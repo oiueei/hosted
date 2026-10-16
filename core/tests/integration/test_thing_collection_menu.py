@@ -216,40 +216,45 @@ class TestWhatItHolds:
 
 @pytest.mark.django_db
 class TestTheCalendarEntry:
-    """`has_date_things` is the rule the collection page uses: the allowlist when the
-    owner set one, else whether the group holds a thing booked by date. A curator's
-    only: a member has no calendar."""
+    """`has_date_things` is the rule the collection page uses: a library or a shed
+    always has dates to export, a stall only when it holds a thing booked by date (a
+    loan the kind migration kept). A curator's only: a member has no calendar."""
 
     def _menu(self, reader, thing, group):
         return _read(_client(reader), thing, group.code)["collection_menu"]
 
-    def test_an_allowlist_naming_a_date_type_says_yes(self, group, thing, user):
-        group.allowed_thing_types = ["GIFT_THING", "LEND_THING"]
-        group.save(update_fields=["allowed_thing_types"])
+    def _make(self, group, kind, verbs):
+        group.kind = kind
+        group.allowed_thing_types = verbs
+        group.save(update_fields=["kind", "allowed_thing_types"])
+
+    def test_a_library_with_nothing_in_it_says_yes(self, group, thing, user):
+        self._make(group, "LIBRARY", ["LEND_THING", "RENT_THING"])
+        group.things.clear()
+        gift = ThingFactory(owner=user, type="GIFT_THING")
+        group.things.add(gift)
+
+        assert self._menu(user, gift, group)["has_date_things"] is True
+
+    def test_a_shed_says_yes(self, group, thing, user):
+        self._make(group, "SHED", ["RESERVE_THING"])
 
         assert self._menu(user, thing, group)["has_date_things"] is True
 
-    def test_an_allowlist_with_no_date_type_says_no_even_if_a_loan_is_there(
-        self, group, thing, user
-    ):
-        group.allowed_thing_types = ["GIFT_THING"]
-        group.save(update_fields=["allowed_thing_types"])
+    def test_a_stall_with_only_gifts_says_no(self, group, thing, user):
+        self._make(group, "STALL", ["GIFT_THING", "SELL_THING"])
+
+        assert thing.type == "GIFT_THING"
+        assert self._menu(user, thing, group)["has_date_things"] is False
+
+    def test_a_stall_that_kept_a_loan_says_yes(self, group, thing, user):
+        self._make(group, "STALL", ["GIFT_THING", "SELL_THING"])
         group.things.add(ThingFactory(owner=user, type="LEND_THING"))
 
-        assert self._menu(user, thing, group)["has_date_things"] is False
-
-    def test_without_an_allowlist_a_date_thing_in_the_group_says_yes(self, group, thing, user):
-        assert group.allowed_thing_types == []
-        group.things.add(ThingFactory(owner=user, type="RENT_THING"))
-
         assert self._menu(user, thing, group)["has_date_things"] is True
 
-    def test_without_an_allowlist_and_nothing_by_date_it_says_no(self, group, thing, user):
-        assert self._menu(user, thing, group)["has_date_things"] is False
-
     def test_a_member_never_gets_a_calendar(self, group, thing, member, user):
-        group.allowed_thing_types = ["LEND_THING"]
-        group.save(update_fields=["allowed_thing_types"])
+        self._make(group, "LIBRARY", ["LEND_THING", "RENT_THING"])
 
         assert self._menu(member, thing, group)["has_date_things"] is False
 
@@ -314,6 +319,16 @@ class TestWhatItCosts:
         unframed = self._count_unframed(user, thing)
 
         assert framed - unframed <= 1, f"{unframed} queries unframed, {framed} framed"
+
+    def test_a_library_asks_no_calendar_question_at_all(self, group, thing, user):
+        group.kind = "LIBRARY"
+        group.allowed_thing_types = ["LEND_THING", "RENT_THING"]
+        group.save(update_fields=["kind", "allowed_thing_types"])
+
+        framed_library = self._count(user, thing, group.code)
+        unframed = self._count_unframed(user, thing)
+
+        assert framed_library - unframed <= 0, f"{unframed} unframed, {framed_library} framed"
 
     def test_it_does_not_grow_with_the_things_in_the_group(self, group, thing, member, user):
         group.digest_frequency = Collection.DigestFrequency.WEEKLY

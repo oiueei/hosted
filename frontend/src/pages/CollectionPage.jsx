@@ -1,56 +1,27 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router';
+import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Koros, Notification, Tag, TextArea } from 'hds-react';
+import { Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
-import AccountMenu from '../components/AccountMenu';
-import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
-import MarkdownText, { sanitizeUrl } from '../components/MarkdownText';
-import ShareCollectionMenu from '../components/ShareCollectionMenu';
-import ThingLinkbox from '../components/ThingLinkbox';
 import InboxNotifications from '../components/InboxNotifications';
 import DemoNotice from '../components/DemoNotice';
-import HeroPhoto from '../components/HeroPhoto';
-import useTheeeme from '../hooks/useTheeeme';
-import RecommendGuest from '../components/RecommendGuest';
-import { useLocalized } from '../utils/localized';
-import { teamParts } from '../utils/team';
-import { loginPathFor } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
-import StatusRegion from '../components/StatusRegion';
-import CollectionMenu, {
-  CollectionDigestStatus,
-  CollectionDownloadsStatus,
-} from '../components/CollectionMenu';
+import useTheeeme from '../hooks/useTheeeme';
+import { useLocalized } from '../utils/localized';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useDigestPreference from '../hooks/useDigestPreference';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useMediaQuery from '../hooks/useMediaQuery';
 import Toast from '../components/Toast';
-import { DATE_TYPES } from '../constants/things';
-import { useCollectionBase, useCanonicalCollectionPath } from '../hooks/useCollectionBase';
-
-/**
- * Cards mounted before the "Show more" button appears.
- *
- * The collection serialises **every** thing it holds and there is no ceiling on
- * how many that is (`COLLECTION_THINGS_BLOCK` is off by default), so a lending
- * library with 200 items used to mount 200 `ThingLinkbox`es — each with its own
- * theeeme, localisation and booking view-model — on first paint. The photos were
- * already `loading="lazy"`, so what this cuts is the mount cost, which is what
- * a mid-range Android actually feels (DESIGN §7).
- *
- * Deliberately a **render** cap, not server pagination: the tag chips count
- * across the whole collection, and a paginated payload would make those counts
- * lie. 24 fills the widest grid (4 columns) six rows deep.
- */
-const CARDS_PER_PAGE = 24;
-
-// What the member's "Invite someone" button controls (aria-controls) and the
-// form it opens sits under.
-const RECOMMEND_BOX_ID = 'recommend-box';
+import { useCanonicalCollectionPath } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
+import { collectionPath } from '../utils/collectionPath';
+import { hasOpeningHours } from '../utils/rental';
+import CollectionHero from '../components/collection/CollectionHero';
+import BroadcastBox from '../components/collection/BroadcastBox';
+import ThingsSection, { InactiveThings } from '../components/collection/ThingsSection';
 
 // How long the card of a thing just uploaded stays marked.
 const JUST_ADDED_MS = 2000;
@@ -59,24 +30,13 @@ export default function CollectionPage() {
   const { code } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, i18n } = useTranslation();
-  const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { t } = useTranslation();
+  const { tc, btnStyle } = useTheeeme();
   const [collection, setCollection] = useState(null);
-  // The collection's own address, and the move off a wrong one: a link made
-  // before kinds, or at the wrong kind's prefix, is corrected here.
-  const base = useCollectionBase(code, collection?.kind);
+  // The move off a wrong address: a link made before kinds, or at the wrong
+  // kind's prefix, is corrected here.
   useCanonicalCollectionPath(collection?.kind);
   const [error, setError] = useState('');
-  const [broadcastOpen, setBroadcastOpen] = useState(false);
-  const [broadcastMessage, setBroadcastMessage] = useState('');
-  const [broadcastSending, setBroadcastSending] = useState(false);
-  const [broadcastResult, setBroadcastResult] = useState(null);
-  const [activeTag, setActiveTag] = useState(null);
-  const [shownCount, setShownCount] = useState(CARDS_PER_PAGE);
-  const [joining, setJoining] = useState(false);
-  const [joinError, setJoinError] = useState(false);
-  const [recommendOpen, setRecommendOpen] = useState(false);
-  const recommendButtonRef = useRef(null);
   // The owner may have written the collection's text once per language; every
   // child (cards, share menu, back labels) gets the resolved words from here.
   const L = useLocalized();
@@ -143,11 +103,9 @@ export default function CollectionPage() {
       JUST_ADDED_MS
     );
   }, [addedThing, collection, isPhone, reducedMotion, tc.color_01, location.pathname, navigate]);
-  useEffect(() => {
-    document.title = collection
-      ? t('titles.collection', { headline })
-      : t('titles.collectionDefault');
-  }, [collection, headline, t]);
+  useDocumentTitle(
+    collection ? t('titles.collection', { headline }) : t('titles.collectionDefault')
+  );
 
   // Stable across renders (functional setState, no deps) so memoised ThingLinkbox
   // cards don't re-render when unrelated page state (broadcast box, tag filter)
@@ -220,431 +178,26 @@ export default function CollectionPage() {
     return <LoadingSpinner />;
   }
 
-  const handleBroadcast = async () => {
-    setBroadcastSending(true);
-    setBroadcastResult(null);
-    try {
-      const res = await apiFetch(`/api/v1/collections/${code}/broadcast/`, {
-        method: 'POST',
-        body: JSON.stringify({ message: broadcastMessage }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setBroadcastResult({
-          type: 'success',
-          message: t('broadcast.sent', { count: data.recipients }),
-        });
-        setBroadcastMessage('');
-      } else {
-        // `detail` first, then `error`, the same order `extractApiError` reads
-        // them in: this view answers `{error}` on its own refusals, but the one
-        // an owner actually meets is the daily cap (5/day), and that arrives
-        // from the rate-limit handler as `{detail}`. Reading only `error` turned
-        // "slow down and try again later" into a bare "Error" — no reason, no
-        // hint that tomorrow works, on the one screen where the owner is left
-        // wondering whether the group got the message.
-        setBroadcastResult({
-          type: 'error',
-          message: data.detail || data.error || t('common.error'),
-        });
-      }
-    } catch {
-      setBroadcastResult({ type: 'error', message: t('common.connectionError') });
-    }
-    setBroadcastSending(false);
-  };
-
-  // Join a PUBLIC group you are only browsing. The signed-in half of
-  // login-to-act: an anonymous reader gets `/collections/:code/join`, which
-  // takes an email and mails a magic link — no use at all to a session that
-  // already exists, so the reader with the most intent had no way in. Re-fetches
-  // rather than patching `is_member` locally: joining changes several fields at
-  // once (the member roster, the digest switch, what the cards may offer), and
-  // the server is the only thing that knows all of them.
-  const handleJoin = async () => {
-    setJoining(true);
-    setJoinError(false);
-    try {
-      const res = await apiFetch(`/api/v1/collections/${code}/join/`, { method: 'POST' });
-      if (res.ok) {
-        const fresh = await apiFetch(`/api/v1/collections/${code}/`);
-        if (fresh.ok) setCollection(await fresh.json());
-        else setJoinError(true);
-      } else {
-        setJoinError(true);
-      }
-    } catch {
-      setJoinError(true);
-    }
-    setJoining(false);
-  };
-
-  const userCode = localStorage.getItem('userCode');
-  // The strict founder check — still what the attribution line and the
-  // INACTIVE/delete-adjacent controls key on. Everything else that used to
-  // read `isOwner` for an admin power now reads `isCurator` instead, the
-  // server-computed field that also admits a co-owner.
-  const isOwner = userCode === collection.owner;
   const isCurator = !!collection.is_curator;
-  // The team the hero names, founder first, whoever has no name counted at the
-  // end rather than listed, written as the language on screen writes a list
-  // ("A y B", "A, B y C") — one rule (`utils/team.js`) shared with the "Run by"
-  // column of "My groups", so the two cannot disagree. The pieces come apart so
-  // each name can be a link.
-  const teamLine = teamParts(collection, t, i18n.resolvedLanguage || i18n.language);
-  const isAuthenticated = !!userCode;
-  // The Community/visibility tags in the H1 are purely informational — no
-  // click, no delete, so no hover/focus state to design for — so they follow
-  // the theeeme's primary-button colours (color_01/color_06) instead of a
-  // fixed HDS token pair, matching every other themed surface on the page.
-  // They are also the curators' own bookkeeping — how the group is set up, not
-  // something a member or a passer-by needs before the title —
-  // so both render for `isCurator` only.
-  const tagTheme = tc.color_01
-    ? {
-        '--tag-background': `var(--color-${tc.color_01})`,
-        '--tag-color': `var(--color-${tc.color_06})`,
-      }
-    : undefined;
-
-  // Active (non-inactive) things, optionally narrowed to the selected tag chip.
-  const visibleThings = collection.things.filter((thg) => thg.status !== 'INACTIVE');
-  const collectionTags = collection.tags || [];
-  const effectiveTag = activeTag && collectionTags.includes(activeTag) ? activeTag : null;
-  const matchingThings = effectiveTag
-    ? visibleThings.filter((thg) => (thg.tags || []).includes(effectiveTag))
-    : visibleThings;
-  // Newest first, then capped at what's actually been asked for. Sorting before
-  // the slice is what makes "Show more" append older things rather than reshuffle.
-  const sortedThings = [...matchingThings].sort(
-    (a, b) => new Date(b.created) - new Date(a.created)
-  );
-  const shownThings = sortedThings.slice(0, shownCount);
-  const remainingThings = sortedThings.length - shownThings.length;
   // Who may put a thing here: a curator, or a member of a COMMUNITY group —
   // the same rule `Collection.can_add_thing` enforces. Mode alone is not enough:
   // a reader who is not a member (signed in or not) would be sent through the
   // whole form, photos uploaded and all, to collect a 403 at the end.
   const canAddThing = isCurator || (collection.mode === 'COMMUNITY' && !!collection.is_member);
-  // Who may hand the group's link to someone: a curator, and — in a PUBLIC group
-  // — any member. A PUBLIC group is shared by its own address,
-  // with no token to mint, rotate or revoke, so a member can pass it on without
-  // holding anything a curator would need to pull back; it is the cheapest way to
-  // bring new people in, and nothing had ever asked a member to. In a PRIVATE one
-  // the link is the curators' credential, and the member has "Recommend" instead.
-  const canShare = isCurator || (collection.visibility === 'PUBLIC' && !!collection.is_member);
-  // A rank-and-file member: signed in, `is_member` (false for a co-owner by design,
-  // who is a curator and has the curator's menu). They get a menu of their own in
-  // the corner — the welcome document, the summary switch when
-  // the group sends one, and "Leave the group".
-  const isMember = isAuthenticated && !!collection.is_member && !isCurator;
-  const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
-  // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
-  // this group" and "Sign in" — whatever the mode and whether it holds things or not.
-  // It used to be a line in the content that only a COMMUNITY or an
-  // empty group showed, and a member without a session (the weekly digest's link is an
-  // ordinary one) had no way in from here at all.
-  const showsSignedOutDoors = !isAuthenticated && collection.visibility === 'PUBLIC';
-  // A collection locked to one thing type makes the per-card "Type = X" row
-  // redundant — hide it (an allowlist of one).
-  const singleType = (collection.allowed_thing_types || []).length === 1;
-  // Whether the calendar download has anything to offer: only date-based
-  // things (loans, rentals, on-site reservations) ever reach that CSV. The
-  // allowlist says so directly; an old collection with no allowlist never
-  // restricted anything, so its own things are the answer — a RENT drill in a
-  // restriction-free group is as bookable as one the list names.
-  const allowedTypes = collection.allowed_thing_types || [];
-  const hasDateThings =
-    allowedTypes.length > 0
-      ? allowedTypes.some((type) => DATE_TYPES.includes(type))
-      : collection.things.some((thg) => DATE_TYPES.includes(thg.type));
-
-  // When the owner has given the group its own web address, the hero's back
-  // link goes there instead of the OIUEEI home — but it still says "Home".
-  // `sanitizeUrl` returns "#" for anything that isn't
-  // http(s), and we ignore that.
-  const homePageUrl = collection.home_page ? sanitizeUrl(collection.home_page) : '';
-  const backHref = homePageUrl && homePageUrl !== '#' ? homePageUrl : null;
 
   return (
     <div
       className="form-page"
       style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
     >
-      <div
-        className={`form-hero${collection.thumbnail_url ? ' form-hero--photo' : ''}`}
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
-      >
-        <div className="form-hero-split">
-          <div
-            className="form-hero-content"
-            style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
-          >
-            <span className="hero-corners">
-              {/* "Requests to me" is the collection menu's first entry where this page
-                  has one: the account menu then leaves it out. */}
-              {/* Signed out, in a PUBLIC group the hero already offers "Sign in",
-                  so the corner's icon to the same place is left out; with
-                  a session `offerSignIn` changes nothing, and on every other page a
-                  signed-out reader keeps the icon. */}
-              <AccountMenu
-                requestsInCollectionMenu={isCurator || isMember}
-                offerSignIn={!showsSignedOutDoors}
-              />
-              {/* The group's own options, between the account menu
-                  and the share one: a curator's, and a
-                  member's, with what is theirs. Nothing for a reader who is
-                  neither. */}
-              {(isCurator || isMember) && (
-                <CollectionMenu
-                  code={code}
-                  kind={collection.kind}
-                  headline={headline}
-                  isCurator={isCurator}
-                  hasDateThings={hasDateThings}
-                  downloads={downloads}
-                  welcomeDocUrl={collection.welcome_doc_url || ''}
-                  digest={isMember && sendsDigest ? digestPref : null}
-                />
-              )}
-              {canShare && (
-                <ShareCollectionMenu
-                  collectionCode={code}
-                  collectionKind={collection.kind}
-                  collectionHeadline={headline}
-                  isPublic={collection.visibility === 'PUBLIC'}
-                />
-              )}
-            </span>
-            {/* Says "← Home" whatever it points at: the group's own
-                `home_page` when it has one, the app's home otherwise. It used to be
-                worded "The group's site" with an external-link icon; the wording
-                and the icon went, the destination stayed. */}
-            <BackLink to="/" href={backHref} label={t('common.home')} />
-            <h1 className="form-hero-title">
-              {headline}
-              {isCurator && collection.mode === 'COMMUNITY' && (
-                <>
-                  {' '}
-                  <Tag theme={tagTheme}>{t('collectionPage.communityTag')}</Tag>
-                </>
-              )}
-              {isCurator && (
-                <>
-                  {' '}
-                  <Tag theme={tagTheme}>
-                    {collection.visibility === 'PUBLIC'
-                      ? t('visibility.publicTag')
-                      : t('visibility.privateTag')}
-                  </Tag>
-                </>
-              )}
-            </h1>
-            {collection.description && (
-              <MarkdownText text={L(collection.description)} className="form-hero-text" />
-            )}
-            {/* Attribution. With co-curators, one line names the whole team,
-                founder first, everyone at the same level and shown to everyone
-                (2026-09); whoever has no name is counted at the end, not
-                linked, and with nobody named there is no line. Without, the
-                single founder line, and only to non-owners — the owner knows
-                who they are. */}
-            {collection.co_owners?.length > 0
-              ? teamLine.length > 0 && (
-                  <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
-                    <strong>{t('collectionPage.curatorsLabel')}</strong>{' '}
-                    {teamLine.map((part, i) => {
-                      if (part.type === 'member') {
-                        return (
-                          <Link key={i} to={`/${part.member.code}`} className="owner-link">
-                            {part.member.name}
-                          </Link>
-                        );
-                      }
-                      // The count of those without a name is plain text, and so is
-                      // what the language puts between the pieces ("," and "y").
-                      return part.type === 'more' ? part.text : part.value;
-                    })}
-                  </p>
-                )
-              : !isOwner &&
-                collection.owner_name && (
-                  <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
-                    <strong>{t('collectionPage.curator')}</strong>{' '}
-                    <Link to={`/${collection.owner}`} className="owner-link">
-                      {collection.owner_name}
-                    </Link>
-                  </p>
-                )}
-            {/* The group's welcome PDF is an entry of the collection menu,
-                first, for members and curators — the API serves its
-                URL to those two only. It was a loose link here. */}
-            {/* The hero's two doors for a signed-out reader, in the
-              order: "Sign in" first and primary, to /login,
-              which brings them back here — most people who open a public group
-              without a session already have an account, and the member whose session
-              expired (the weekly digest's link is an ordinary one) is one of them —
-              and "Join this group" secondary, to the join page (no ?thing=: there is
-              no thing in it). Its first form — "This group shares its things on
-              OIUEEI. Join to take part →" — was removed on 2026-09-21; a line in
-              the content stood in for it from 2026-09-29, only where no card
-              had a button to press, and that line is gone in turn. In every PUBLIC
-              group, COMMUNITY or PROPRIETARY, empty or not; the action button on
-              each card (login-to-act) is still there for whoever has one. The
-              account icon of the corner is left out on this page (above): this row
-              is its replacement. */}
-            {showsSignedOutDoors && (
-              <div className="invite-nudge">
-                <div className="button-row-wide">
-                  <ButtonLink to={loginPathFor({ pathname: base })} style={btnStyle}>
-                    {t('login.signIn')}
-                  </ButtonLink>
-                  <ButtonLink to={`${base}/join`} style={btnSecondaryStyle}>
-                    {t('collectionPage.visitorJoin')}
-                  </ButtonLink>
-                </div>
-              </div>
-            )}
-            {/* An invitation for a reader who is already signed in. They
-              cannot be sent down the anonymous funnel — it asks for an email and
-              answers with a magic link — so they get the action itself. Only on
-              a PUBLIC collection: a private one is unreachable without an
-              invitation, and this is exactly where the page used to offer
-              "Add thing" to someone the API would refuse. */}
-            {isAuthenticated &&
-              !isCurator &&
-              !collection.is_member &&
-              collection.visibility === 'PUBLIC' && (
-                <div className="invite-nudge">
-                  <div className="button-row-wide">
-                    <Button style={btnStyle} disabled={joining} onClick={handleJoin}>
-                      {joining ? t('joinToAct.joining') : t('collectionPage.visitorJoin')}
-                    </Button>
-                  </div>
-                  {joinError && (
-                    <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 0 }}>
-                      {t('collectionPage.visitorJoinError')}
-                    </p>
-                  )}
-                </div>
-              )}
-            {isCurator && (
-              <>
-                <div className="spacer-m"></div>
-                {/* "Add thing" first and primary, then "Edit collection":
-                    what a curator does most, and what
-                    an empty group needs before anything else, is put things in it;
-                    editing the group is the second thing. It used to be the other way round
-                    ("Edit collection" primary, "Add thing" beside it). Always there,
-                    with things or without, and still an
-                    entry of the collection menu (deliberately repeated there).
-                    "Manage members" and the downloads live only in the menu; the
-                    outcome of a download lands right under the row. */}
-                <div className="button-row-wide">
-                  <ButtonLink to={`${base}/add`} style={btnStyle}>
-                    {t('collectionPage.addThing')}
-                  </ButtonLink>
-                  <ButtonLink to={`${base}/edit`} style={btnSecondaryStyle}>
-                    {t('collectionPage.editCollection')}
-                  </ButtonLink>
-                  {/* The third button of the row (it was a quiet line
-                      under the row, "Your collection is taking shape. Now invite your
-                      circle →"): secondary, like "Edit collection", so the row keeps its
-                      one primary. It was shown only while the group had things and
-                      nobody invited, and went with the first guest who accepted — a curator
-                      who had invited people found the button gone. Now it is
-                      always there for whoever runs the group, owner or co-curator, with
-                      things or without and with members or without: inviting is not a
-                      step of the beginning. */}
-                  <ButtonLink to={`${base}/invites`} style={btnSecondaryStyle}>
-                    {t('collectionPage.inviteYourPeople')}
-                  </ButtonLink>
-                </div>
-                <CollectionDownloadsStatus downloads={downloads} />
-                <div className="spacer-s"></div>
-              </>
-            )}
-            {/* Everything in here is a rank-and-file member's control —
-              contributing a thing, recommending a guest — so membership
-              (excluding a curator, who has the real thing above) is the single
-              condition. It used to admit any signed-in reader of a COMMUNITY
-              collection, which is how the dead-end button got here. */}
-            {isAuthenticated && !isOwner && collection.is_member && (
-              <>
-                <div className="spacer-m"></div>
-                {/* One row, each button on its own condition:
-                "Invite someone" first and primary — it opens the recommend form
-                below the row, and stays on screen while the form is open so the
-                same button closes it — then "Add thing", secondary. Neither:
-                no row. Membership, not just mode, for "Add thing":
-                `Collection.can_add_thing` requires an invite, so offering it to
-                a signed-in non-member sent them through the whole form — photos
-                uploaded to the bucket and all — to collect a 403 at the end.
-                They get the join button above instead, which is the thing that
-                actually unlocks it. */}
-                {(collection.allow_member_proposals || collection.mode === 'COMMUNITY') && (
-                  <div className="button-row-wide">
-                    {collection.allow_member_proposals && (
-                      <Button
-                        ref={recommendButtonRef}
-                        style={btnStyle}
-                        aria-expanded={recommendOpen}
-                        aria-controls={recommendOpen ? RECOMMEND_BOX_ID : undefined}
-                        onClick={() => setRecommendOpen((open) => !open)}
-                      >
-                        {t('recommend.openButton')}
-                      </Button>
-                    )}
-                    {collection.mode === 'COMMUNITY' && (
-                      <ButtonLink to={`${base}/add`} style={btnSecondaryStyle}>
-                        {t('collectionPage.addThing')}
-                      </ButtonLink>
-                    )}
-                  </div>
-                )}
-                {collection.allow_member_proposals && recommendOpen && (
-                  <RecommendGuest
-                    id={RECOMMEND_BOX_ID}
-                    collectionCode={code}
-                    ownerName={collection.owner_name}
-                    coOwnerCount={collection.co_owners?.length ?? 0}
-                    onClose={() => {
-                      setRecommendOpen(false);
-                      recommendButtonRef.current?.focus();
-                    }}
-                  />
-                )}
-                {/* The outcome of "Mute the summary" / "Get the summary again" from the
-                collection menu: a short message in a live region, as the downloads'.
-                Only a member has the switch. */}
-                <CollectionDigestStatus digest={digestPref} />
-                {/* "Leave the group" used to sit here, third in a stack of
-                unlabelled text links under the description — and the only
-                destructive one of the three. It moved to the own profile's "My
-                groups" list: leaving is something you do to your
-                own membership, so it belongs with the rest of your account, next
-                to the other memberships you might weigh it against. It is also
-                the last entry of the member's collection
-                menu, under a divider; the route (/collections/:code/leave) is
-                unchanged. */}
-              </>
-            )}
-          </div>
-        </div>
-        {collection.thumbnail_url && (
-          <HeroPhoto
-            photoUrl={collection.thumbnail_url}
-            alt={headline}
-            koroType={koro}
-            color03={tc.color_03}
-          />
-        )}
-        <Koros
-          className="form-hero-koros"
-          type={koro}
-          style={tc.color_02 ? { fill: `var(--color-${tc.color_02})` } : undefined}
-        />
-      </div>
+      <CollectionHero
+        collection={collection}
+        setCollection={setCollection}
+        code={code}
+        headline={headline}
+        downloads={downloads}
+        digestPref={digestPref}
+      />
       <div className="page-container">
         {collection.is_onboarding && <DemoNotice />}
         {/* Each viewer's own notifications for this collection — a hold request or a
@@ -667,6 +220,24 @@ export default function CollectionPage() {
             {t('collectionPage.inactiveNotice')}
           </Notification>
         )}
+        {/* A shed booked by the hour that has no opening hours is closed every day,
+            and whoever tries to reserve sees a calendar of grey: its curators are
+            told where to fix it. Nobody else can. */}
+        {isCurator &&
+          collection.kind === 'SHED' &&
+          collection.reservation_unit === 'HOUR' &&
+          !hasOpeningHours(collection.opening_hours) && (
+            <Notification
+              label={t('collectionPage.noOpeningHoursLabel')}
+              type="alert"
+              style={{ marginBottom: 'var(--spacing-m)' }}
+            >
+              <p>{t('collectionPage.noOpeningHoursBody')}</p>
+              <ButtonLink to={`${collectionPath(code, collection.kind)}/edit`} style={btnStyle}>
+                {t('collectionPage.editCollection')}
+              </ButtonLink>
+            </Notification>
+          )}
         {collection.is_paused && (
           <Notification
             label={t('pause.bannerLabel')}
@@ -677,215 +248,22 @@ export default function CollectionPage() {
           </Notification>
         )}
 
-        {/* Visually hidden, still in the outline. The cards
-            below are <h3>s (ThingLinkbox's default) and rely on an <h2> above
-            them: take this out and the page jumps from <h1> to <h3>, which axe's
-            heading-order flags. It also stays a landmark a screen-reader user can
-            jump to, next to "Messages to the group". */}
-        <h2 className="sr-only">{t('collectionPage.things')}</h2>
-        <div className="spacer-m" />
-        {/* A recorded DESIGN §1 exception, not an oversight: these are plain
-            `<button aria-pressed>`s, not HDS `Tag`. HDS `Tag` (`variant="action"`)
-            has no pressed/selected state to bind `aria-pressed` to, and a filter
-            chip has to announce which one is active. The `.tag-chip` styling is
-            ours; it sits on the same page as real HDS `Tag`s (`ThingTags`, on
-            every card below), so the two are free to drift apart visually —
-            worth knowing if either one's look changes (found in review,
-            2026-09-18). */}
-        {visibleThings.length > 0 && collectionTags.length > 0 && (
-          <div className="tag-filter-bar">
-            <button
-              type="button"
-              className="tag-chip"
-              aria-pressed={!effectiveTag}
-              onClick={() => {
-                setActiveTag(null);
-                setShownCount(CARDS_PER_PAGE);
-              }}
-            >
-              {t('collectionPage.allTags')} ({visibleThings.length})
-            </button>
-            {collectionTags.map((tag) => {
-              const count = visibleThings.filter((thg) => (thg.tags || []).includes(tag)).length;
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  className="tag-chip"
-                  aria-pressed={effectiveTag === tag}
-                  onClick={() => {
-                    setActiveTag(effectiveTag === tag ? null : tag);
-                    setShownCount(CARDS_PER_PAGE);
-                  }}
-                >
-                  {L(tag)} ({count})
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {visibleThings.length === 0 ? (
-          // Whoever can add a thing (a curator, or a member of a COMMUNITY group)
-          // already has "Add thing" in the hero, so an empty group says nothing to
-          // them: the phrase, "Add one" and the CSV link are gone,
-          // the CSV one into the collection menu. Whoever cannot — a member of a
-          // PROPRIETARY group, a reader with no session — is told, with no link.
-          canAddThing ? null : (
-            <p>{t('collectionPage.noThings')}</p>
-          )
-        ) : shownThings.length === 0 ? (
-          <p>{t('collectionPage.noThingsForTag')}</p>
-        ) : (
-          <>
-            <div className="things-grid">
-              {shownThings.map((thing) => (
-                <ThingLinkbox
-                  key={thing.code}
-                  thing={thing}
-                  userCode={userCode}
-                  collectionCode={code}
-                  collectionKind={collection.kind}
-                  collectionHeadline={headline}
-                  collectionOwner={collection.owner}
-                  collectionMode={collection.mode}
-                  isPaused={collection.is_paused}
-                  hideType={singleType}
-                  canAct={isAuthenticated}
-                  loginToAct={!isAuthenticated}
-                  onUpdateThing={handleUpdateThing}
-                  onJoinedGroup={reloadCollection}
-                />
-              ))}
-            </div>
-            {remainingThings > 0 && (
-              <>
-                <div className="spacer-m" />
-                {/* A pager is a loose action button like any other: in a wide row,
-                    so on a phone it is the width of the screen. */}
-                <div className="button-row-wide">
-                  <Button
-                    variant="secondary"
-                    style={btnSecondaryStyle}
-                    onClick={() => setShownCount((n) => n + CARDS_PER_PAGE)}
-                  >
-                    {t('collectionPage.showMoreThings', { count: remainingThings })}
-                  </Button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-        {isCurator && collection.invites.length > 0 && (
-          <>
-            <div className="spacer-l" />
-            <h2>{t('broadcast.heading')}</h2>
-            <div className="spacer-m" />
-            {!broadcastOpen ? (
-              <div className="button-row-wide">
-                <Button
-                  variant="secondary"
-                  style={btnSecondaryStyle}
-                  onClick={() => setBroadcastOpen(true)}
-                >
-                  {t('broadcast.openButton')}
-                </Button>
-              </div>
-            ) : (
-              <div className="form-grid">
-                {/* The one place in the product where a member learns an address
-                  the API takes care never to serve them: the broadcast carries
-                  the owner's own email as Reply-To, so replying to the group
-                  message is one tap. Worth keeping — without it a broadcast is
-                  a megaphone with no way back, and the replies would land on a
-                  noreply — but not worth doing without saying so first
-                  (DESIGN §6). Their own address, their own send: disclosure is
-                  what consent needs here, not a switch. */}
-                <TextArea
-                  id="broadcast-message"
-                  label={t('broadcast.messageLabel')}
-                  helperText={t('broadcast.replyToNotice')}
-                  value={broadcastMessage}
-                  onChange={(e) => setBroadcastMessage(e.target.value)}
-                  maxLength={256}
-                  required
-                />
-                <StatusRegion>
-                  {broadcastResult && (
-                    <Notification
-                      label={
-                        broadcastResult.type === 'success' ? t('common.sent') : t('common.error')
-                      }
-                      type={broadcastResult.type}
-                      style={{ marginBottom: 'var(--spacing-s)' }}
-                      dismissible
-                      closeButtonLabelText={t('common.close')}
-                      onClose={() => setBroadcastResult(null)}
-                    >
-                      {broadcastResult.message}
-                    </Notification>
-                  )}
-                </StatusRegion>
-                <div className="button-row-wide">
-                  <Button
-                    style={btnStyle}
-                    onClick={handleBroadcast}
-                    disabled={broadcastSending || !broadcastMessage.trim()}
-                  >
-                    {broadcastSending ? t('broadcast.sending') : t('broadcast.sendButton')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    style={btnSecondaryStyle}
-                    onClick={() => {
-                      setBroadcastOpen(false);
-                      setBroadcastResult(null);
-                    }}
-                  >
-                    {t('common.close')}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
+        <ThingsSection
+          collection={collection}
+          code={code}
+          headline={headline}
+          canAddThing={canAddThing}
+          onUpdateThing={handleUpdateThing}
+          onJoinedGroup={reloadCollection}
+        />
+        {isCurator && collection.invites.length > 0 && <BroadcastBox code={code} />}
 
-        {/* Gated on the payload, not on `isOwner` (the *collection* owner): the
-            backend now sends an INACTIVE thing to two audiences — the
-            collection owner (every one) and that thing's own owner (just
-            theirs), the same "owner can always view their own things" rule
-            `Thing.can_view()` already states. In a COMMUNITY collection a
-            member's own gift going INACTIVE after a completed hand-off, or a
-            listing they hid themselves, must stay reachable from here — not
-            only via the thing's own `/things/{code}` URL — same as it always
-            has for the collection owner. */}
-        {collection.things.some((thg) => thg.status === 'INACTIVE') && (
-          <>
-            <div className="spacer-l" />
-            <h2>{t('collectionPage.inactiveThings')}</h2>
-            <div className="spacer-m" />
-            <div className="things-grid">
-              {[...collection.things]
-                .filter((thg) => thg.status === 'INACTIVE')
-                .sort((a, b) => {
-                  return new Date(b.created) - new Date(a.created);
-                })
-                .map((thing) => (
-                  <ThingLinkbox
-                    key={thing.code}
-                    thing={thing}
-                    userCode={userCode}
-                    collectionCode={code}
-                    collectionKind={collection.kind}
-                    collectionHeadline={headline}
-                    collectionOwner={collection.owner}
-                    collectionMode={collection.mode}
-                    hideType={singleType}
-                    onUpdateThing={handleUpdateThing}
-                  />
-                ))}
-            </div>
-          </>
-        )}
+        <InactiveThings
+          collection={collection}
+          code={code}
+          headline={headline}
+          onUpdateThing={handleUpdateThing}
+        />
         {/* A key, not text: Toast translates where it paints, and this opens just as
             `useCollectionLanguage` is changing the language. */}
         <Toast

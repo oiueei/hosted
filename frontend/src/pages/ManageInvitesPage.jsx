@@ -23,6 +23,7 @@ import { useLocalized } from '../utils/localized';
 import { parseEmailList } from '../utils/emailList';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function ManageInvitesPage() {
   const { code } = useParams();
@@ -45,9 +46,7 @@ export default function ManageInvitesPage() {
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, [collectionHeadline]);
   const headline = L(collectionHeadline);
-  useEffect(() => {
-    document.title = headline ? t('titles.guests', { headline }) : t('titles.guestsDefault');
-  }, [headline, t]);
+  useDocumentTitle(headline ? t('titles.guests', { headline }) : t('titles.guestsDefault'));
   // The whole management UI — promoting/demoting a co-curator included, since
   // 2026-09 — reads `isCurator`, the server-computed field that admits a
   // co-owner. The founder is no longer a distinct client-side tier here.

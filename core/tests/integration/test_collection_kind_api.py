@@ -55,7 +55,15 @@ class TestCreatingByKind:
         assert res.status_code == status.HTTP_201_CREATED, res.data
         assert res.data["kind"] == kind
 
-    @pytest.mark.parametrize("verbs", [[], [GIFT, LEND], [RESERVE, SELL]])
+    def test_no_kind_and_no_verbs_is_a_stall_with_both_of_its_verbs(self, authenticated_client):
+        res = _create(authenticated_client)
+
+        assert res.status_code == status.HTTP_201_CREATED, res.data
+        assert res.data["kind"] == "STALL"
+        assert res.data["allowed_thing_types"] == [GIFT, SELL]
+        assert Collection.objects.get(code=res.data["code"]).kind == "STALL"
+
+    @pytest.mark.parametrize("verbs", [[GIFT, LEND], [RESERVE, SELL]])
     def test_no_kind_and_no_single_family_is_refused(self, authenticated_client, verbs):
         res = _create(authenticated_client, allowed_thing_types=verbs)
 
@@ -155,6 +163,66 @@ class TestTheKindNeverChanges:
 
         assert res.status_code == status.HTTP_400_BAD_REQUEST
         assert "orphaned" in str(res.data)
+
+    def test_the_refusal_names_its_code_and_lists_the_verbs_as_words(
+        self, authenticated_client, collection, user
+    ):
+        collection.mode = "COMMUNITY"
+        collection.allowed_thing_types = [GIFT, SELL]
+        collection.save()
+        also_in(
+            collection,
+            Thing.objects.create(code="SELL02", owner=user, headline="Lamp", type=SELL),
+        )
+
+        res = authenticated_client.patch(
+            f"{URL}{collection.code}/", {"allowed_thing_types": [GIFT]}, format="json"
+        )
+
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+        assert res.data["code"] == "priced_things_remain"
+        sentence = res.json()["non_field_errors"][0]
+        assert "(types: SELL_THING)" in sentence
+        assert "[" not in sentence
+        assert "'" not in sentence
+
+    def test_a_stall_holding_a_lend_can_still_be_saved_from_the_edit_page(
+        self, authenticated_client, collection, user
+    ):
+        # The edit page always sends the verb list; a thing of the other family is
+        # tolerated, so it must not make every save a 400.
+        also_in(
+            collection,
+            Thing.objects.create(code="LEND01", owner=user, headline="Drill", type=LEND),
+        )
+
+        res = authenticated_client.patch(
+            f"{URL}{collection.code}/",
+            {"headline": "Renamed", "allowed_thing_types": [GIFT, SELL]},
+            format="json",
+        )
+
+        assert res.status_code == status.HTTP_200_OK, res.data
+        collection.refresh_from_db()
+        assert collection.headline == "Renamed"
+        assert collection.things.get(code="LEND01").type == LEND
+
+    def test_a_mixed_stall_with_no_sale_inside_can_switch_the_prices_off(
+        self, authenticated_client, collection, user
+    ):
+        collection.mode = "COMMUNITY"
+        collection.save()
+        also_in(
+            collection,
+            Thing.objects.create(code="LEND02", owner=user, headline="Drill", type=LEND),
+        )
+
+        res = authenticated_client.patch(
+            f"{URL}{collection.code}/", {"allowed_thing_types": [GIFT]}, format="json"
+        )
+
+        assert res.status_code == status.HTTP_200_OK, res.data
+        assert res.data["allowed_thing_types"] == [GIFT]
 
     def test_the_switch_can_be_flipped_when_nothing_is_priced(
         self, authenticated_client, collection

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import PageLayout from '../components/PageLayout';
@@ -7,13 +6,16 @@ import ApprovalNotice from '../components/ApprovalNotice';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useTheeeme from '../hooks/useTheeeme';
 import { COLLECTION_KINDS, kindSegment } from '../utils/collectionPath';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * `/new` — what kind of collection is this? Three cards, one destination each:
  * a stall (to sell or give away), a library (to lend or rent out) or a shed (to
  * book by the day or by the hour). The kind is fixed for good when the
  * collection is created, so it is chosen here, before the form, and the form
- * lives at `/{kind}/new`.
+ * lives at `/{kind}/new`; the hero says so (`kinds.chooseIntro`), and each card says
+ * what separates its kind from the others (a library's things go home with whoever
+ * takes them, a shed is used where it stands).
  *
  * A deployment that does not hand a kind out to this account (`collection_kinds`
  * on `GET /auth/me/`, derived from the verbs its policy offers) still shows the
@@ -31,12 +33,15 @@ export default function NewCollectionPage() {
   const backPath = location.state?.backPath || '/';
   const backLabel = location.state?.backLabel || t('common.home');
 
-  useEffect(() => {
-    document.title = t('titles.newCollection');
-  }, [t]);
+  useDocumentTitle(t('titles.newCollection'));
 
   return (
-    <PageLayout title={t('createCollection.pageTitle')} backTo={backPath} backLabel={backLabel}>
+    <PageLayout
+      title={t('createCollection.pageTitle')}
+      description={t('kinds.chooseIntro')}
+      backTo={backPath}
+      backLabel={backLabel}
+    >
       <ul className="kind-cards">
         {COLLECTION_KINDS.map((kind) => {
           const long = t(`kinds.${kind}.long`);

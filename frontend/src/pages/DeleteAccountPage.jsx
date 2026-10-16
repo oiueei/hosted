@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { Link } from 'react-router';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import StatusRegion from '../components/StatusRegion';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * Step one of the right-to-erasure flow (`/me/delete`): states exactly what is
@@ -15,9 +16,7 @@ import StatusRegion from '../components/StatusRegion';
  */
 export default function DeleteAccountPage() {
   const { t } = useTranslation();
-  useEffect(() => {
-    document.title = t('titles.deleteAccount');
-  }, [t]);
+  useDocumentTitle(t('titles.deleteAccount'));
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');

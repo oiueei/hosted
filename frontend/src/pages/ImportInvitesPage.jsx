@@ -6,6 +6,7 @@ import PageLayout from '../components/PageLayout';
 import BulkInviteCsv from '../components/BulkInviteCsv';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * Invite several people at once, from a CSV. The tool was the
@@ -37,9 +38,7 @@ export default function ImportInvitesPage() {
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, []);
 
-  useEffect(() => {
-    document.title = t('titles.importInvites');
-  }, [t]);
+  useDocumentTitle(t('titles.importInvites'));
 
   useEffect(() => {
     if (!userCode) return;

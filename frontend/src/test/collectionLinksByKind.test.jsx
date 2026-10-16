@@ -21,6 +21,7 @@ import CollectionLinkbox from '../components/CollectionLinkbox';
 import CollectionMenu from '../components/CollectionMenu';
 import ShareCollectionMenu from '../components/ShareCollectionMenu';
 import ThingLinkbox from '../components/ThingLinkbox';
+import { press } from './settle';
 
 const ok = (body) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
 
@@ -150,13 +151,13 @@ describe('the collection menu', () => {
     collectionExport: { downloading: false, download: vi.fn() },
   };
 
-  test('a curator’s entries go to the kind’s pages', () => {
+  test('a curator’s entries go to the kind’s pages', async () => {
     render(
       <MemoryRouter>
         <CollectionMenu code="COL001" kind="SHED" headline="Tools" downloads={downloads} />
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByRole('button', { name: /collection options/i }));
+    await press(screen.getByRole('button', { name: /collection options/i }));
 
     const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
     expect(hrefs).toEqual(
@@ -170,13 +171,13 @@ describe('the collection menu', () => {
     expect(hrefs.some((h) => h.startsWith('/collections/'))).toBe(false);
   });
 
-  test('a member’s leave link goes to the kind’s page', () => {
+  test('a member’s leave link goes to the kind’s page', async () => {
     render(
       <MemoryRouter>
         <CollectionMenu code="COL001" kind="LIBRARY" headline="Tools" isCurator={false} />
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByRole('button', { name: /collection options/i }));
+    await press(screen.getByRole('button', { name: /collection options/i }));
 
     expect(screen.getByRole('link', { name: /leave/i })).toHaveAttribute(
       'href',
@@ -184,7 +185,7 @@ describe('the collection menu', () => {
     );
   });
 
-  test('without a kind it follows the prefix of the page it sits on', () => {
+  test('without a kind it follows the prefix of the page it sits on', async () => {
     render(
       <MemoryRouter initialEntries={['/stall/COL001/things/THG001']}>
         <Routes>
@@ -197,7 +198,7 @@ describe('the collection menu', () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByRole('button', { name: /collection options/i }));
+    await press(screen.getByRole('button', { name: /collection options/i }));
 
     expect(screen.getByRole('link', { name: /manage members/i })).toHaveAttribute(
       'href',

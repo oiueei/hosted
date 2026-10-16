@@ -145,7 +145,7 @@ heroku config:set \
 > requests one IP may make per minute **while not signed in**, so a script cannot scrape a PUBLIC
 > collection's things, calendars, FAQ and journeys as fast as your dynos answer. It is on by default
 > and you do not need to set anything: a signed-in member is never counted, a page is a handful of
-> reads, and the bucket is the real client IP (`TRUSTED_PROXY_COUNT`, `1` on Heroku). Two things to
+> reads (the link preview and the old-address redirect, which ask the database for a visitor, spend the same count and go quiet past it), and the bucket is the real client IP (`TRUSTED_PROXY_COUNT`, `1` on Heroku). Two things to
 > know. The count lives in each web process's memory, not in Postgres — it costs no query, and it
 > is approximate: every gunicorn process (`WEB_CONCURRENCY` per dyno) counts on its own, so one
 > address gets up to the rate times your processes, and a restart or deploy forgets it. And an office
@@ -223,6 +223,8 @@ The `Procfile` release command runs migrations automatically on each deploy. If 
 ```bash
 heroku run python manage.py migrate -a your-app-name
 ```
+
+**A new required column needs a `db_default`.** While the release phase runs, the dynos of the previous version keep serving, and a Django `default` exists only in the new model: their `INSERT`s would leave the column out and fail. Give an `AddField` that is not nullable a `db_default` as well, and drop the column in a later release than the one that stops using it. `reservation_max_hours` is the example: it left the model in one release and its column, kept meanwhile with a database default, was dropped in the next.
 
 ### 7. Create a superuser (optional)
 

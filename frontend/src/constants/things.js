@@ -3,24 +3,9 @@
  * Display labels are handled by i18n — use t('types.GIFT_THING') etc.
  */
 
-export const TYPE_VALUES = [
-  'GIFT_THING',
-  'SELL_THING',
-  'RENT_THING',
-  'LEND_THING',
-  'RESERVE_THING',
-];
-
 // Types booked by date. RESERVE is date-based too (pickup date + duration), so
 // its reserve button navigates to RequestThingPage like LEND/RENT.
 export const DATE_TYPES = ['LEND_THING', 'RENT_THING', 'RESERVE_THING'];
-
-// Types whose fee field is REQUIRED and shown.
-export const FEE_TYPES = ['SELL_THING', 'RENT_THING'];
-// Types whose fee field is shown but OPTIONAL (a space may cost something, or
-// nothing). The form shows the input for FEE_TYPES ∪ FEE_OPTIONAL_TYPES and
-// requires it only for FEE_TYPES.
-export const FEE_OPTIONAL_TYPES = ['RESERVE_THING'];
 
 // A rental has a condition and a place like a loan does (and its availability, live,
 // from the calendar), so RENT joins LEND here.

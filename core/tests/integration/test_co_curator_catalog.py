@@ -4,7 +4,7 @@ Every thing in a PROPRIETARY collection was added by a curator *for* the group,
 so its curators (owner + co-curators) may add, edit, hide, activate and delete
 any of them — there is no contributing member with a stake to protect. COMMUNITY
 is unchanged: a member owns what they contribute, and a curator's reach there
-still stops at `remove_thing`.
+still stops short of editing it.
 
 These tests pin `Thing.can_manage`, the `IsThingManager` permission, the widened
 `_can_delete`, and the `can_manage` serializer field the frontend gates on.

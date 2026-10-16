@@ -74,18 +74,52 @@ class TestOnAThing:
         assert res.data["collection_kind"] is None
         assert res.data["collection_allowed_thing_types"] == []
 
-    def test_a_private_collection_is_not_named_to_someone_outside_it(
+    def test_a_stranger_cannot_read_a_thing_of_a_private_collection(
         self, authenticated_client2, user
     ):
-        """The kind follows ``collection_code``: both are withheld together."""
         private = _group(user, "SHED", "SHD001", visibility=Collection.Visibility.PRIVATE)
         thing = Thing.objects.create(code="THG003", owner=user, headline="Lamp")
         private.things.add(thing)
 
         res = authenticated_client2.get(f"/api/v1/things/{thing.code}/")
 
-        assert res.status_code in (status.HTTP_200_OK, status.HTTP_403_FORBIDDEN)
-        assert "SHED" not in str(res.data)
+        assert res.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_an_owner_whose_collection_was_deactivated_is_not_told_its_kind(
+        self, authenticated_client2, user, user2
+    ):
+        """The member still reads their own thing, but the collection they can no
+        longer open is neither named nor typed to them."""
+        community = _group(
+            user,
+            "LIBRARY",
+            "LIBCOM",
+            visibility=Collection.Visibility.PRIVATE,
+            mode=Collection.Mode.COMMUNITY,
+            allowed_thing_types=["LEND_THING"],
+        )
+        community.invites.add(user2)
+        thing = Thing.objects.create(
+            code="THG004", owner=user2, headline="Drill", type="LEND_THING"
+        )
+        community.things.add(thing)
+
+        open_read = authenticated_client2.get(f"/api/v1/things/{thing.code}/")
+        assert open_read.status_code == status.HTTP_200_OK
+        assert open_read.data["collection_code"] == "LIBCOM"
+        assert open_read.data["collection_kind"] == "LIBRARY"
+        assert open_read.data["collection_allowed_thing_types"] == ["LEND_THING"]
+
+        community.status = Collection.Status.INACTIVE
+        community.save()
+
+        res = authenticated_client2.get(f"/api/v1/things/{thing.code}/")
+
+        assert res.status_code == status.HTTP_200_OK
+        assert res.data["collection_code"] is None
+        assert res.data["collection_kind"] is None
+        assert res.data["collection_headline"] is None
+        assert res.data["collection_allowed_thing_types"] == []
 
 
 @pytest.mark.django_db

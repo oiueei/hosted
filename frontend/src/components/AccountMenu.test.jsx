@@ -7,6 +7,7 @@ vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
 
 import { apiFetch } from '../services/api';
 import AccountMenu from './AccountMenu';
+import { press } from '../test/settle';
 
 expect.extend(toHaveNoViolations);
 
@@ -206,9 +207,9 @@ describe('AccountMenu — signed in', () => {
     );
   });
 
-  test('a click inside the open panel is not mistaken for a click outside', () => {
+  test('a click inside the open panel is not mistaken for a click outside', async () => {
     renderMenu();
-    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+    await press(screen.getByRole('button', { name: /your account/i }));
 
     fireEvent.mouseDown(screen.getByRole('link', { name: /my profile/i }));
 
@@ -218,7 +219,7 @@ describe('AccountMenu — signed in', () => {
 
   test('the open panel has no axe violations', async () => {
     const { container } = renderMenu();
-    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+    await press(screen.getByRole('button', { name: /your account/i }));
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();

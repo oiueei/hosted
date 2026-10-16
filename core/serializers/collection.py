@@ -11,7 +11,7 @@ from rest_framework import serializers
 from core.models import RSVP, Collection, InvitationProposal, Thing
 from core.models.collection import KIND_THING_TYPES, kind_for_thing_type
 from core.serializers.thing import ThingComputedFieldsMixin
-from core.utils import asset_url, doc_asset_url
+from core.utils import Refusal, asset_url, doc_asset_url
 from core.validators import (
     LOCALIZED_DESCRIPTION_STORAGE,
     LOCALIZED_DESCRIPTION_VISIBLE,
@@ -511,8 +511,10 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
             attrs["visibility"] = Collection.Visibility.PRIVATE
         listed = attrs.get("allowed_thing_types", [])
         # A client that names no kind (the API before kinds) gets the one its verbs
-        # belong to; a list that names none or several kinds cannot say.
-        kind = attrs.get("kind") or _kind_of_verbs(listed)
+        # belong to; one that names neither a kind nor any verb gets a stall, the
+        # model's default (and what the kind migration made of a collection with no
+        # verbs); a list that spans several kinds cannot say.
+        kind = attrs.get("kind") or (_kind_of_verbs(listed) if listed else Collection.Kind.STALL)
         attrs["kind"] = kind
         attrs["allowed_thing_types"] = normalize_allowed_thing_types(kind, mode, listed)
         _validate_reservation_minutes(
@@ -666,7 +668,7 @@ def _normalize_tags(tags):
 
 
 def _kind_of_verbs(verbs):
-    """The one kind a list of verbs belongs to, else the 400 that says why not."""
+    """The one kind a non-empty list of verbs belongs to, else the 400 that says why not."""
     unknown = [v for v in verbs if kind_for_thing_type(v) is None]
     if unknown:
         raise serializers.ValidationError(f"These types are not allowed: {unknown}")
@@ -863,17 +865,23 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
                 "reservation_max_minutes", instance.reservation_max_minutes if instance else 180
             ),
         )
-        # Orphan check: if this is an update narrowing the list, every existing
-        # thing currently in the collection must keep a valid slot in the new
-        # list. Otherwise the rule would become incoherent ("type X is not
-        # allowed but the collection contains 3 of them").
+        # Orphan check: narrowing the list must leave every thing of the collection's
+        # own family a valid slot. A thing of the other family (a lend in a stall, kept
+        # by design when a collection that held both was given a kind) is tolerated
+        # and not counted: it was never covered by the list. What can be orphaned
+        # inside a kind is the paid verb, when a COMMUNITY group stops letting
+        # members set a price.
         if instance is not None and "allowed_thing_types" in attrs and allowed_thing_types:
-            existing_types = set(instance.things.values_list("type", flat=True))
+            own_family = set(KIND_THING_TYPES[instance.kind])
+            existing_types = set(instance.things.values_list("type", flat=True)) & own_family
             orphaned = sorted(existing_types - set(allowed_thing_types))
             if orphaned:
                 raise serializers.ValidationError(
-                    "Cannot restrict the allowed types: existing things would be"
-                    f" orphaned (types: {orphaned}). Remove them first."
+                    Refusal(
+                        "Cannot restrict the allowed types: existing things would be"
+                        f" orphaned (types: {', '.join(orphaned)}). Remove them first.",
+                        "priced_things_remain",
+                    )
                 )
         return attrs
 
@@ -921,12 +929,6 @@ class CollectionProposeInviteSerializer(serializers.Serializer):
 
     email = serializers.EmailField(max_length=64)
     note = SafeTextField(max_length=256, required=False, allow_blank=True)
-
-
-class CollectionRemoveThingSerializer(serializers.Serializer):
-    """Serializer for removing a thing from a collection."""
-
-    thing_code = serializers.CharField(max_length=6)
 
 
 class CollectionRemoveInviteSerializer(serializers.Serializer):

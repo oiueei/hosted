@@ -5,7 +5,7 @@ Thing serializers for OIUEEI.
 from django.db.models import Count, Prefetch
 from rest_framework import serializers
 
-from core.models import Thing
+from core.models import Collection, Thing
 from core.models.booking import DATE_BASED_TYPES, BookingPeriod
 from core.utils import asset_url, doc_asset_url
 from core.validators import (
@@ -435,16 +435,14 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     def _viewable_collections(self, obj):
         """The thing's collections **this viewer is allowed to read**, in order.
 
-        A thing can live in several collections at once, and the collection
-        fields below used to answer with ``collections.all()[0]`` — whichever the
-        DB handed back first, viewable or not. So a drill shared with both a
-        private family group and a public neighbourhood one told every reader of
-        the public one the name and code of the private one: `/shared` printed it
-        on the card (that page was retired on 2026-10-03), `/things/{code}` used
-        it as the back label for anonymous visitors, and following it landed on a
-        403. `Thing.can_view()` let the
-        *thing* through on the strength of the public collection; nothing then
-        re-asked the question about the collection it named.
+        A thing lives in one collection (``core/services/single_collection.py``);
+        this still walks every row of ``collections``, in case one predates that
+        rule. The collection fields below answer from the first of them the viewer
+        may read, never from ``collections.all()[0]`` unjudged: ``Thing.can_view()``
+        lets the *thing* through on the strength of a collection the reader has,
+        and nothing else re-asks the question about the collection a field names,
+        so a private collection's name and code would reach someone who cannot
+        open it.
 
         Mirrors ``Collection.can_view()`` exactly — owner regardless of status,
         never INACTIVE otherwise, then PUBLIC or membership — but reads the
@@ -563,15 +561,15 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         return self.context["_viewer_muted_collection_codes"]
 
     def _collection_has_date_things(self, collection):
-        """The calendar entry's rule: the allowlist when the owner set one, else
-        whether the group holds a thing booked by date. Cached per collection on
-        the shared context, so a list read through a collection asks once, not
-        once per thing."""
+        """The calendar entry's rule: a library or a shed always has dates to
+        export; a stall only when it holds a thing booked by date (one the kind
+        migration kept from a collection that also lent). Cached per collection
+        on the shared context, so a list read through a collection asks once,
+        not once per thing — and a library or a shed asks nothing."""
         cache = self.context.setdefault("_date_things_by_collection", {})
         if collection.code not in cache:
-            allowed = collection.allowed_thing_types or []
-            if allowed:
-                cache[collection.code] = any(kind in DATE_BASED_TYPES for kind in allowed)
+            if collection.kind != Collection.Kind.STALL:
+                cache[collection.code] = True
             else:
                 cache[collection.code] = collection.things.filter(
                     type__in=DATE_BASED_TYPES
@@ -593,9 +591,9 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         ``is_curator`` / ``is_member`` follow ``CollectionSerializer`` (a co-owner is
         a curator, never a member); ``digest_frequency`` and ``is_digest_muted`` feed
         the member's "Mute the summary"; ``has_date_things`` is the rule the
-        collection page uses for the calendar entry — the allowlist when there is
-        one, else whether the group holds a date-based thing (one query, curators of
-        an old collection only).
+        collection page uses for the calendar entry — always for a library or a
+        shed, for a stall whether it holds a date-based thing (one query, a stall's
+        curator only).
         """
         request = self.context.get("request")
         wanted = self._requested_collection_code()

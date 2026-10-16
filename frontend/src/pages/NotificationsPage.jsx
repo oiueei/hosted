@@ -8,15 +8,14 @@ import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import StatusRegion from '../components/StatusRegion';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function NotificationsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { token } = useParams();
 
-  useEffect(() => {
-    document.title = t('titles.notifications');
-  }, [t]);
+  useDocumentTitle(t('titles.notifications'));
 
   const { tc: theeemeColors, btnStyle } = useTheeeme();
 

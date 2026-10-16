@@ -9,6 +9,7 @@ import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function DeleteThingPage() {
   const { t } = useTranslation();
@@ -32,11 +33,11 @@ export default function DeleteThingPage() {
   const error = failedCode === thingCode;
   useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
 
-  useEffect(() => {
-    document.title = thing
+  useDocumentTitle(
+    thing
       ? t('titles.deleteThing', { headline: L(thing.headline) })
-      : t('titles.deleteThingDefault');
-  }, [thing, t, L]);
+      : t('titles.deleteThingDefault')
+  );
 
   useEffect(() => {
     if (!userCode) return;

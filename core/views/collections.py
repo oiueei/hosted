@@ -16,7 +16,6 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import serializers, status
-from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -34,7 +33,6 @@ from core.serializers import (
     CollectionInviteSerializer,
     CollectionProposeInviteSerializer,
     CollectionRemoveInviteSerializer,
-    CollectionRemoveThingSerializer,
     CollectionSerializer,
     CollectionUpdateSerializer,
     EmailNoteTestSerializer,
@@ -162,11 +160,6 @@ class CollectionViewSet(ModelViewSet):
         return CollectionSerializer
 
     def get_permissions(self):
-        # remove_thing is intentionally NOT gated by IsCollectionOwner here: its
-        # rule is broader (in COMMUNITY mode a thing's own owner may remove it), so
-        # it is enforced inline in the action. It also fetches via get_object_or_404,
-        # so an object-level permission would never run for it anyway.
-        #
         # destroy stays owner-only — deleting the collection is deliberately not
         # a co-owner power. update/partial_update widen to the curator tier.
         if self.action == "destroy":
@@ -265,46 +258,6 @@ class CollectionViewSet(ModelViewSet):
         return Response(
             CollectionSerializer(self._created_collection, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
-        )
-
-    @action(detail=True, methods=["post"], url_path="remove-thing")
-    def remove_thing(self, request, code=None):
-        """Remove a thing from the collection (without deleting it).
-
-        Owner can remove any thing. In COMMUNITY mode, thing owners
-        can remove their own things.
-        """
-        collection = get_object_or_404(Collection, code=self.kwargs[self.lookup_field])
-
-        serializer = CollectionRemoveThingSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        thing_code = serializer.validated_data["thing_code"]
-
-        thing = collection.things.filter(code=thing_code).first()
-        if thing is None:
-            return Response(
-                {"error": "Thing is not in this collection"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Collection owner or a co-owner can always remove. In community mode,
-        # thing owners can remove their own things.
-        if not collection.is_curator(request.user.code):
-            if not (collection.is_community() and thing.is_owner(request.user.code)):
-                return Response(
-                    {"error": "You do not have permission to remove this thing"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
-        collection.things.remove(thing)
-
-        return Response(
-            {
-                "message": "Thing removed from collection",
-                "collection": CollectionSerializer(collection, context={"request": request}).data,
-            },
-            status=status.HTTP_200_OK,
         )
 
 

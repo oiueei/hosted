@@ -1,0 +1,88 @@
+{
+  "_about": "Shared by core/tests/unit/test_kind_verb_parity.py and frontend/src/constants/things.test.js. `kinds` is the map from a collection's kind to the verbs it holds (server: core.models.collection.KIND_THING_TYPES; browser: constants/things.js) and `cases` the verb a thing takes for a kind and a price (server: derive_thing_type, which decides it; browser: deriveThingType, which decides what the form shows and which verb the deployment's policy is asked about). `fee` is what the form holds and the server receives: a string or null. An unknown kind is left out on purpose: the server refuses it (KeyError) while the browser falls back to a stall, so the two do not treat it alike.",
+  "kinds": {
+    "STALL": ["GIFT_THING", "SELL_THING"],
+    "LIBRARY": ["LEND_THING", "RENT_THING"],
+    "SHED": ["RESERVE_THING"]
+  },
+  "cases": [
+    {
+      "kind": "STALL",
+      "fee": null,
+      "verb": "GIFT_THING",
+      "note": "no price: the free verb"
+    },
+    {
+      "kind": "STALL",
+      "fee": "0",
+      "verb": "GIFT_THING",
+      "note": "a zero price is no price"
+    },
+    {
+      "kind": "STALL",
+      "fee": "0.00",
+      "verb": "GIFT_THING",
+      "note": "a zero price written with decimals is no price"
+    },
+    {
+      "kind": "STALL",
+      "fee": "0.01",
+      "verb": "SELL_THING",
+      "note": "the smallest price is a price"
+    },
+    {
+      "kind": "STALL",
+      "fee": "12.50",
+      "verb": "SELL_THING",
+      "note": "an ordinary price"
+    },
+    {
+      "kind": "LIBRARY",
+      "fee": null,
+      "verb": "LEND_THING",
+      "note": "no price: the free verb"
+    },
+    {
+      "kind": "LIBRARY",
+      "fee": "0",
+      "verb": "LEND_THING",
+      "note": "a zero price is no price"
+    },
+    {
+      "kind": "LIBRARY",
+      "fee": "0.00",
+      "verb": "LEND_THING",
+      "note": "a zero price written with decimals is no price"
+    },
+    {
+      "kind": "LIBRARY",
+      "fee": "0.01",
+      "verb": "RENT_THING",
+      "note": "the smallest price is a price"
+    },
+    {
+      "kind": "LIBRARY",
+      "fee": "12.50",
+      "verb": "RENT_THING",
+      "note": "an ordinary price"
+    },
+    {
+      "kind": "SHED",
+      "fee": null,
+      "verb": "RESERVE_THING",
+      "note": "a shed books without a price"
+    },
+    {
+      "kind": "SHED",
+      "fee": "0",
+      "verb": "RESERVE_THING",
+      "note": "a shed books at a zero price"
+    },
+    {
+      "kind": "SHED",
+      "fee": "12.50",
+      "verb": "RESERVE_THING",
+      "note": "a price does not change a shed's verb: it always books"
+    }
+  ]
+}

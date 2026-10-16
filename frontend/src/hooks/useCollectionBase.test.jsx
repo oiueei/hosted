@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router';
 import { describe, test, expect } from 'vitest';
 import { useCollectionBase, useCanonicalCollectionPath } from './useCollectionBase';
@@ -64,7 +64,7 @@ describe('useCanonicalCollectionPath', () => {
     );
     expect(screen.getByTestId('where')).toHaveTextContent('/library/AbC123');
 
-    screen.getByRole('button', { name: 'back' }).click();
+    act(() => screen.getByRole('button', { name: 'back' }).click());
 
     return waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/me'));
   });

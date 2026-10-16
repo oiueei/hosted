@@ -1,16 +1,13 @@
-import { useEffect } from 'react';
-
 import { useTranslation } from 'react-i18next';
 import { Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
 import AccountMenu from '../components/AccountMenu';
 import ButtonLink from '../components/ButtonLink';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function NotFoundPage() {
   const { t } = useTranslation();
-  useEffect(() => {
-    document.title = t('titles.notFound');
-  }, [t]);
+  useDocumentTitle(t('titles.notFound'));
 
   const { tc, btnStyle } = useTheeeme();
   const isLoggedIn = !!localStorage.getItem('userCode');

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { TextInput, TextArea, Select, Button, Accordion } from 'hds-react';
@@ -6,7 +6,8 @@ import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
 import CollectionModeField from '../components/CollectionModeField';
-import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
+import useCapabilities, { useCapabilitiesSettled, isOfferable } from '../hooks/useCapabilities';
+import LoadingSpinner from '../components/LoadingSpinner';
 import RentalRulesFields from '../components/RentalRulesFields';
 import ReservationRulesFields from '../components/ReservationRulesFields';
 import ClosedDatesField from '../components/ClosedDatesField';
@@ -22,6 +23,7 @@ import hdsLang from '../utils/hdsLang';
 import ApprovalNotice from '../components/ApprovalNotice';
 import { collectionPath, kindOfPrefix } from '../utils/collectionPath';
 import { allowedVerbsFor } from '../utils/collectionKind';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 /**
  * `/stall/new`, `/library/new` and `/shed/new`: the form for the kind named by the
@@ -32,9 +34,13 @@ import { allowedVerbsFor } from '../utils/collectionKind';
 export default function CreateCollectionPage() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-  const capabilities = useCapabilities();
+  const { capabilities, settled } = useCapabilitiesSettled();
   const kind = kindOfPrefix(pathname.split('/')[1]);
   if (!kind) return <Navigate to="/new" replace />;
+  // Until the deployment has answered, neither form nor notice: showing the form
+  // first and swapping it for the notice would throw away what was typed. A failed
+  // answer is `null` and settles open, as everywhere else.
+  if (!settled) return <LoadingSpinner />;
   if (!isOfferable(capabilities, 'collection_kinds', kind)) {
     return (
       <PageLayout
@@ -55,9 +61,7 @@ export default function CreateCollectionPage() {
 function CreateCollectionForm({ kind }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  useEffect(() => {
-    document.title = t('titles.newCollection');
-  }, [t]);
+  useDocumentTitle(t('titles.newCollection'));
   const location = useLocation();
   const backPath = location.state?.backPath || '/';
   const backLabel = location.state?.backLabel || t('common.home');

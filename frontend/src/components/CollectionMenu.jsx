@@ -38,7 +38,7 @@ const PANEL_ID = 'collection-menu-panel';
  * The downloads themselves belong to `useCollectionDownloads`, which the
  * page calls once and hands here and to `CollectionDownloadsStatus`; the
  * calendar entry appears only where the group holds date-based things
- * (`hasDateThings`, the rule the hero button always used). The JSON
+ * (`hasDateThings`: always in a library or a shed, in a stall only when it holds a loan, a rental or a reservation). The JSON
  * download is **direct, no warning**: the privacy notice
  * it used to carry at the settings page's foot went with it — whoever
  * runs a group should already know what its copy holds, and the place to

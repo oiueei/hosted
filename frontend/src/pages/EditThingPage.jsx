@@ -19,6 +19,8 @@ import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
 import { collectionPath, collectionThingPath } from '../utils/collectionPath';
+import { membersPriceFromVerbs } from '../utils/collectionKind';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function EditThingPage() {
   const { t } = useTranslation();
@@ -39,11 +41,9 @@ export default function EditThingPage() {
   // The allowlist of its collection, only to tell whether members may set a price.
   const [collectionAllowedTypes, setCollectionAllowedTypes] = useState([]);
   const [headline, setHeadline] = useState('');
-  useEffect(() => {
-    document.title = headline
-      ? t('titles.editThing', { headline: L(headline) })
-      : t('titles.editThingDefault');
-  }, [headline, t, L]);
+  useDocumentTitle(
+    headline ? t('titles.editThing', { headline: L(headline) }) : t('titles.editThingDefault')
+  );
   const [description, setDescription] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -128,11 +128,7 @@ export default function EditThingPage() {
   const type = isStray ? savedType : deriveThingType(kind, fee);
   // A community stall or library whose members may not set a price lists only its free
   // verb: there is no price to edit, as there was none to give.
-  const priceAllowed = !(
-    (thingCollectionKind === 'STALL' || thingCollectionKind === 'LIBRARY') &&
-    collectionAllowedTypes.length === 1 &&
-    collectionAllowedTypes[0] === KIND_THING_TYPES[thingCollectionKind][0]
-  );
+  const priceAllowed = membersPriceFromVerbs(thingCollectionKind, collectionAllowedTypes);
   // A thing already offered under a verb this deployment has stopped handing out stays
   // editable, as the server allows: it only refuses a *change* into a withheld one,
   // so the stored verb is never withheld here.
@@ -222,6 +218,7 @@ export default function EditThingPage() {
           kind={kind}
           type={type}
           priceAllowed={priceAllowed}
+          verbFollowsPrice={!!thingCollectionKind && !isStray}
           approvalCatalogue={notOffered ? [{ label: t('types.' + type), value: type }] : []}
           isEndless={isEndless}
           setIsEndless={setIsEndless}

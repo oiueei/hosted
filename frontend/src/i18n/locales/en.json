@@ -182,7 +182,7 @@
     "tryAnotherEmail": "Try another email",
     "magicLinkSent": "If this email is registered, your magic link is on its way — check your inbox, and your spam folder just in case.",
     "errorSendingLink": "Error sending link.",
-    "pitch": "Share what you have with the people around you. Create a collection of things to gift, sell, rent, lend or reserve — and invite people to browse it and ask for what they need.",
+    "pitch": "Share what you have with the people around you: a stall to give away or sell, a library of things to lend or rent out, a shed to book by the day or by the hour. Then invite your people to ask for what they need.",
     "nextNotice": "Sign in and we'll take you straight to the page you were opening.",
     "licence": "OIUEEI's code is open source under the EUPL-1.2, a strong copyleft licence. The project lives on <1>GitHub</1>: ideas, issues and collaboration are welcome there.",
     "noBanner": "You won't see a cookie banner: there is nothing to consent to. No advertising, no analytics, no third-party code running in your browser — and you don't have to take my word for it, <1>you can check</1>.",
@@ -317,7 +317,9 @@
     "showMoreThings_other": "Show {{count}} more things",
     "visitorJoin": "Join this group",
     "visitorJoinError": "We couldn't add you to the group. Please try again.",
-    "welcomeDoc": "The group's welcome document (PDF)"
+    "welcomeDoc": "The group's welcome document (PDF)",
+    "noOpeningHoursLabel": "Nobody can book yet",
+    "noOpeningHoursBody": "This shed is booked by the hour and has no opening hours. Add them in Edit collection, under \"More options\"."
   },
   "digestMute": {
     "pageTitle": "Email summaries — OIUEEI",
@@ -337,7 +339,6 @@
     "availabilityLabel": "Availability.",
     "locationLabel": "Location.",
     "conditionLabel": "Condition.",
-    "photos": "Photos",
     "faqHeading": "Questions or comments?",
     "faqPlaceholder": "Write your question here...",
     "faqLabel": "Question",
@@ -683,7 +684,6 @@
     "myCollections": "My collections",
     "inactiveCollections": "Inactive collections",
     "sharedWithMe": "Shared with me",
-    "collectionInfo": "{{things}} things · {{guests}} members",
     "viewCollection": "View {{headline}}",
     "loadingCollections": "Loading collections...",
     "noCollections": "You have no active collections yet.",
@@ -701,7 +701,11 @@
     "myGroupsIntro": "Every group you're in, including the ones you run. Leaving one removes your access to it.",
     "youRunIt": "You run it",
     "colGroup": "Group",
-    "colTeam": "Run by"
+    "colTeam": "Run by",
+    "thingsCount_one": "{{count}} thing",
+    "thingsCount_other": "{{count}} things",
+    "membersCount_one": "{{count}} member",
+    "membersCount_other": "{{count}} members"
   },
   "koro": {
     "basic": "Basic",
@@ -793,7 +797,6 @@
     "newsLabel": "News and announcements (optional)",
     "newsHelper": "A summary of what's new in each group you're in. You can turn a single group's summary off from the collection page, or from the foot of the email itself.",
     "saved": "Preferences saved.",
-    "errorLoading": "Error loading preferences.",
     "errorSaving": "Error saving.",
     "invalidLink": "This link is invalid or has expired. Please sign in to change your preferences."
   },
@@ -819,7 +822,9 @@
     "whatsapp": "WhatsApp",
     "emailSubject": "I'm inviting you to {{headline}} on OIUEEI",
     "emailBody": "Hi,\n\nI'm inviting you to \"{{headline}}\" on OIUEEI, where a group shares its things among its members.\n\nYou can join here: {{url}}",
+    "emailBodyKind": "Hi,\n\nI'm inviting you to \"{{headline}}\", {{kind}} on OIUEEI, where a group shares its things among its members.\n\nYou can join here: {{url}}",
     "whatsappText": "I'm inviting you to \"{{headline}}\" on OIUEEI, where a group shares its things among its members: {{url}}",
+    "whatsappTextKind": "I'm inviting you to \"{{headline}}\", {{kind}} on OIUEEI, where a group shares its things among its members: {{url}}",
     "copied": "Invite link copied to clipboard.",
     "copyError": "We couldn't copy the link. Try again or use one of the other options.",
     "linkError": "We couldn't generate the invite link. Please try again.",
@@ -1048,6 +1053,7 @@
     "helper": "As JSON: one key per weekday (\"0\" Monday … \"6\" Sunday), each a list of [\"HH:MM\",\"HH:MM\"] ranges — e.g. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Leave a day out, or give it an empty list, to keep it closed.",
     "invalidJson": "That's not valid JSON — check the brackets and quotes.",
     "invalidOnSave": "Nothing was saved: the weekly opening hours (under “More options”) aren't valid JSON. Fix them and save again.",
+    "noneOpen": "With no opening hours, nobody can book: add at least one time range.",
     "previewLabel": "Reads as:",
     "closed": "closed"
   },
@@ -1075,9 +1081,11 @@
     "co_owners_full_one": "This group's team already has 1 person besides the founder — the most it allows.",
     "co_owners_full_other": "This group's team already has {{count}} people besides the founder — the most it allows.",
     "dates_taken": "Those dates are already taken.",
+    "no_prices_here": "This group doesn't take prices.",
     "not_a_member": "You need to be a member of this group to reserve.",
     "not_available": "This isn't available right now.",
     "not_awaiting_return": "This isn't waiting to be returned any more.",
+    "priced_things_remain": "Some things in this group have a price. Take it off them, or remove them, before turning off prices for members.",
     "rental_length_not_allowed": "This collection only allows periods of {{allowed}} days.",
     "rental_pickup_weekday": "Pickup isn't possible on that day of the week.",
     "rental_return_weekday": "Return isn't possible on that day of the week.",
@@ -1113,22 +1121,26 @@
     "time_taken": "That time is already taken."
   },
   "kinds": {
+    "chooseIntro": "Choose what your things are for. The kind can't be changed later.",
     "STALL": {
       "short": "Stall",
       "long": "Stall",
-      "what": "Things to sell or give away",
+      "what": "Things to sell or give away: whoever takes one keeps it.",
+      "withArticle": "a stall",
       "create": "Create stall"
     },
     "LIBRARY": {
       "short": "Library",
       "long": "Library of Things",
-      "what": "Things to lend or rent out",
+      "what": "Things to lend or rent out: people take them home and bring them back.",
+      "withArticle": "a library of things",
       "create": "Create library"
     },
     "SHED": {
       "short": "Shed",
       "long": "Shed",
-      "what": "Things to book by the day or by the hour",
+      "what": "Machines and spaces used where they are, booked by the day or by the hour.",
+      "withArticle": "a shed",
       "create": "Create shed"
     }
   },

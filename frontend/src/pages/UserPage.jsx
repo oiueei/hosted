@@ -17,6 +17,7 @@ import ButtonLink from '../components/ButtonLink';
 import ResponsiveTable from '../components/ResponsiveTable';
 import useTheeeme from '../hooks/useTheeeme';
 import { collectionPath } from '../utils/collectionPath';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 // The groups of the account, each once: the ones it runs first, then the ones it is
 // only a member of; each part keeps the order of its own list. What it runs is what
@@ -59,11 +60,7 @@ export default function UserPage() {
   // Own profile: the freshly-fetched colours; other profiles: the viewer's,
   // from localStorage (the hook's fallback).
   const { tc, koro: koroType, btnStyle, btnSecondaryStyle } = useTheeeme(user?.theeeme_colors);
-  useEffect(() => {
-    // Both branches always fell back to the same word, and it was English in
-    // every locale — the one string on this page that never got externalised.
-    document.title = t('titles.user', { name: user?.name || t('common.profile') });
-  }, [user, t]);
+  useDocumentTitle(t('titles.user', { name: user?.name || t('common.profile') }));
 
   useEffect(() => {
     if (!userCode) {

@@ -117,11 +117,10 @@ class TestCommunityAddThing:
 
 
 @pytest.mark.django_db
-class TestCommunityRemoveThing:
-    """Tests for removing things from community collections."""
+class TestNoRouteTakesAThingOutOfItsCollection:
+    """A thing lives in exactly one collection, so nothing detaches it from it."""
 
-    def test_owner_can_remove_any_thing(self, authenticated_client, user, user2):
-        """Collection owner can remove any thing from a community collection."""
+    def test_the_curator_gets_a_404_and_the_thing_stays(self, authenticated_client, user, user2):
         coll = Collection.objects.create(owner=user, headline="Market", mode="COMMUNITY")
         thing = Thing.objects.create(owner=user2, headline="Guest Item", type="SELL_THING")
         coll.things.add(thing)
@@ -131,56 +130,9 @@ class TestCommunityRemoveThing:
             {"thing_code": thing.code},
             format="json",
         )
-        assert response.status_code == 200
-        assert not coll.things.filter(code=thing.code).exists()
 
-    def test_thing_owner_can_remove_own_thing_community(self, authenticated_client2, user, user2):
-        """Thing owner can remove their own thing from a community collection."""
-        coll = Collection.objects.create(owner=user, headline="Market", mode="COMMUNITY")
-        coll.invites.add(user2)
-        thing = Thing.objects.create(owner=user2, headline="My Item", type="SELL_THING")
-        coll.things.add(thing)
-
-        response = authenticated_client2.post(
-            f"/api/v1/collections/{coll.code}/remove-thing/",
-            {"thing_code": thing.code},
-            format="json",
-        )
-        assert response.status_code == 200
-        assert not coll.things.filter(code=thing.code).exists()
-
-    def test_invitee_cannot_remove_others_thing_community(self, authenticated_client2, user, user2):
-        """Invitee cannot remove someone else's thing from a community collection."""
-        coll = Collection.objects.create(owner=user, headline="Market", mode="COMMUNITY")
-        coll.invites.add(user2)
-        thing = Thing.objects.create(owner=user, headline="Owner Item", type="GIFT_THING")
-        coll.things.add(thing)
-
-        response = authenticated_client2.post(
-            f"/api/v1/collections/{coll.code}/remove-thing/",
-            {"thing_code": thing.code},
-            format="json",
-        )
-        assert response.status_code == 403
-        # remove_thing's authz is the inline check, not IsCollectionOwner (which is
-        # inert here). Lock the inline {"error": ...} body so a
-        # naive switch to the permission class (which returns {"detail": ...} and
-        # would also wrongly deny community thing-owners) is caught.
-        assert response.json() == {"error": "You do not have permission to remove this thing"}
-
-    def test_invitee_cannot_remove_thing_proprietary(
-        self, authenticated_client2, user, user2, collection, thing
-    ):
-        """Invitee cannot remove things from a proprietary collection."""
-        collection.invites.add(user2)
-
-        response = authenticated_client2.post(
-            f"/api/v1/collections/{collection.code}/remove-thing/",
-            {"thing_code": thing.code},
-            format="json",
-        )
-        assert response.status_code == 403
-        assert collection.things.filter(code=thing.code).exists()
+        assert response.status_code == 404
+        assert coll.things.filter(code=thing.code).exists()
 
 
 @pytest.mark.django_db

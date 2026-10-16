@@ -116,6 +116,36 @@ class TestASecondCollection:
 
 
 @pytest.mark.django_db
+class TestTheRetiredEndpointsStayGone:
+    """A thing used to be moved between collections over the API. Neither route exists
+    any more, and a curator posting to one finds nothing and moves nothing."""
+
+    def test_adding_a_thing_to_a_second_collection_is_not_a_route(
+        self, authenticated_client, first, second, placed
+    ):
+        response = authenticated_client.post(
+            f"/api/v1/collections/{second.code}/add-thing/",
+            {"thing_code": placed.code},
+            format="json",
+        )
+
+        assert response.status_code == 404
+        assert list(placed.collections.all()) == [first]
+
+    def test_taking_a_thing_out_of_its_collection_is_not_a_route(
+        self, authenticated_client, first, placed
+    ):
+        response = authenticated_client.post(
+            f"/api/v1/collections/{first.code}/remove-thing/",
+            {"thing_code": placed.code},
+            format="json",
+        )
+
+        assert response.status_code == 404
+        assert list(placed.collections.all()) == [first]
+
+
+@pytest.mark.django_db
 class TestTheCommandsThatBuildThings:
     def test_the_demo_seed_still_runs(self):
         call_command("seed_demo", stdout=StringIO())

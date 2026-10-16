@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import i18n from '../i18n';
 import JoinToAct from './JoinToAct';
+import { switchLanguage } from '../test/settle';
 
 // A PROPRIETARY lending library, as the collection endpoint describes it once it has
 // loaded: the door names what a member can do there, so it needs both fields.
@@ -153,7 +154,7 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
 
   beforeEach(() => localStorage.clear());
   afterEach(async () => {
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
     localStorage.removeItem('i18nextLng');
   });
 
@@ -209,7 +210,7 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
   ];
 
   test.each(EXAMPLES)('$what', async ({ language, mode, types, name, says, never }) => {
-    await i18n.changeLanguage(language);
+    await switchLanguage(i18n, language);
     renderJoin({ mode, allowedThingTypes: types, collectionHeadline: name });
 
     expect(pitch(name)).toBe(says);
@@ -217,7 +218,7 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
   });
 
   test.each(EXAMPLES)('never promises asking a question: $what', async (example) => {
-    await i18n.changeLanguage(example.language);
+    await switchLanguage(i18n, example.language);
     renderJoin({
       mode: example.mode,
       allowedThingTypes: example.types,
@@ -268,7 +269,7 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
 describe('JoinToAct — the sign-in button', () => {
   beforeEach(() => localStorage.clear());
   afterEach(async () => {
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
     localStorage.removeItem('i18nextLng');
   });
 
@@ -304,7 +305,7 @@ describe('JoinToAct — the sign-in button', () => {
     ['es', '¿Ya tienes cuenta?'],
     ['ca', 'Ja tens un compte?'],
   ])('in %s it reads "%s", and nothing more', async (language, label) => {
-    await i18n.changeLanguage(language);
+    await switchLanguage(i18n, language);
     renderJoin();
 
     const link = screen

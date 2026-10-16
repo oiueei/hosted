@@ -24,6 +24,8 @@ SOURCES = [
     ROOT / "core" / "services" / "booking_service.py",
     ROOT / "core" / "views" / "collections.py",
     ROOT / "core" / "views" / "booking.py",
+    ROOT / "core" / "views" / "_helpers.py",
+    ROOT / "core" / "serializers" / "collection.py",
 ]
 LOCALES = ROOT / "frontend" / "src" / "i18n" / "locales"
 
@@ -75,6 +77,8 @@ def test_every_code_a_request_can_be_refused_with_is_translated():
         "rental_pickup_weekday",
         "time_taken",
         "co_owners_full",
+        "no_prices_here",
+        "priced_things_remain",
     } <= codes
     for lang in ("en", "es", "ca"):
         table = json.loads((LOCALES / f"{lang}.json").read_text())["requestErrors"]

@@ -203,7 +203,21 @@ class TestCatalogueParity:
         keys = {frozenset(d) for d in en.VIRAL_LINES} | {
             frozenset(d) for d in catalogue.VIRAL_LINES
         }
-        assert keys == {frozenset({"text", "cta"})}
+        assert keys == {frozenset({"text", "cta", "path"})}
+
+    @pytest.mark.parametrize("catalogue", OTHER_CATALOGUES, ids=["es", "ca"])
+    def test_every_viral_line_leads_to_the_same_place_in_every_language(self, catalogue):
+        assert [line["path"] for line in en.VIRAL_LINES] == [
+            line["path"] for line in catalogue.VIRAL_LINES
+        ]
+
+    def test_every_viral_line_leads_to_a_form_the_app_has(self):
+        assert {line["path"] for line in en.VIRAL_LINES} <= {
+            "/new",
+            "/stall/new",
+            "/library/new",
+            "/shed/new",
+        }
 
     def test_T_reads_settings_lazily(self):
         with override_settings(EMAIL_LANGUAGE="es"):

@@ -18,6 +18,7 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch } from '../services/api';
 import ShareCollectionMenu from './ShareCollectionMenu';
+import en from '../i18n/locales/en.json';
 
 const props = {
   collectionCode: 'COL001',
@@ -318,6 +319,46 @@ describe('handing the link over', () => {
     expect(text).toMatch(
       /on OIUEEI, where a group shares its things among its members: http:\/\/localhost:3000\/collections\/COL001$/
     );
+  });
+
+  test('the WhatsApp text of a library names its kind, and keeps what OIUEEI is', async () => {
+    render(<ShareCollectionMenu {...props} collectionKind="LIBRARY" isPublic />);
+
+    pick('WhatsApp');
+
+    await waitFor(() => expect(openSpy).toHaveBeenCalled());
+    const text = decodeURIComponent(openSpy.mock.calls[0][0].split('?text=')[1]);
+    expect(text).toBe(
+      `I'm inviting you to "My Collection", ${en.kinds.LIBRARY.withArticle} on OIUEEI, where a group shares its things among its members: http://localhost:3000/library/COL001`
+    );
+    expect(en.kinds.LIBRARY.withArticle).toBe('a library of things');
+  });
+
+  test('the email draft of a library names its kind, the subject is as it was', async () => {
+    render(<ShareCollectionMenu {...props} collectionKind="LIBRARY" isPublic />);
+
+    pick('Email');
+
+    await waitFor(() => expect(window.location.href).toMatch(/^mailto:\?subject=/));
+    const [head, rawBody] = window.location.href.split('&body=');
+    expect(decodeURIComponent(head)).toBe(
+      "mailto:?subject=I'm inviting you to My Collection on OIUEEI"
+    );
+    const body = decodeURIComponent(rawBody);
+    expect(body).toContain(
+      `"My Collection", ${en.kinds.LIBRARY.withArticle} on OIUEEI, where a group shares its things among its members.`
+    );
+    expect(body.endsWith('http://localhost:3000/library/COL001')).toBe(true);
+  });
+
+  test('a collection with no kind is shared with the words it always had', async () => {
+    render(<ShareCollectionMenu {...props} isPublic />);
+
+    pick('WhatsApp');
+
+    await waitFor(() => expect(openSpy).toHaveBeenCalled());
+    const text = decodeURIComponent(openSpy.mock.calls[0][0].split('?text=')[1]);
+    expect(text).toContain('"My Collection" on OIUEEI, where');
   });
 
   test('the WhatsApp hand-off carries the link and cannot reach back', async () => {

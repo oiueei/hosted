@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import ManageInvitesPage from './ManageInvitesPage';
+import { switchLanguage } from '../test/settle';
 
 // The same JSON shape CollectionSerializer emits (subset the page reads).
 const COLLECTION = {
@@ -345,7 +346,7 @@ describe('ManageInvitesPage — co-owners', () => {
     // `useCollectionLanguage` moves the whole UI to the collection's language;
     // put it back so the next test starts in English.
     const { default: i18n } = await import('../i18n');
-    await i18n.changeLanguage('en');
+    await switchLanguage(i18n, 'en');
     localStorage.removeItem('i18nextLng');
   });
 

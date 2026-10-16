@@ -143,8 +143,8 @@ class Thing(models.Model):
         the group, so its curators (owner + co-curators) collectively run the
         catalogue: edit / hide / activate / delete any thing, answer any FAQ,
         decide any booking. COMMUNITY is deliberately excluded — there a member
-        owns what they contribute and a curator's reach stops at
-        ``remove_thing``.
+        owns what they contribute and a curator's reach stops short of
+        editing it.
 
         Iterates ``collections.all()`` (and ``is_curator`` iterates
         ``co_owners.all()``) rather than ``.filter().exists()`` so a view that

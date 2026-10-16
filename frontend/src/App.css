@@ -75,6 +75,16 @@ body {
   padding: var(--spacing-s) 0;
 }
 
+/* The kind of collection, under its name: a quiet line in the hero's own text
+   colour (the grey of `.collection-kind` is for a white page). */
+.form-hero-kind {
+  font-size: var(--fontsize-body-m);
+  line-height: var(--lineheight-m);
+  color: var(--hero-text-color, var(--color-black-90));
+  margin: 0;
+  padding-bottom: var(--spacing-s);
+}
+
 .form-hero-text {
   font-size: var(--fontsize-body-l);
   line-height: 28px;
@@ -2015,11 +2025,16 @@ main:focus {
 
 /* A <caption> whose only content is screen-reader-only exists to give the table a
    name — VoiceOver's table rotor lists tables by name, and every one of these was
-   nameless. It must not also reserve HDS's visible caption margin, or naming a
-   table would push it 16px down the page. The heading above each of them already
-   says the same thing on screen; this is for the reader who is not looking at it. */
-caption:has(> .sr-only:only-child) {
+   nameless. It must not also reserve HDS's visible caption room (a margin, then
+   padding and a white background once HDS wrapped the content in a div of its
+   own), or naming a table would push it down the page. The `sr-only` is matched as
+   a descendant for that reason: it is a direct child in one HDS version and one
+   level down in the next. The heading above each of them already says the same
+   thing on screen; this is for the reader who is not looking at it. */
+caption:has(.sr-only:only-child) {
   margin: 0;
+  padding: 0;
+  background: none;
   line-height: 0;
 }
 
@@ -2247,8 +2262,13 @@ caption:has(> .sr-only:only-child) {
    One card per kind, one destination each. Mobile first: a column, then the
    three side by side at 992px. There is no two-column step at 768px on purpose:
    three cards in two columns leave one alone on a second row, and that is
-   worse than a column (the standing exception to the card-grid progression,
-   as `collections-grid`). White with a thin border, like the table cards. */
+   worse than a column (an exception to the card-grid progression, like
+   `collections-grid`). White with a thin border, like the table cards.
+   Deliberately not HDS `Card`: it paints a `role="region"` with no name — the
+   defect already recorded for `Linkbox` — and three anonymous regions in a list
+   of three options are noise for a screen reader, where a `<ul>` of `<li>` with
+   an `<h2>` says what this is; and its default 2px black border and padding
+   clash with the table cards this one imitates. */
 .kind-cards {
   list-style: none;
   margin: 0;

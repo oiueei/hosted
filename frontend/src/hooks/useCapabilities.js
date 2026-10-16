@@ -134,20 +134,31 @@ export function invalidateMe() {
   cached = { userCode: null, promise: null, optionalAuth: false };
 }
 
-export default function useCapabilities() {
-  const [capabilities, setCapabilities] = useState(null);
+/**
+ * `useCapabilities` and whether the question has been answered. `settled` turns
+ * true once the request is over, answer or failure, so a caller that must not
+ * decide on the `null` of "still asking" (a form that would be swapped for a notice
+ * after the person has started typing) can wait, and still fail open on the `null`
+ * of a failure.
+ */
+export function useCapabilitiesSettled() {
+  const [state, setState] = useState({ capabilities: null, settled: false });
 
   useEffect(() => {
     let alive = true;
     loadCapabilities().then((value) => {
-      if (alive) setCapabilities(value);
+      if (alive) setState({ capabilities: value, settled: true });
     });
     return () => {
       alive = false;
     };
   }, []);
 
-  return capabilities;
+  return state;
+}
+
+export default function useCapabilities() {
+  return useCapabilitiesSettled().capabilities;
 }
 
 /**

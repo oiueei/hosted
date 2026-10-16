@@ -13,15 +13,14 @@ import useTheeeme from '../hooks/useTheeeme';
 import { invalidateMe } from '../hooks/useCapabilities';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 import hdsLang from '../utils/hdsLang';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const AGE_RANGES = ['PRE_1946', 'BOOMER', 'GEN_X', 'GEN_Y', 'GEN_Z', 'GEN_A', 'GEN_B'];
 
 export default function EditProfilePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  useEffect(() => {
-    document.title = t('titles.editProfile');
-  }, [t]);
+  useDocumentTitle(t('titles.editProfile'));
   const location = useLocation();
   const backPath = location.state?.backPath || '/';
   const backLabel = location.state?.backLabel || t('common.home');

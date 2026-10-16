@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { settle, press } from './settle';
 import en from '../i18n/locales/en.json';
 
 /**
@@ -47,9 +48,11 @@ function setApi(collection = {}) {
   });
 }
 
-const renderCreate = (kind) => {
+// The create page asks the deployment what it allows before it shows anything, so the
+// form is there a moment after the render: the helper hands it back once it is.
+const renderCreate = async (kind) => {
   setApi();
-  return render(
+  const view = render(
     <MemoryRouter initialEntries={[`/${kind.toLowerCase()}/new`]}>
       <Routes>
         <Route path="/:kind/new" element={<CreateCollectionPage />} />
@@ -57,6 +60,11 @@ const renderCreate = (kind) => {
       </Routes>
     </MemoryRouter>
   );
+  await waitFor(() =>
+    expect(view.container.querySelector('#create-collection-headline')).toBeInTheDocument()
+  );
+  await settle(apiFetch);
+  return view;
 };
 
 const renderEdit = (collection) => {
@@ -108,14 +116,14 @@ describe('Create — the page is the kind’s', () => {
     ['STALL', 'Create stall'],
     ['LIBRARY', 'Create library'],
     ['SHED', 'Create shed'],
-  ])('a %s says so in its title', (kind, title) => {
-    renderCreate(kind);
+  ])('a %s says so in its title', async (kind, title) => {
+    await renderCreate(kind);
 
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
   });
 
-  test.each(['STALL', 'LIBRARY', 'SHED'])('a %s has no choice of verbs to make', (kind) => {
-    const { container } = renderCreate(kind);
+  test.each(['STALL', 'LIBRARY', 'SHED'])('a %s has no choice of verbs to make', async (kind) => {
+    const { container } = await renderCreate(kind);
 
     expect(
       container.querySelector('#create-collection-allowed-thing-types-main-button')
@@ -127,8 +135,8 @@ describe('Create — the page is the kind’s', () => {
     ['STALL', true],
     ['LIBRARY', true],
     ['SHED', false],
-  ])('the mode is a choice for a %s: %s', (kind, choosable) => {
-    renderCreate(kind);
+  ])('the mode is a choice for a %s: %s', async (kind, choosable) => {
+    await renderCreate(kind);
 
     expect(screen.queryAllByRole('radio').length > 0).toBe(choosable);
   });
@@ -152,8 +160,8 @@ describe('Create — which sections each kind shows', () => {
     ['STALL', { rental: false, reservation: false, closedDates: false, requestInfo: false }],
     ['LIBRARY', { rental: true, reservation: false, closedDates: true, requestInfo: true }],
     ['SHED', { rental: false, reservation: true, closedDates: true, requestInfo: true }],
-  ])('%s', (kind, expected) => {
-    const { container } = renderCreate(kind);
+  ])('%s', async (kind, expected) => {
+    const { container } = await renderCreate(kind);
 
     expect(sections(container)).toEqual({
       ...expected,
@@ -172,22 +180,23 @@ describe('Create — the members-can-set-a-price switch', () => {
   test.each([
     ['STALL', en.collectionForm.membersPriceStall],
     ['LIBRARY', en.collectionForm.membersPriceLibrary],
-  ])('a %s that is Community has it, on, with its own words', (kind, label) => {
-    const { container } = renderCreate(kind);
+  ])('a %s that is Community has it, on, with its own words', async (kind, label) => {
+    const { container } = await renderCreate(kind);
     expect(sw(container)).toBeNull();
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
+    await press(screen.getByRole('radio', { name: 'Community' }));
+    await settle(apiFetch);
 
     expect(sw(container)).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
-  test('a PROPRIETARY one and a shed have none', () => {
-    const stall = renderCreate('STALL');
+  test('a PROPRIETARY one and a shed have none', async () => {
+    const stall = await renderCreate('STALL');
     expect(sw(stall.container)).toBeNull();
     stall.unmount();
 
-    const shed = renderCreate('SHED');
+    const shed = await renderCreate('SHED');
     expect(sw(shed.container)).toBeNull();
   });
 });
@@ -202,7 +211,7 @@ describe('Create — what is sent, for each kind and mode', () => {
     ['LIBRARY', 'COMMUNITY', false, ['LEND_THING']],
     ['SHED', 'PROPRIETARY', true, VERBS.SHED],
   ])('%s, %s, members may set a price: %s → %j', async (kind, mode, price, verbs) => {
-    const { container } = renderCreate(kind);
+    const { container } = await renderCreate(kind);
     name(container);
     if (mode === 'COMMUNITY') {
       fireEvent.click(screen.getByRole('radio', { name: 'Community' }));
@@ -216,7 +225,7 @@ describe('Create — what is sent, for each kind and mode', () => {
   });
 
   test('a stall sends none of what a stall has no use for', async () => {
-    const { container } = renderCreate('STALL');
+    const { container } = await renderCreate('STALL');
     name(container);
 
     create();
@@ -235,7 +244,7 @@ describe('Create — what is sent, for each kind and mode', () => {
   });
 
   test('a library sends its rental rules, its closed days and its request note', async () => {
-    const { container } = renderCreate('LIBRARY');
+    const { container } = await renderCreate('LIBRARY');
     name(container);
 
     create();
@@ -251,7 +260,7 @@ describe('Create — what is sent, for each kind and mode', () => {
   });
 
   test('a shed sends its reservation rules and no rental length', async () => {
-    const { container } = renderCreate('SHED');
+    const { container } = await renderCreate('SHED');
     name(container);
 
     create();
@@ -262,7 +271,7 @@ describe('Create — what is sent, for each kind and mode', () => {
   });
 
   test('a library’s deposit policy reaches the request', async () => {
-    const { container } = renderCreate('LIBRARY');
+    const { container } = await renderCreate('LIBRARY');
     name(container);
     await openMore();
     fireEvent.change(container.querySelector('#create-collection-deposit-policy'), {

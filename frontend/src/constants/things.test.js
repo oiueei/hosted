@@ -1,5 +1,22 @@
 import { describe, test, expect } from 'vitest';
 import { DETAIL_TYPES, KIND_THING_TYPES, deriveThingType, kindOfThingType } from './things';
+import parity from '../test/kindVerbParity.json';
+
+// The table lives in src/test/kindVerbParity.json, read by this suite and by
+// core/tests/unit/test_kind_verb_parity.py (one of the shared fixtures CLAUDE.md
+// names): the form's copy of the server's rule and the rule itself stay one.
+describe('the form and the server agree on the verb a price makes', () => {
+  test('the kinds hold exactly the verbs the server says', () => {
+    expect(KIND_THING_TYPES).toEqual(parity.kinds);
+  });
+
+  test.each(parity.cases.map((c) => [c.kind, c.fee, c.verb, c.note]))(
+    '%s with a price of %s is %s (%s)',
+    (kind, fee, verb) => {
+      expect(deriveThingType(kind, fee)).toBe(verb);
+    }
+  );
+});
 
 describe('the verb a thing takes follows its collection’s kind and its price', () => {
   test.each([

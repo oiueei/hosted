@@ -7,6 +7,7 @@ import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import { useCollectionBase } from '../hooks/useCollectionBase';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function RemoveGuestPage() {
   const { t } = useTranslation();
@@ -26,9 +27,7 @@ export default function RemoveGuestPage() {
     if (!guestCode) navigate(backPath);
   }, [guestCode, navigate, backPath]);
 
-  useEffect(() => {
-    document.title = t('titles.removeGuest');
-  }, [t]);
+  useDocumentTitle(t('titles.removeGuest'));
 
   const [removing, setRemoving] = useState(false);
   const [toast, setToast] = useState(null);

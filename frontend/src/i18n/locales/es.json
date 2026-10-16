@@ -176,7 +176,7 @@
     "tryAnotherEmail": "Probar con otro email",
     "magicLinkSent": "Si este correo está registrado, tu enlace mágico está en camino — revisa tu bandeja de entrada y, por si acaso, la carpeta de spam.",
     "errorSendingLink": "Error al enviar el enlace.",
-    "pitch": "Comparte lo que tienes con la gente que te rodea. Crea una colección de cosas para regalar, vender, alquilar, prestar o reservar — e invita a la gente a conocerlas y pedirlas.",
+    "pitch": "Comparte lo que tienes con la gente que te rodea: un rastrillo para regalar o vender, una biblioteca de las cosas para prestar o alquilar, un taller para reservar por días o por horas. Después, invita a tu gente a pedir lo que necesite.",
     "nextNotice": "Entra y te llevamos directo a la página que ibas a abrir.",
     "licence": "El código de OIUEEI es abierto, bajo la licencia EUPL-1.2, un copyleft fuerte. El proyecto vive en <1>GitHub</1>: ideas, propuestas y colaboración, allí.",
     "noBanner": "No verás un banner de cookies: no hay nada que consentir. Ni publicidad, ni analítica, ni código de terceros ejecutándose en tu navegador — y no hace falta que te fíes de mi palabra, <1>puedes comprobarlo</1>.",
@@ -311,7 +311,9 @@
     "showMoreThings_other": "Ver {{count}} cosas más",
     "visitorJoin": "Unirme al grupo",
     "visitorJoinError": "No hemos podido unirte al grupo. Vuelve a intentarlo.",
-    "welcomeDoc": "Documento de bienvenida del grupo (PDF)"
+    "welcomeDoc": "Documento de bienvenida del grupo (PDF)",
+    "noOpeningHoursLabel": "Aún no se puede reservar",
+    "noOpeningHoursBody": "Este taller se reserva por horas y no tiene horario. Añádelo en Editar colección, en «Más opciones»."
   },
   "digestMute": {
     "pageTitle": "Resúmenes por correo — OIUEEI",
@@ -331,7 +333,6 @@
     "availabilityLabel": "Disponibilidad.",
     "locationLabel": "Ubicación.",
     "conditionLabel": "Estado.",
-    "photos": "Fotos",
     "faqHeading": "¿Preguntas o comentarios?",
     "faqPlaceholder": "Escribe tu pregunta aquí...",
     "faqLabel": "Pregunta",
@@ -677,7 +678,6 @@
     "myCollections": "Mis colecciones",
     "inactiveCollections": "Colecciones inactivas",
     "sharedWithMe": "Compartidas conmigo",
-    "collectionInfo": "{{things}} cosas · {{guests}} miembros",
     "viewCollection": "Ver {{headline}}",
     "loadingCollections": "Cargando colecciones...",
     "noCollections": "Todavía no tienes colecciones activas.",
@@ -695,7 +695,11 @@
     "myGroupsIntro": "Todos los grupos en los que estás, también los que dinamizas. Si dejas uno, pierdes el acceso.",
     "youRunIt": "Lo dinamizas",
     "colGroup": "Grupo",
-    "colTeam": "Dinamización"
+    "colTeam": "Dinamización",
+    "thingsCount_one": "{{count}} cosa",
+    "thingsCount_other": "{{count}} cosas",
+    "membersCount_one": "{{count}} miembro",
+    "membersCount_other": "{{count}} miembros"
   },
   "koro": {
     "basic": "Básico",
@@ -787,7 +791,6 @@
     "newsLabel": "Noticias y anuncios (opcional)",
     "newsHelper": "Un resumen de las novedades de cada grupo en el que estás. Puedes desactivar el de un grupo concreto desde la página de la colección, o desde el pie del propio correo.",
     "saved": "Preferencias guardadas.",
-    "errorLoading": "Error al cargar las preferencias.",
     "errorSaving": "Error al guardar.",
     "invalidLink": "Este enlace no es válido o ha caducado. Inicia sesión para cambiar tus preferencias."
   },
@@ -813,7 +816,9 @@
     "whatsapp": "WhatsApp",
     "emailSubject": "Te invito a {{headline}} en OIUEEI",
     "emailBody": "Hola,\n\nTe invito a \"{{headline}}\" en OIUEEI, donde un grupo comparte sus cosas entre sus miembros.\n\nPuedes unirte aquí: {{url}}",
+    "emailBodyKind": "Hola,\n\nTe invito a \"{{headline}}\", {{kind}} en OIUEEI, donde un grupo comparte sus cosas entre sus miembros.\n\nPuedes unirte aquí: {{url}}",
     "whatsappText": "Te invito a \"{{headline}}\" en OIUEEI, donde un grupo comparte sus cosas entre sus miembros: {{url}}",
+    "whatsappTextKind": "Te invito a \"{{headline}}\", {{kind}} en OIUEEI, donde un grupo comparte sus cosas entre sus miembros: {{url}}",
     "copied": "Enlace copiado al portapapeles.",
     "copyError": "No hemos podido copiar el enlace. Inténtalo de nuevo o usa otra opción.",
     "linkError": "No hemos podido generar el enlace. Inténtalo de nuevo.",
@@ -1048,6 +1053,7 @@
     "helper": "En JSON: una clave por día de la semana (\"0\" lunes … \"6\" domingo), cada una con una lista de tramos [\"HH:MM\",\"HH:MM\"] — p. ej. {\"0\": [[\"10:00\",\"14:00\"],[\"16:00\",\"20:00\"]]}. Deja un día fuera, o ponle una lista vacía, para que quede cerrado.",
     "invalidJson": "Eso no es JSON válido — revisa las llaves y las comillas.",
     "invalidOnSave": "No se ha guardado nada: el horario semanal (en «Más opciones») no es JSON válido. Corrígelo y vuelve a guardar.",
+    "noneOpen": "Sin horario, nadie puede reservar: añade al menos un tramo.",
     "previewLabel": "Se lee así:",
     "closed": "cerrado"
   },
@@ -1075,9 +1081,11 @@
     "co_owners_full_one": "La dinamización de este grupo ya suma 1 persona además de quien lo creó: es el máximo que permite.",
     "co_owners_full_other": "La dinamización de este grupo ya suma {{count}} personas además de quien lo creó: es el máximo que permite.",
     "dates_taken": "Esas fechas ya están cogidas.",
+    "no_prices_here": "Este grupo no admite precios.",
     "not_a_member": "Tienes que ser miembro de este grupo para reservar.",
     "not_available": "Ahora mismo no está disponible.",
     "not_awaiting_return": "Esto ya no está pendiente de devolución.",
+    "priced_things_remain": "Algunas cosas de este grupo tienen precio. Quítaselo o retíralas antes de quitar a los miembros la opción de poner precio.",
     "rental_length_not_allowed": "Esta colección solo permite periodos de {{allowed}} días.",
     "rental_pickup_weekday": "Ese día de la semana no se puede recoger.",
     "rental_return_weekday": "Ese día de la semana no se puede devolver.",
@@ -1113,22 +1121,26 @@
     "time_taken": "Esa hora ya está cogida."
   },
   "kinds": {
+    "chooseIntro": "Elige para qué son tus cosas. El tipo no se puede cambiar después.",
     "STALL": {
       "short": "Rastrillo",
       "long": "Rastrillo",
-      "what": "Cosas para vender o regalar",
+      "what": "Cosas para vender o regalar: quien se la lleva, se la queda.",
+      "withArticle": "un rastrillo",
       "create": "Crear rastrillo"
     },
     "LIBRARY": {
       "short": "Biblioteca",
       "long": "Biblioteca de las cosas",
-      "what": "Cosas para prestar o alquilar",
+      "what": "Cosas para prestar o alquilar: se las llevan a casa y las devuelven.",
+      "withArticle": "una biblioteca de las cosas",
       "create": "Crear biblioteca"
     },
     "SHED": {
       "short": "Taller",
       "long": "Taller de máquinas",
-      "what": "Cosas para reservar por días o por horas",
+      "what": "Máquinas y espacios que se usan donde están, con reserva por días o por horas.",
+      "withArticle": "un taller de máquinas",
       "create": "Crear taller"
     }
   },

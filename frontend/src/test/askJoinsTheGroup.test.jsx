@@ -15,6 +15,7 @@ import { apiFetch } from '../services/api';
 import ThingLinkbox from '../components/ThingLinkbox';
 import ThingPage from '../pages/ThingPage';
 import RequestThingPage from '../pages/RequestThingPage';
+import { press } from './settle';
 
 // Asking for any thing is being part of the group that lists it. The server
 // answers `not_a_member` to someone who only reads a PUBLIC group; the client
@@ -163,7 +164,7 @@ describe('a gift asked for from its own page', () => {
       </MemoryRouter>
     );
   };
-  const claim = async () => fireEvent.click(await screen.findByRole('button', { name: 'Claim' }));
+  const claim = async () => press(await screen.findByRole('button', { name: 'Claim' }));
   const thing = gift({ collection_code: 'COL001', collection_headline: 'Taller' });
 
   test('joins the collection the server resolved, and says so', async () => {

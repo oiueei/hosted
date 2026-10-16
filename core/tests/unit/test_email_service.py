@@ -771,6 +771,39 @@ def test_the_viral_line_is_a_pale_yellow_callout_with_black_text():
     )
 
 
+# --- The growth line leads to the form of the kind it names ----------
+
+
+def _viral(line, monkeypatch, lang="en"):
+    """Send the magic link with the growth line pinned to ``line``, and return the
+    message and its HTML."""
+    monkeypatch.setattr(email_service, "viral_lines", lambda lang=None: [line])
+    email_service.send_magic_link_email(
+        "lele8@your-domain.test", "http://localhost:3000/verify/tok", lang=lang
+    )
+    return mail.outbox[0], mail.outbox[0].alternatives[0][0]
+
+
+@pytest.mark.django_db
+def test_the_line_about_a_library_leads_to_the_form_of_a_library(monkeypatch):
+    line = {"text": "A drill?", "cta": "Open your library", "path": "/library/new"}
+
+    message, html = _viral(line, monkeypatch)
+
+    assert 'href="http://localhost:3000/library/new"' in html
+    assert "Open your library: http://localhost:3000/library/new" in message.body
+
+
+@pytest.mark.django_db
+def test_a_line_with_no_path_still_leads_to_the_chooser(monkeypatch):
+    line = {"text": "Moving?", "cta": "Start here"}
+
+    message, html = _viral(line, monkeypatch)
+
+    assert 'href="http://localhost:3000/new"' in html
+    assert "Start here: http://localhost:3000/new" in message.body
+
+
 # --- The card gives up its own framing on a phone -----------
 
 

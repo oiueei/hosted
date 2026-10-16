@@ -576,6 +576,91 @@ class TestCollectionViews:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data["error"] == "User is not invited to this collection"
 
+    def _invite_by_email(self, client, collection, email):
+        """Invite through the endpoint, as a manager does; returns the invitee and the
+        accept and decline links the email carried."""
+        from core.models import RSVP, User
+
+        response = client.post(
+            f"/api/v1/collections/{collection.code}/invite/", {"email": email}, format="json"
+        )
+        assert response.status_code == status.HTTP_200_OK
+        invitee = User.objects.get(email=email)
+        accept = RSVP.objects.get(
+            user_code=invitee, target_code=collection.code, action=RSVP.Action.COLLECTION_INVITE
+        )
+        decline = RSVP.objects.get(
+            user_code=invitee, target_code=collection.code, action=RSVP.Action.COLLECTION_REJECT
+        )
+        return invitee, accept, decline
+
+    def test_withdrawing_a_pending_invitation_kills_both_of_its_links(
+        self, authenticated_client, api_client, collection
+    ):
+        """An invitation withdrawn before it is accepted can no longer be accepted or
+        declined from the email, and the person never joined."""
+        from core.models import RSVP
+
+        invitee, accept, decline = self._invite_by_email(
+            authenticated_client, collection, "pending1@your-domain.test"
+        )
+
+        response = authenticated_client.delete(
+            f"/api/v1/collections/{collection.code}/invite/",
+            {"user_code": invitee.code},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] == "Pending invitation cancelled"
+        assert not RSVP.objects.filter(pk__in=[accept.pk, decline.pk]).exists()
+        for token in (accept.token, decline.token):
+            link = api_client.get(f"/api/v1/auth/verify/{token}/")
+            assert link.status_code == status.HTTP_401_UNAUTHORIZED
+        assert not collection.invites.filter(code=invitee.code).exists()
+
+    def test_withdrawing_a_pending_invitation_sends_no_revocation_email(
+        self, authenticated_client, collection
+    ):
+        """Someone who never got in has no access to revoke, so nothing is sent
+        beyond the invitation itself."""
+        from django.core import mail
+
+        invitee, _, _ = self._invite_by_email(
+            authenticated_client, collection, "pending2@your-domain.test"
+        )
+        sent_before = len(mail.outbox)
+
+        authenticated_client.delete(
+            f"/api/v1/collections/{collection.code}/invite/",
+            {"user_code": invitee.code},
+            format="json",
+        )
+
+        assert len(mail.outbox) == sent_before
+        assert not any("revoked" in message.subject for message in mail.outbox)
+
+    def test_withdrawing_a_pending_invitation_leaves_the_same_persons_other_invitations(
+        self, authenticated_client, user, collection
+    ):
+        from core.models import RSVP, Collection
+
+        invitee, _, _ = self._invite_by_email(
+            authenticated_client, collection, "pending3@your-domain.test"
+        )
+        other = Collection.objects.create(code="OTHER1", owner=user, headline="Other")
+        _, other_accept, other_decline = self._invite_by_email(
+            authenticated_client, other, invitee.email
+        )
+
+        authenticated_client.delete(
+            f"/api/v1/collections/{collection.code}/invite/",
+            {"user_code": invitee.code},
+            format="json",
+        )
+
+        assert RSVP.objects.filter(pk__in=[other_accept.pk, other_decline.pk]).count() == 2
+
     def test_leave_collection(self, user, user2, collection):
         """An invited member can remove themselves from a collection."""
         from rest_framework.test import APIClient

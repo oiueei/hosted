@@ -27,6 +27,11 @@ import {
   earliestStartMinutes,
   isHourlyPickupDisabled,
   openingHoursWeek,
+  hasOpeningHours,
+  startOfToday,
+  daysFromToday,
+  reservationMaxDays,
+  reservationHorizonDays,
 } from './rental';
 
 // Run in a UTC-negative timezone so a regression to UTC date parsing
@@ -944,5 +949,57 @@ describe('openingHoursWeek', () => {
 
   test('no map at all is a closed week', () => {
     expect(openingHoursWeek(null, 'en').every((d) => d.ranges.length === 0)).toBe(true);
+  });
+});
+
+describe('the reservation limits a collection sets', () => {
+  test('a length is at least one day, whatever the collection says', () => {
+    expect(reservationMaxDays({ reservation_max_days: 3 })).toBe(3);
+    expect(reservationMaxDays({ reservation_max_days: 0 })).toBe(1);
+    expect(reservationMaxDays({})).toBe(1);
+    expect(reservationMaxDays(null)).toBe(1);
+  });
+
+  test('how far ahead a reservation may be booked defaults to 90 days', () => {
+    expect(reservationHorizonDays({ reservation_horizon_days: 30 })).toBe(30);
+    expect(reservationHorizonDays({})).toBe(90);
+    expect(reservationHorizonDays(undefined)).toBe(90);
+  });
+});
+
+describe('today, read fresh each time', () => {
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  test('it is the local midnight of the day it is asked, and follows the clock', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 15, 17, 45));
+    expect(toISODate(startOfToday())).toBe('2026-10-15');
+    expect(startOfToday().getHours()).toBe(0);
+
+    vi.setSystemTime(new Date(2026, 9, 16, 0, 5));
+    expect(toISODate(startOfToday())).toBe('2026-10-16');
+  });
+
+  test('days from today counts calendar days, across a month end', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 30, 12, 0));
+    expect(toISODate(daysFromToday(2))).toBe('2026-11-01');
+    expect(toISODate(daysFromToday(0))).toBe('2026-10-30');
+  });
+});
+
+describe('hasOpeningHours', () => {
+  test.each([
+    [{}, false],
+    [undefined, false],
+    [null, false],
+    [{ 0: [], 3: [] }, false],
+    [{ 0: 'not a list' }, false],
+    [{ 3: [['10:00', '12:00']] }, true],
+    [{ 0: [], 6: [['09:00', '10:00']] }, true],
+  ])('%j → %s', (hours, expected) => {
+    expect(hasOpeningHours(hours)).toBe(expected);
   });
 });
