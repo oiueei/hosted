@@ -668,7 +668,10 @@
     "warning": "Se't traurà de <0>{{headline}}</0> i en perdràs l'accés, tret que el propietari et torni a convidar.",
     "leave": "Sortir del grup",
     "leaving": "Sortint…",
-    "errorLeaving": "No s'ha pogut sortir del grup. Torna-ho a provar."
+    "errorLeaving": "No s'ha pogut sortir del grup. Torna-ho a provar.",
+    "thingsLabel": "Les teves coses se'n van amb tu",
+    "thingsBody_one": "En sortir s'esborra la teva cosa d'aquest grup: {{list}}. S'avisarà qui l'hagi demanada o la tingui ara. No es pot desfer.",
+    "thingsBody_other": "En sortir s'esborren les teves {{count}} coses d'aquest grup: {{list}}. S'avisarà qui n'hagi demanat alguna o en tingui una ara. No es pot desfer."
   },
   "userPage": {
     "memberSince": "Membre des de {{date}}",

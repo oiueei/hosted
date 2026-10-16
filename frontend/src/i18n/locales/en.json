@@ -674,7 +674,10 @@
     "warning": "You'll be removed from <0>{{headline}}</0> and lose access to it, unless the owner invites you again.",
     "leave": "Leave the group",
     "leaving": "Leaving…",
-    "errorLeaving": "Couldn't leave the group. Please try again."
+    "errorLeaving": "Couldn't leave the group. Please try again.",
+    "thingsLabel": "Your things go with you",
+    "thingsBody_one": "Leaving deletes your thing in this group: {{list}}. Anyone who asked for it or has it now will be told. This can't be undone.",
+    "thingsBody_other": "Leaving deletes your {{count}} things in this group: {{list}}. Anyone who asked for one or has one now will be told. This can't be undone."
   },
   "userPage": {
     "memberSince": "Member since {{date}}",

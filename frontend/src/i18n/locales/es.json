@@ -668,7 +668,10 @@
     "warning": "Se te quitará de <0>{{headline}}</0> y perderás el acceso, salvo que el propietario vuelva a invitarte.",
     "leave": "Salir del grupo",
     "leaving": "Saliendo…",
-    "errorLeaving": "No se pudo salir del grupo. Inténtalo de nuevo."
+    "errorLeaving": "No se pudo salir del grupo. Inténtalo de nuevo.",
+    "thingsLabel": "Tus cosas se van contigo",
+    "thingsBody_one": "Al salir se borra tu cosa de este grupo: {{list}}. Se avisará a quien la haya pedido o la tenga ahora. No se puede deshacer.",
+    "thingsBody_other": "Al salir se borran tus {{count}} cosas de este grupo: {{list}}. Se avisará a quien haya pedido alguna o la tenga ahora. No se puede deshacer."
   },
   "userPage": {
     "memberSince": "Miembro desde {{date}}",
