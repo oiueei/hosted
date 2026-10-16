@@ -1507,22 +1507,29 @@ def send_contact_email(name, email, message, kind="support"):
     )
 
 
-def send_collection_revoke_email(owner_name, collection_headline, email, collection=None):
-    """Send collection access revoked notification email."""
+def send_collection_revoke_email(
+    owner_name, collection_headline, email, collection=None, things=()
+):
+    """Send collection access revoked notification email.
+
+    ``things`` are the headlines of the removed member's things that went with them;
+    when there are any, one more line names them.
+    """
     user, lang = _recipient(email, collection)
     T, L = _texts(lang), _local(lang)
     headline = L(collection_headline)
     owner_name = _member_name(owner_name, lang)
     subject = T("revoke_subject")
     plain = T("revoke_plain").format(owner=owner_name, collection=headline)
-    html = _render_email(
-        [
-            _para(T("revoke_intro").format(owner=owner_name)),
-            _para(T("revoke_outro")),
-        ],
-        lang=lang,
-        header=headline,
-    )
+    blocks = [
+        _para(T("revoke_intro").format(owner=owner_name)),
+        _para(T("revoke_outro")),
+    ]
+    if things:
+        deleted = T("revoke_things").format(things=", ".join(L(t) for t in things))
+        plain = f"{plain} {deleted}"
+        blocks.append(_para(deleted))
+    html = _render_email(blocks, lang=lang, header=headline)
     _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang, header=headline)
 
 
@@ -2077,6 +2084,35 @@ def send_return_reminder_email(requester_name, thing, end_date, owner_email):
     body = T("reminder_body").format(requester=requester_name, thing=headline, end=end)
     html = _render_email([_para(body)], lang=lang, header=header)
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
+
+
+def send_thing_left_with_owner_email(
+    thing_headline, group_headline, requester_email, *, holding, collection=None
+):
+    """Tell whoever asked for a thing that its owner left the group and took it along.
+
+    The thing is already deleted, so it is named by headline. The second sentence, about
+    returning it, goes only to somebody who has it in hand now (``holding``). Neither the
+    leaving member's nor the curator's address appears: the requester is told a
+    membership ended, not who ended it.
+    """
+    user, lang = _recipient(requester_email, collection)
+    T, L = _texts(lang), _local(lang)
+    thing, group = L(thing_headline), L(group_headline)
+    subject = T("thing_left_subject").format(thing=thing, group=group)
+    intro = T("thing_left_intro").format(thing=thing, group=group)
+    paragraphs = [intro, T("thing_left_holding")] if holding else [intro]
+    html = _render_email([_para(p) for p in paragraphs], lang=lang, header=group)
+    _send(
+        requester_email,
+        subject,
+        " ".join(paragraphs),
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=group,
+    )
 
 
 def send_return_due_email(owner_name, thing, end_date, requester_email):

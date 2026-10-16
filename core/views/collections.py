@@ -66,7 +66,7 @@ from core.services.invitation_service import (
     reject_proposal,
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
-from core.services.membership_service import end_membership
+from core.services.membership_service import end_membership, things_leaving_with
 from core.services.team import drop_team_notices_of
 from core.utils import redact_email
 from core.validators import SafeHeadlineField
@@ -379,6 +379,7 @@ class CollectionInviteView(APIView):
 
         if invited_user:
             was_co_owner = collection.co_owners.filter(code=invited_user.code).exists()
+            went_with_them = [t.headline for t in things_leaving_with(collection, invited_user)]
             things_deleted = end_membership(collection, invited_user, actor=request.user)
             if was_co_owner:
                 # They stopped running the group: the requests and reservations it
@@ -392,7 +393,11 @@ class CollectionInviteView(APIView):
             # should be handed the owner's address on the way out.
             owner_name = request.user.name
             send_collection_revoke_email(
-                owner_name, collection.headline, invited_user.email, collection=collection
+                owner_name,
+                collection.headline,
+                invited_user.email,
+                collection=collection,
+                things=went_with_them,
             )
             InAppNotification.objects.create(
                 user=invited_user,
