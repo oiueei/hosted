@@ -44,6 +44,7 @@ from django.core.mail import BadHeaderError, EmailMultiAlternatives
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.template.loader import render_to_string
 from django.utils.html import escape
+from django.utils.module_loading import import_string
 from django.utils.safestring import mark_safe
 
 from core.services.email_texts import T, viral_lines
@@ -400,6 +401,56 @@ def _notifications_link(email, user=_UNSET):
     return f"{base}/me/notifications"
 
 
+@functools.lru_cache(maxsize=None)
+def _viral_provider(dotted_path):
+    """The deployment's growth-line function, imported once per dotted path.
+
+    Cached on the path, not on the setting, as ``get_creator_policy`` does, so
+    ``override_settings`` works in tests and a live deployment never re-imports.
+    """
+    return import_string(dotted_path)
+
+
+def _provided_line(user, lang):
+    """The growth line the deployment's ``VIRAL_LINE_PROVIDER`` picks, else ``None``.
+
+    The function gets this recipient's ``User`` (``None`` for an address with no
+    account) and the language the email is written in, and answers
+    ``{"text", "cta", "path"}``. Anything else — ``None``, a line missing a part, a
+    ``path`` that is not a path on this site — means no line. A provider that
+    raises costs the email its line and nothing more: a deployment's mistake must
+    not cost anyone their magic link. Only the setting's path is logged, never the
+    recipient.
+    """
+    path = settings.VIRAL_LINE_PROVIDER
+    try:
+        line = _viral_provider(path)(user, lang)
+    except Exception as exc:  # noqa: BLE001 — a deployment's bug never costs an email.
+        logger.warning(
+            "VIRAL_LINE_PROVIDER %s failed (%s); sending without a line", path, type(exc).__name__
+        )
+        return None
+    if not isinstance(line, dict):
+        return None
+    text, cta, target = line.get("text"), line.get("cta"), line.get("path")
+    if not (isinstance(text, str) and text and isinstance(cta, str) and cta):
+        return None
+    # A path on this site: "//host" and "/\host" are how a browser is sent elsewhere.
+    if not (
+        isinstance(target, str)
+        and target.startswith("/")
+        and not target.startswith("//")
+        and not target.startswith("/\\")
+    ):
+        return None
+    return {"text": text, "cta": cta, "path": target}
+
+
+def _catalogue_line(lang):
+    lines = viral_lines(lang)
+    return random.choice(lines) if lines else None
+
+
 def _bottom(
     plain,
     html,
@@ -433,6 +484,9 @@ def _bottom(
     (``user`` is ``None``). Suppressed for collection owners and when
     ``VIRAL_LINES`` is empty. Its CTA is the plain URL of the line's ``path``
     (the form of the kind it names, or ``/new``), never tracking-wrapped (DESIGN §9).
+    With ``VIRAL_LINE_PROVIDER`` set, the deployment's function picks the line for
+    this recipient instead of the catalogue, after the suppression above (see
+    ``_provided_line``).
     """
     lang = lang or getattr(settings, "EMAIL_LANGUAGE", "en")
     legal_url = f"{_frontend_base_url()}/legal"
@@ -458,17 +512,22 @@ def _bottom(
         )
 
     if include_viral:
-        lines = viral_lines(lang)
         # A co-curator gets it suppressed too (2026-09-28): since 2026-09 they
         # have the founder's whole reach minus deletion, so inviting them to
         # "start a collection" is a letter to someone who already runs one. The
         # flag is one Exists over both paths (owner or co-owner), folded into
-        # the lookup queries — no extra round-trip.
+        # the lookup queries — no extra round-trip. It comes **first**: a
+        # deployment's provider is never asked about someone who gets no line.
         curates_collection = (
             user is not _UNSET and user and getattr(user, "_curates_collection", False)
         )
-        if lines and not curates_collection:
-            line = random.choice(lines)
+        line = None
+        if not curates_collection:
+            if settings.VIRAL_LINE_PROVIDER:
+                line = _provided_line(None if user is _UNSET else user, lang)
+            else:
+                line = _catalogue_line(lang)
+        if line:
             url = f"{_frontend_base_url()}{line.get('path', '/new')}"
             plain_parts.append(f"{line['text']}\n{line['cta']}: {url}")
             # A highlighted callout, not plain footer prose:

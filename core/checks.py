@@ -188,3 +188,37 @@ def check_anon_api_rate(app_configs, **kwargs):
             id="core.E005",
         )
     ]
+
+
+@register()
+def check_viral_line_provider(app_configs, **kwargs):
+    """`VIRAL_LINE_PROVIDER`, when set, names an importable, callable function.
+
+    Empty is the standalone default and has nothing to check. A bad path would not
+    stop an email (a provider that fails only costs it its growth line), so without
+    this check a typo would quietly switch the line off for every recipient.
+    """
+    from django.utils.module_loading import import_string
+
+    path = getattr(settings, "VIRAL_LINE_PROVIDER", "")
+    if not path:
+        return []
+    try:
+        provider = import_string(path)
+    except ImportError as exc:
+        reason = f"which cannot be imported: {exc}"
+    else:
+        if callable(provider):
+            return []
+        reason = "which is not callable"
+    return [
+        Error(
+            f"VIRAL_LINE_PROVIDER points at {path!r}, {reason}",
+            hint=(
+                "Point it at a function `provider(user, lang)` returning "
+                '`{"text": ..., "cta": ..., "path": "/..."}` or `None`, or leave it empty '
+                "for core's own growth lines."
+            ),
+            id="core.E006",
+        )
+    ]
