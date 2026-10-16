@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation, Trans } from 'react-i18next';
 import { Button, IconSignout } from 'hds-react';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
+import ThingsGoNotice from '../components/ThingsGoNotice';
 import useTheeeme from '../hooks/useTheeeme';
 import { useCollectionBase } from '../hooks/useCollectionBase';
 import useDocumentTitle from '../hooks/useDocumentTitle';
@@ -22,6 +23,32 @@ export default function LeaveCollectionPage() {
 
   const [leaving, setLeaving] = useState(false);
   const [toast, setToast] = useState(null);
+  // The member's own things in this group, which leave with them. Leaving does not
+  // depend on this: if the group cannot be read the page works without the notice.
+  const [goingTitles, setGoingTitles] = useState([]);
+
+  useEffect(() => {
+    const userCode = localStorage.getItem('userCode');
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch(`/api/v1/collections/${code}/`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setGoingTitles(
+          (data.things || [])
+            .filter((thing) => thing.owner === userCode)
+            .map((thing) => thing.headline)
+        );
+      } catch {
+        // No notice; the exit still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
 
   const handleLeave = async () => {
     setLeaving(true);
@@ -55,6 +82,11 @@ export default function LeaveCollectionPage() {
           components={[<strong key="0" />]}
         />
       </p>
+      <ThingsGoNotice
+        titles={goingTitles}
+        label={t('leaveCollection.thingsLabel')}
+        body={(count, list) => t('leaveCollection.thingsBody', { count, list })}
+      />
       <div className="spacer-xs" />
       <div className="form-grid">
         <Button

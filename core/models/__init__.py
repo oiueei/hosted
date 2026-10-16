@@ -1,4 +1,4 @@
-from .activity import DailyActivity
+from .activity import DailyActivity, DeviceDay
 from .booking import BookingPeriod
 from .calendar_export import CalendarExportMark
 from .collection import Collection
@@ -29,5 +29,6 @@ __all__ = [
     "InvitationProposal",
     "Event",
     "DailyActivity",
+    "DeviceDay",
     "CalendarExportMark",
 ]

@@ -954,3 +954,60 @@ describe('InboxNotifications — whoever cancelled keeps their own record', () =
     expect(screen.queryByText(/your reservation/)).not.toBeInTheDocument();
   });
 });
+
+// Leaving a group deletes the leaver's things there; the founder's notice says how many.
+describe('InboxNotifications — a member leaving says how many of their things went', () => {
+  const renderInbox = (notifications) => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok(notifications);
+      return ok([]);
+    });
+    return render(
+      <MemoryRouter>
+        <InboxNotifications />
+      </MemoryRouter>
+    );
+  };
+
+  const left = (extra) => ({
+    code: 'NOTL01',
+    type: 'MEMBER_LEFT',
+    payload: {
+      collection_headline: 'Toy library',
+      member_name: 'Lulu',
+      collection_code: 'COL001',
+      ...extra,
+    },
+    created: '2026-10-16T10:00:00Z',
+  });
+
+  test('one thing is said in the singular', async () => {
+    renderInbox([left({ things_deleted: 1 })]);
+
+    expect(
+      await screen.findByText(
+        'Lulu has left “Toy library”. Their thing in it was deleted with them.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('several are counted', async () => {
+    renderInbox([left({ things_deleted: 3 })]);
+
+    expect(
+      await screen.findByText(
+        'Lulu has left “Toy library”. Their 3 things in it were deleted with them.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test.each([
+    ['none', { things_deleted: 0 }],
+    ['a notice written before the count existed', {}],
+  ])('with %s only who left is said', async (_case, extra) => {
+    renderInbox([left(extra)]);
+
+    expect(await screen.findByText('Lulu has left “Toy library”.')).toBeInTheDocument();
+    expect(screen.queryByText(/deleted with them/)).not.toBeInTheDocument();
+  });
+});

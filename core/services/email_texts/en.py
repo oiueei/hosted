@@ -78,6 +78,14 @@ TEXTS = {
     "revoke_plain": "{owner} has revoked your access to '{collection}'.",
     "revoke_intro": "{owner} has revoked your access to this group.",
     "revoke_outro": "You will no longer be able to view this collection.",
+    "revoke_things": "Your things in this group were deleted with your membership: {things}.",
+    "thing_left_subject": "“{thing}” is no longer in {group}",
+    "thing_left_intro": (
+        "Whoever offered “{thing}” is no longer a member of {group}, "
+        "and the thing has gone with them. "
+        "Your request or reservation for it no longer stands."
+    ),
+    "thing_left_holding": "If you have it with you, return it to them as you agreed.",
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Welcome to '{collection}'",
     "welcome_doc_plain": (

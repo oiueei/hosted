@@ -30,6 +30,27 @@ LOANS_ONLY = "core.tests.sample_creator_policy.LoansOnlyCreatorPolicy"
 CO_OWNERS_DISABLED = "core.tests.sample_creator_policy.CoOwnersDisabledCreatorPolicy"
 BULK_URL = "/api/v1/collections/{code}/things/bulk/"
 
+# The collection kind and price that make each verb: a thing is created in a
+# collection, and there its verb follows the price.
+_HOME_OF = {
+    "GIFT_THING": ("STALL", None),
+    "SELL_THING": ("STALL", "3.00"),
+    "LEND_THING": ("LIBRARY", None),
+    "RENT_THING": ("LIBRARY", "3.00"),
+    "RESERVE_THING": ("SHED", None),
+}
+
+
+def _create_thing(client, owner, thing_type, headline="A thing"):
+    """POST a thing of ``thing_type`` into a collection of the kind that holds it."""
+    kind, fee = _HOME_OF[thing_type]
+    home = Collection.objects.create(owner=owner, headline=f"Home of {thing_type}", kind=kind)
+    body = {"type": thing_type, "headline": headline, "thumbnail": "img/x"}
+    body["collection_code"] = home.code
+    if fee:
+        body["fee"] = fee
+    return client.post("/api/v1/things/", body, format="json")
+
 
 @pytest.mark.django_db
 class TestTheStandaloneDoorIsOpen:
@@ -49,12 +70,10 @@ class TestTheStandaloneDoorIsOpen:
     # a structural rule the policy doesn't express — it can only be created in a
     # reservations collection. Its happy path is in test_reservations.py.
     @pytest.mark.parametrize("thing_type", [t for t in Thing.Type.values if t != "RESERVE_THING"])
-    def test_every_verb_is_available_to_a_plain_account(self, authenticated_client, thing_type):
-        response = authenticated_client.post(
-            "/api/v1/things/",
-            {"type": thing_type, "headline": "A thing", "thumbnail": "img/x"},
-            format="json",
-        )
+    def test_every_verb_is_available_to_a_plain_account(
+        self, authenticated_client, user, thing_type
+    ):
+        response = _create_thing(authenticated_client, user, thing_type)
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -102,23 +121,25 @@ class TestANarrowedDeploymentRefusesAtCreation:
         assert response.status_code == status.HTTP_201_CREATED
         assert Collection.objects.get(headline="Unstated mode").mode == Collection.Mode.PROPRIETARY
 
-    def test_a_withheld_verb_is_refused_and_creates_nothing(self, authenticated_client):
+    def test_a_withheld_verb_is_refused_and_creates_nothing(self, authenticated_client, user):
+        response = _create_thing(authenticated_client, user, "LEND_THING", "Ladder")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "lend thing" in str(response.data)
+        assert not Thing.objects.filter(headline="Ladder").exists()
+
+    def test_a_missing_collection_is_answered_before_the_verb_is_judged(self, authenticated_client):
         response = authenticated_client.post(
             "/api/v1/things/",
             {"type": "LEND_THING", "headline": "Ladder", "thumbnail": "img/x"},
             format="json",
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "lend thing" in str(response.data)
-        assert not Thing.objects.filter(headline="Ladder").exists()
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "collection_code" in response.data
 
-    def test_an_allowed_verb_still_works(self, authenticated_client):
-        response = authenticated_client.post(
-            "/api/v1/things/",
-            {"type": "GIFT_THING", "headline": "Books", "thumbnail": "img/x"},
-            format="json",
-        )
+    def test_an_allowed_verb_still_works(self, authenticated_client, user):
+        response = _create_thing(authenticated_client, user, "GIFT_THING", "Books")
 
         assert response.status_code == status.HTTP_201_CREATED
 
@@ -522,7 +543,7 @@ class TestWhatTheFrontendIsTold:
 
     @pytest.mark.parametrize("policy", [None, RESTRICTED])
     def test_every_advertised_verb_is_actually_accepted(
-        self, authenticated_client, settings, policy
+        self, authenticated_client, user, settings, policy
     ):
         """The promise, checked against the door — under both policies.
 
@@ -541,26 +562,19 @@ class TestWhatTheFrontendIsTold:
             # policy's remit. Covered end-to-end in test_reservations.py.
             if thing_type == "RESERVE_THING":
                 continue
-            response = authenticated_client.post(
-                "/api/v1/things/",
-                {"type": thing_type, "headline": f"Thing {index}", "thumbnail": "img/x"},
-                format="json",
-            )
+            response = _create_thing(authenticated_client, user, thing_type, f"Thing {index}")
             assert response.status_code == status.HTTP_201_CREATED, thing_type
 
     @pytest.mark.parametrize("policy", [None, RESTRICTED])
-    def test_nothing_left_off_the_list_slips_through(self, authenticated_client, settings, policy):
+    def test_nothing_left_off_the_list_slips_through(
+        self, authenticated_client, user, settings, policy
+    ):
         """And the converse — the list is not merely a subset of what is allowed."""
         if policy:
             settings.CREATOR_POLICY = policy
 
         advertised = authenticated_client.get("/api/v1/auth/me/").data["capabilities"]
         withheld = set(Thing.Type.values) - set(advertised["thing_types"])
-
         for thing_type in withheld:
-            response = authenticated_client.post(
-                "/api/v1/things/",
-                {"type": thing_type, "headline": "Withheld", "thumbnail": "img/x"},
-                format="json",
-            )
+            response = _create_thing(authenticated_client, user, thing_type, "Withheld")
             assert response.status_code == status.HTTP_403_FORBIDDEN, thing_type

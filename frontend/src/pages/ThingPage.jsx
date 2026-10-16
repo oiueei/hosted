@@ -137,8 +137,8 @@ export default function ThingPage() {
         // In a collection's context, read the thing *through* that collection
         // (the same shape as RequestThingPage): `available_today`,
         // `next_available` and `can_manage` come back computed against the
-        // collection in the URL, so a thing living in two collections shows
-        // the one the reader is browsing, not whichever the server picks.
+        // collection in the URL, so what the page shows is the collection the
+        // reader is browsing, not whichever the server picks.
         const query = code ? `?collection=${encodeURIComponent(code)}` : '';
         const res = await apiFetch(`/api/v1/things/${thingCode}/${query}`, { signal });
         if (res.ok) {

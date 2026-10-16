@@ -81,4 +81,24 @@ describe('legal content parity', () => {
     expect(LANGS[lang]).toMatch(/EUPL-1\.2/);
     expect(LANGS[lang]).not.toMatch(/\bBU?SL\b|Business Source|MIT from 2030|MIT a partir/i);
   });
+
+  // The privacy section says what the app counts by device. The paragraph sits
+  // straight after "what the app stores", in every language, and says the two things
+  // that make the count harmless: it is numbers only, and it holds no one.
+  const COUNTS = {
+    en: { lead: '**What we count (numbers only):**', no: /not who/ },
+    es: { lead: '**Lo que contamos (solo números):**', no: /ni quién/ },
+    ca: { lead: '**El que comptem (només números):**', no: /ni qui,/ },
+  };
+
+  test.each(CODES)('%s says what is counted by device, right after what is stored', (lang) => {
+    const privacy = sections(LANGS[lang]).find((s) => s.body.includes(COUNTS[lang].lead));
+    expect(privacy, `${lang} privacy section does not name the per-device count`).toBeDefined();
+    const paragraphs = privacy.body.split('\n\n').map((p) => p.trim());
+    const at = paragraphs.findIndex((p) => p.startsWith(COUNTS[lang].lead));
+    expect(paragraphs[at - 1], `${lang}: it must follow the paragraph on what is stored`).toMatch(
+      /^\*\*(What the app stores, by design|Qué guarda la aplicación, por diseño|Què desa l'aplicació, per disseny):/
+    );
+    expect(paragraphs[at]).toMatch(COUNTS[lang].no);
+  });
 });

@@ -256,6 +256,31 @@ def _(w):
     es.send_collection_revoke_email("Lala", "Chalmercadillo", w.to, collection=w.collection)
 
 
+@sample("collection_revoke_with_things", "send_collection_revoke_email")
+def _(w):
+    es.send_collection_revoke_email(
+        "Lala",
+        "Chalmercadillo",
+        w.to,
+        collection=w.collection,
+        things=["Taladro", "Escalera de mano"],
+    )
+
+
+@sample("thing_left_asked", "send_thing_left_with_owner_email")
+def _(w):
+    es.send_thing_left_with_owner_email(
+        "Taladro", "Chalmercadillo", w.to, holding=False, collection=w.collection
+    )
+
+
+@sample("thing_left_holding", "send_thing_left_with_owner_email")
+def _(w):
+    es.send_thing_left_with_owner_email(
+        "Taladro", "Chalmercadillo", w.to, holding=True, collection=w.collection
+    )
+
+
 @sample("account_delete", "send_account_delete_email")
 def _(w):
     es.send_account_delete_email(w.me, w.link("verify"))

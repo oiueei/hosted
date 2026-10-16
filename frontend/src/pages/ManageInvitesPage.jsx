@@ -36,6 +36,7 @@ export default function ManageInvitesPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [invites, setInvites] = useState([]);
+  const [things, setThings] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   // Members' recommendations awaiting a curator's answer. Curator-only from
   // the serializer: they name someone who has not been contacted and does not
@@ -76,6 +77,7 @@ export default function ManageInvitesPage() {
       if (res.ok) {
         const data = await res.json();
         setInvites(data.invites || []);
+        setThings(data.things || []);
         setPendingInvites(data.pending_invites || []);
         setProposals(data.pending_proposals || []);
         setCollectionHeadline(data.headline || '');
@@ -447,6 +449,11 @@ export default function ManageInvitesPage() {
                               state: {
                                 guestCode: row._code,
                                 guestName: row._name,
+                                // Their things in this group go with them; the
+                                // confirmation names them.
+                                thingTitles: things
+                                  .filter((thing) => thing.owner === row._code)
+                                  .map((thing) => thing.headline),
                                 // Bare: with no headline, RemoveGuestPage's own
                                 // `t('removeGuest.guests')` is the right label for
                                 // where the link goes. A literal here is truthy and

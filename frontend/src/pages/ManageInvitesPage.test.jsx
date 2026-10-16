@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import ManageInvitesPage from './ManageInvitesPage';
 import { switchLanguage } from '../test/settle';
@@ -782,5 +782,58 @@ describe('ManageInvitesPage — several addresses in the invitations field', () 
     expect(invite).toBeEnabled();
     type('lele1@your-domain.test, lili1@your-domain.test');
     expect(invite).toBeEnabled();
+  });
+});
+
+// Removing a member deletes their things in the group, so the confirmation page is
+// handed their titles with the guest: it cannot read them itself without a second
+// request, and a stale list is worse than none.
+describe('ManageInvitesPage hands the confirmation the removed member’s things', () => {
+  beforeEach(() => {
+    localStorage.setItem('userCode', 'OWNER1');
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  function ConfirmationProbe() {
+    return <pre data-testid="state">{JSON.stringify(useLocation().state)}</pre>;
+  }
+
+  async function removeAna(collection) {
+    mockRoutes({ collection });
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001/invites']}>
+        <Routes>
+          <Route path="/collections/:code/invites" element={<ManageInvitesPage />} />
+          <Route path="/collections/:code/invites/remove" element={<ConfirmationProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const row = (await screen.findByText(/Ana/)).closest('tr');
+    fireEvent.click(within(row).getByRole('button', { name: 'Remove from this collection' }));
+    return JSON.parse((await screen.findByTestId('state')).textContent);
+  }
+
+  const thing = (code, owner, headline) => ({ code, owner, headline, status: 'ACTIVE' });
+
+  test('only the titles of that member’s things travel in the state', async () => {
+    const state = await removeAna({
+      ...COLLECTION,
+      things: [
+        thing('T1', 'GST001', 'Drill'),
+        thing('T2', 'OWNER1', 'Ladder'),
+        thing('T3', 'GST001', 'Saw'),
+      ],
+    });
+
+    expect(state).toMatchObject({ guestCode: 'GST001', thingTitles: ['Drill', 'Saw'] });
+  });
+
+  test('a member with no things in the group travels with an empty list', async () => {
+    const state = await removeAna({ ...COLLECTION, things: [thing('T2', 'OWNER1', 'Ladder')] });
+
+    expect(state.thingTitles).toEqual([]);
   });
 });
