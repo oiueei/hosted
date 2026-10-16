@@ -435,16 +435,14 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     def _viewable_collections(self, obj):
         """The thing's collections **this viewer is allowed to read**, in order.
 
-        A thing can live in several collections at once, and the collection
-        fields below used to answer with ``collections.all()[0]`` — whichever the
-        DB handed back first, viewable or not. So a drill shared with both a
-        private family group and a public neighbourhood one told every reader of
-        the public one the name and code of the private one: `/shared` printed it
-        on the card (that page was retired on 2026-10-03), `/things/{code}` used
-        it as the back label for anonymous visitors, and following it landed on a
-        403. `Thing.can_view()` let the
-        *thing* through on the strength of the public collection; nothing then
-        re-asked the question about the collection it named.
+        A thing lives in one collection (``core/services/single_collection.py``);
+        this still walks every row of ``collections``, in case one predates that
+        rule. The collection fields below answer from the first of them the viewer
+        may read, never from ``collections.all()[0]`` unjudged: ``Thing.can_view()``
+        lets the *thing* through on the strength of a collection the reader has,
+        and nothing else re-asks the question about the collection a field names,
+        so a private collection's name and code would reach someone who cannot
+        open it.
 
         Mirrors ``Collection.can_view()`` exactly — owner regardless of status,
         never INACTIVE otherwise, then PUBLIC or membership — but reads the
