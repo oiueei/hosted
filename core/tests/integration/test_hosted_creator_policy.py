@@ -22,6 +22,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from core.models import Collection, Thing
+from core.models.collection import kind_for_thing_type
 from hosted.models import CreatorValidation
 from hosted.policy import HostedCreatorPolicy
 from hosted.tally import REQUEST_ACCESS
@@ -45,6 +46,32 @@ def hosted_policy(settings):
     settings.CREATOR_POLICY = POLICY
 
 
+# Where a thing is created is where its verb comes from: the kind of the collection
+# and the price (no price gives or lends, a price sells or rents out). So each test
+# creates the thing in a collection of the kind its verb belongs to, with the price
+# that verb needs. The collection is made with the ORM because an account the policy
+# holds back could not make a library or a shed through the API.
+PAID_VERBS = ("SELL_THING", "RENT_THING")
+
+
+def thing_in_its_own_collection(client, owner, thing_type, headline, **extra):
+    collection = Collection.objects.create(
+        owner=owner,
+        headline=f"Home of {headline}",
+        kind=kind_for_thing_type(thing_type),
+    )
+    body = {
+        "type": thing_type,
+        "headline": headline,
+        "thumbnail": "img/x",
+        "collection_code": collection.code,
+        **extra,
+    }
+    if thing_type in PAID_VERBS:
+        body["fee"] = "5.00"
+    return client.post("/api/v1/things/", body, format="json")
+
+
 def approve(user, **kwargs):
     return CreatorValidation.objects.create(
         user=user,
@@ -58,12 +85,10 @@ def approve(user, **kwargs):
 
 @pytest.mark.django_db
 class TestSomebodyWhoHasNotAsked:
-    def test_giving_and_selling_are_open_to_them(self, authenticated_client):
+    def test_giving_and_selling_are_open_to_them(self, authenticated_client, user):
         for thing_type in ("GIFT_THING", "SELL_THING"):
-            response = authenticated_client.post(
-                "/api/v1/things/",
-                {"type": thing_type, "headline": "A thing", "thumbnail": "img/x"},
-                format="json",
+            response = thing_in_its_own_collection(
+                authenticated_client, user, thing_type, "A thing"
             )
             assert response.status_code == status.HTTP_201_CREATED, thing_type
 
@@ -87,12 +112,8 @@ class TestSomebodyWhoHasNotAsked:
         assert not Collection.objects.filter(headline="Held back").exists()
 
     @pytest.mark.parametrize("thing_type", ["LEND_THING", "RENT_THING"])
-    def test_lending_and_renting_are_held_back(self, authenticated_client, thing_type):
-        response = authenticated_client.post(
-            "/api/v1/things/",
-            {"type": thing_type, "headline": "A ladder", "thumbnail": "img/x"},
-            format="json",
-        )
+    def test_lending_and_renting_are_held_back(self, authenticated_client, user, thing_type):
+        response = thing_in_its_own_collection(authenticated_client, user, thing_type, "A ladder")
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert not Thing.objects.filter(headline="A ladder").exists()
@@ -144,11 +165,7 @@ class TestSomebodyApproved:
             {"headline": "Mercadillo", "mode": "COMMUNITY", "kind": "LIBRARY"},
             format="json",
         )
-        thing = authenticated_client.post(
-            "/api/v1/things/",
-            {"type": "LEND_THING", "headline": "A ladder", "thumbnail": "img/x"},
-            format="json",
-        )
+        thing = thing_in_its_own_collection(authenticated_client, user, "LEND_THING", "A ladder")
 
         assert collection.status_code == status.HTTP_201_CREATED
         assert thing.status_code == status.HTTP_201_CREATED
@@ -230,10 +247,8 @@ class TestTheAdvertisedListIsTheAcceptedList:
             # collection this loop has no business building.
             if thing_type == "RESERVE_THING":
                 continue
-            response = authenticated_client.post(
-                "/api/v1/things/",
-                {"type": thing_type, "headline": f"Thing {index}", "thumbnail": "img/x"},
-                format="json",
+            response = thing_in_its_own_collection(
+                authenticated_client, user, thing_type, f"Thing {index}"
             )
             assert response.status_code == status.HTTP_201_CREATED, thing_type
 
@@ -278,10 +293,8 @@ class TestTheAdvertisedListIsTheAcceptedList:
         withheld = set(Thing.Type.values) - set(advertised["thing_types"])
 
         for thing_type in withheld:
-            response = authenticated_client.post(
-                "/api/v1/things/",
-                {"type": thing_type, "headline": "Withheld", "thumbnail": "img/x"},
-                format="json",
+            response = thing_in_its_own_collection(
+                authenticated_client, user, thing_type, "Withheld"
             )
             assert response.status_code == status.HTTP_403_FORBIDDEN, thing_type
 

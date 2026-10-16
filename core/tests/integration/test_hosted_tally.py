@@ -34,6 +34,7 @@ from django.test import RequestFactory
 from django.urls import resolve
 from rest_framework import status
 
+from core.models import Collection
 from core.services.email_service import _frontend_base_url, resolve_email_language
 from hosted.emails import send_creator_validation_decision_email
 from hosted.models import CreatorValidation
@@ -215,9 +216,20 @@ class TestCapabilitiesAndTheRefusals:
     ):
         speaking(user, language)
 
+        # A lending needs a library to be lent from; the account cannot make one
+        # through the API on this deployment, so the collection comes from the ORM.
+        library = Collection.objects.create(
+            owner=user, headline="Ladders", kind=Collection.Kind.LIBRARY
+        )
+
         response = authenticated_client.post(
             "/api/v1/things/",
-            {"type": "LEND_THING", "headline": "A ladder", "thumbnail": "img/x"},
+            {
+                "type": "LEND_THING",
+                "headline": "A ladder",
+                "thumbnail": "img/x",
+                "collection_code": library.code,
+            },
             format="json",
         )
 
