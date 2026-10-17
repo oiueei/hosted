@@ -36,3 +36,13 @@ extension points described in `SELF_HOSTING.md`.
 - An agent commits on its branch and stops there: no push, merge, tag or deploy.
 - Confirm the current branch before editing: `legal/` and the deployment settings differ between
   branches.
+
+## The growth line and the access page
+
+- `hosted/viral.py` is what `VIRAL_LINE_PROVIDER=hosted.viral.pick_line` points at (set by the
+  operator in Heroku, never in code): fifteen lines, each sent to the form the recipient may open or to
+  `/access/<need>`. The lines and the page's copy (`frontend/src/deployment/i18n.js`, `access.*`) are
+  this deployment's words; `core` keeps only the hook.
+- `/access/:need` (`frontend/src/deployment/pages/AccessPage.jsx`) and its two counters
+  (`hosted.models.AccessInterest`) hold numbers per day and need — keep it that way (DESIGN §9): no user,
+  address or User-Agent in a row. `/legal` says so (`frontend/src/legal/`).
