@@ -1,0 +1,87 @@
+import { useEffect, useRef } from 'react';
+import { Link as HdsLink } from 'hds-react';
+import { useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import PageLayout from '../../components/PageLayout';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+import useTheeeme from '../../hooks/useTheeeme';
+import { apiFetch } from '../../services/api';
+
+// What needs asking for, in the order the page tells it. The same four words the
+// server counts by (`hosted.models.AccessInterest`) and the emails link to
+// (`/access/<need>`).
+const NEEDS = ['library', 'rent', 'shed', 'community'];
+
+/**
+ * `/access/:need` — what opens on request, one section per need.
+ *
+ * The emails send a person here for the one thing they would need to ask for, and the
+ * page explains all four, always: somebody who came for renting may well want the
+ * library too. When the address names one, the page goes to it, puts the focus on its
+ * heading and reports — once, as a bare number and nothing about the reader — that the
+ * section was opened. Each section has a "Request access" button of its own that goes
+ * to the form with `?for=<need>`, so the count of presses can be told apart by need.
+ *
+ * It belongs to this deployment: what is asked first, and where, is one operator's.
+ */
+export default function AccessPage() {
+  const { need } = useParams();
+  const { t } = useTranslation();
+  const { btnStyle } = useTheeeme();
+  const reported = useRef(false);
+  const requested = NEEDS.includes(need) ? need : null;
+
+  useDocumentTitle(t('access.docTitle'));
+
+  useEffect(() => {
+    // A ref, not state: StrictMode runs the effect twice on mount and a second run
+    // must not count the same opening again.
+    if (!requested || reported.current) return;
+    reported.current = true;
+    const heading = document.getElementById(requested);
+    heading?.scrollIntoView?.();
+    heading?.focus();
+    apiFetch('/api/v1/access/seen/', {
+      method: 'POST',
+      body: JSON.stringify({ need: requested }),
+    }).catch(() => {
+      // A count that fails is nobody's problem: the page says nothing about it.
+    });
+  }, [requested]);
+
+  const isLoggedIn = !!localStorage.getItem('userCode');
+  const button = t('access.button');
+
+  return (
+    <PageLayout
+      title={t('access.title')}
+      description={t('access.intro')}
+      backTo={isLoggedIn ? '/' : '/login'}
+      backLabel={isLoggedIn ? t('common.home') : t('verify.goToLogin')}
+    >
+      <div className="legal-content" style={{ maxWidth: '720px' }}>
+        {NEEDS.map((name) => (
+          <section key={name}>
+            <h2 id={name} tabIndex={-1}>
+              {t(`access.${name}.title`)}
+            </h2>
+            <p>{t(`access.${name}.body`)}</p>
+            <div className="button-row-wide">
+              <HdsLink
+                href={`/request-access/?for=${name}`}
+                useButtonStyles
+                style={btnStyle}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${button}. ${t('common.opensInNewTab')}`}
+              >
+                {button}
+              </HdsLink>
+            </div>
+            <p style={{ color: 'var(--color-black-60, #666)' }}>{t('access.formNote')}</p>
+          </section>
+        ))}
+      </div>
+    </PageLayout>
+  );
+}

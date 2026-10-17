@@ -31,7 +31,13 @@ beforeEach(() => {
 
 describe('this deployment declares its own pages', () => {
   test('every route, and the paths the shared components read', () => {
-    expect(deploymentRoutes.map((route) => route.path)).toEqual(['/popin', '/welcome', '/faq']);
+    expect(deploymentRoutes.map((route) => route.path)).toEqual([
+      '/popin',
+      '/welcome',
+      '/faq',
+      '/access/:need',
+      '/access',
+    ]);
     // The three values that make LoginPage, SiteFooter, CollectionPage and
     // VerifyPage behave as a hosted service rather than as an invite-only
     // checkout, without any of them being edited. Each must name a route

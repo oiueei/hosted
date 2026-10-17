@@ -20,6 +20,7 @@ export { deploymentI18n } from './i18n';
 const PopInPage = lazy(() => import('./pages/PopInPage'));
 const WelcomePage = lazy(() => import('./pages/WelcomePage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
+const AccessPage = lazy(() => import('./pages/AccessPage'));
 
 export const deploymentRoutes = [
   // The open door: enter an email, get a magic link, land in the demo
@@ -31,6 +32,10 @@ export const deploymentRoutes = [
   // The help page: price, who runs this, what state it is in. Same reason as
   // /welcome — the answers are one operator's, not the product's.
   { path: '/faq', Component: FaqPage },
+  // What opens on request, one section per need. The emails link to `/access/<need>`
+  // and the page goes to that section; `/access` is the whole page.
+  { path: '/access/:need', Component: AccessPage },
+  { path: '/access', Component: AccessPage },
 ];
 
 // Where the "new here?" button on /login goes: the page that says what this
