@@ -96,8 +96,11 @@ describe('legal content parity', () => {
     expect(privacy, `${lang} privacy section does not name the per-device count`).toBeDefined();
     const paragraphs = privacy.body.split('\n\n').map((p) => p.trim());
     const at = paragraphs.findIndex((p) => p.startsWith(COUNTS[lang].lead));
-    expect(paragraphs[at - 1], `${lang}: it must follow the paragraph on what is stored`).toMatch(
-      /^\*\*(What the app stores, by design|Qué guarda la aplicación, por diseño|Què desa l'aplicació, per disseny):/
+    // After what the text says is stored. This deployment's privacy text has no
+    // "stores, by design" paragraph; it lists what it processes, and the new
+    // paragraph follows that list.
+    expect(paragraphs[at - 1], `${lang}: it must follow what is stored`).toMatch(
+      /^(\*\*(What the app stores, by design|Qué guarda la aplicación, por diseño|Què desa l'aplicació, per disseny):|- \*\*)/
     );
     expect(paragraphs[at]).toMatch(COUNTS[lang].no);
   });
