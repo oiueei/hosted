@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .emails import send_creator_validation_decision_email
-from .models import CreatorValidation, Milestone, WeeklySnapshot
+from .models import AccessInterest, CreatorValidation, Milestone, WeeklySnapshot
 
 # What the two free-text columns say for a row the operator creates by hand and leaves them
 # empty in. The request itself was written in a Tally form and lives there (see `tally.py`);
@@ -185,3 +185,21 @@ class WeeklySnapshotAdmin(admin.ModelAdmin):
         return format_html(
             "<pre>{}</pre>", json.dumps(obj.metrics, indent=2, sort_keys=True, ensure_ascii=False)
         )
+
+
+@admin.register(AccessInterest)
+class AccessInterestAdmin(admin.ModelAdmin):
+    """The two counters of the request-access page, read-only: numbers nobody edits."""
+
+    list_display = ("date", "need", "metric", "count")
+    list_filter = ("need", "metric")
+    date_hierarchy = "date"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

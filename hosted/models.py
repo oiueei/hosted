@@ -155,3 +155,54 @@ class WeeklySnapshot(models.Model):
 
     def __str__(self):
         return f"week of {self.week_start} ({self.origin})"
+
+
+class AccessInterest(models.Model):
+    """How often each section of the request-access page is read, and asked from.
+
+    A row is ``(date, need, metric, count)`` and nothing else: no user, no address, no
+    ``User-Agent``. ``SEEN`` counts the times a section is opened on the page, ``ASKED``
+    the times "Request access" is pressed from it; read side by side, per need, they say
+    which of the things that open on request people actually want. Numbers only, so —
+    like ``core``'s ``DeviceDay`` — there is nothing personal to expire, export or erase
+    and no retention period.
+    """
+
+    LIBRARY = "library"
+    RENT = "rent"
+    SHED = "shed"
+    COMMUNITY = "community"
+    NEED_CHOICES = [
+        (LIBRARY, "Library of things"),
+        (RENT, "Renting out"),
+        (SHED, "Shed"),
+        (COMMUNITY, "Community"),
+    ]
+
+    SEEN = "SEEN"
+    ASKED = "ASKED"
+    METRIC_CHOICES = [(SEEN, "Seen"), (ASKED, "Asked")]
+
+    code = models.CharField(max_length=6, primary_key=True, default=generate_id)
+    date = models.DateField()
+    need = models.CharField(max_length=9, choices=NEED_CHOICES)
+    metric = models.CharField(max_length=5, choices=METRIC_CHOICES)
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "hosted_access_interest"
+        ordering = ["-date", "need", "metric"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["date", "need", "metric"], name="unique_access_interest"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.date} {self.need} {self.metric}: {self.count}"
+
+    @classmethod
+    def bump(cls, need, metric):
+        """Add one to today's count, in the database: never read, add and save."""
+        row, _ = cls.objects.get_or_create(date=timezone.localdate(), need=need, metric=metric)
+        cls.objects.filter(pk=row.pk).update(count=models.F("count") + 1)

@@ -6,7 +6,7 @@ upstream owns and evolves — is never edited here. See SELF_HOSTING.md §1.
 
 from django.urls import path
 
-from .views import ContactRedirect, PopInView, RequestAccessRedirect
+from .views import AccessSeenView, ContactRedirect, PopInView, RequestAccessRedirect
 
 app_name = "hosted"
 
@@ -23,6 +23,8 @@ urlpatterns = [
     # then reads it as a user code and calls `GET /api/v1/users/request-access/`: a 404 two
     # layers away from the missing slash. This urlconf is mounted before the catch-all
     # (config/urls.py::deployment_urlpatterns), so these win.
+    # A section of the request-access page was opened: a count, with nobody in it.
+    path("api/v1/access/seen/", AccessSeenView.as_view(), name="access-seen"),
     path("request-access/", RequestAccessRedirect.as_view(), name="request-access"),
     path("request-access", RequestAccessRedirect.as_view(), name="request-access-no-slash"),
     # `/contact`, a page of core's, goes to the Tally form of "Contact us": see the view. Both

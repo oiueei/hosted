@@ -38,6 +38,7 @@ from core.utils import get_client_ip, redact_email
 # in the only direction that is safe: the service layer depends on the product.
 from core.views.auth import _join_collection, _send_magic_link, email_ratelimit_key
 
+from .models import AccessInterest
 from .tally import browser_language, contact_url, request_access_url
 
 security_logger = logging.getLogger("security")
@@ -147,6 +148,15 @@ class RequestAccessRedirect(RedirectView):
     permanent = False
 
     def get_redirect_url(self, *args, **kwargs):
+        # The request-access page links here with `?for=<need>`, and pressing the button
+        # is counted for that need. A missing or unknown `for` counts nothing, and
+        # nothing that goes wrong while counting changes where the person is sent.
+        need = self.request.GET.get("for", "")
+        if need in dict(AccessInterest.NEED_CHOICES):
+            try:
+                AccessInterest.bump(need, AccessInterest.ASKED)
+            except Exception:  # noqa: BLE001 — a count never costs anyone the form.
+                logging.getLogger(__name__).warning("AccessInterest ASKED failed", exc_info=True)
         return request_access_url(browser_language(self.request))
 
 
@@ -168,3 +178,27 @@ class ContactRedirect(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
         return contact_url(browser_language(self.request))
+
+
+class AccessSeenView(APIView):
+    """``POST /api/v1/access/seen/`` — a section of the request-access page was opened.
+
+    Public, no session and no cookie: the page is read before anyone has asked for
+    anything. The body is ``{"need": ...}`` and nothing else is read from the request —
+    not the address, not the browser — so the count holds nobody. An unknown ``need`` is
+    a 400 that writes nothing; a failure while counting is swallowed, because the page
+    must not notice it.
+    """
+
+    permission_classes = [AllowAny]
+
+    @method_decorator(ratelimit(key="ip", rate="30/m", method="POST", block=True))
+    def post(self, request):
+        need = request.data.get("need") if isinstance(request.data, dict) else None
+        if not isinstance(need, str) or need not in dict(AccessInterest.NEED_CHOICES):
+            return Response({"error": "Unknown need."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            AccessInterest.bump(need, AccessInterest.SEEN)
+        except Exception:  # noqa: BLE001 — a count never breaks the page.
+            logging.getLogger(__name__).warning("AccessInterest SEEN failed", exc_info=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
