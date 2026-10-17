@@ -5,6 +5,8 @@ from unittest.mock import patch
 
 import pytest
 import time_machine
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -141,3 +143,53 @@ class TestCountingNeverBreaksAnything:
             assert user.code not in held.replace(row.code, "")
             assert user.email not in held
             assert "iPhone" not in held and "Mozilla" not in held
+
+
+@pytest.mark.django_db
+class TestTheCountCostsOneCacheQuery:
+    """Both daily gates are read from the cache in one go.
+
+    The cache is the database, so each ``cache.get`` is a query; a request with a session
+    already counted today (``da:`` and ``dd:`` both set) used to read two keys one after
+    the other.
+    """
+
+    def _cache_queries(self, user, user_agent):
+        client = client_for(user, user_agent)
+        client.get("/api/v1/auth/me/")  # first request of the day: writes both keys
+        with CaptureQueriesContext(connection) as queries:
+            assert client.get("/api/v1/auth/me/").status_code == 200
+        return [q["sql"] for q in queries if "oiueei_cache" in q["sql"]]
+
+    def test_a_session_already_counted_today_reads_the_cache_once(self, user):
+        assert len(self._cache_queries(user, PHONE)) == 1
+
+    def test_a_request_with_no_user_agent_still_reads_it_once(self, user):
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
+        client.get("/api/v1/auth/me/")
+        with CaptureQueriesContext(connection) as queries:
+            client.get("/api/v1/auth/me/")
+
+        assert len([q for q in queries if "oiueei_cache" in q["sql"]]) == 1
+
+    def test_an_anonymous_request_reads_no_cache_for_the_count(self, api_client):
+        api_client.credentials(HTTP_USER_AGENT=PHONE)
+        with CaptureQueriesContext(connection) as queries:
+            api_client.get("/api/v1/collections/")
+
+        assert [q for q in queries if "oiueei_cache" in q["sql"]] == []
+
+    def test_a_failed_cache_read_skips_both_counts_and_keeps_the_response(self, user):
+        with patch("core.middleware.cache.get_many", side_effect=Exception("cache down")):
+            response = client_for(user, PHONE).get("/api/v1/auth/me/")
+
+        assert response.status_code == 200
+        assert DeviceDay.objects.count() == 0
+        assert DailyActivity.objects.count() == 0
+
+    def test_the_counts_still_land_when_the_cache_is_cold(self, user):
+        client_for(user, PHONE).get("/api/v1/auth/me/")
+
+        assert count("MOBILE", "PEOPLE") == 1
+        assert DailyActivity.objects.filter(user=user).count() == 1

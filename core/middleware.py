@@ -140,6 +140,10 @@ class DailyActivityMiddleware:
       a count: never the user and never the ``User-Agent``. It is counted whatever
       the activity gate said, so a second device the same day still counts.
 
+    The two gates' keys are read in **one** cache query (the cache is the database, so one
+    ``get`` each was two SELECTs on every request with a session); if that read fails, both
+    steps are skipped.
+
     Any failure here is swallowed — bookkeeping must never turn a successful
     response into a 500, and one count failing must not lose the other (DESIGN §9:
     this stays first-party, in our DB).
@@ -164,11 +168,22 @@ class DailyActivityMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         try:
-            self._record(request)
+            user_code = self._user_code(request)
+            device = device_class(request) if user_code else None
+            today = timezone.localdate()
+            keys = self._keys(user_code, device, today)
+            # One query for both gates: the cache is the database, so two `get`s were two
+            # SELECTs on every request with a session.
+            cached = cache.get_many(list(keys.values())) if keys else {}
+        except Exception:  # noqa: BLE001 — never let tracking break the response.
+            logger.warning("Daily activity cache read failed", exc_info=True)
+            return response
+        try:
+            self._record(user_code, today, keys.get("da"), cached)
         except Exception:  # noqa: BLE001 — never let tracking break the response.
             logger.warning("DailyActivity recording failed", exc_info=True)
         try:
-            self._count_device(request, response)
+            self._count_device(request, response, user_code, device, today, keys.get("dd"), cached)
         except Exception:  # noqa: BLE001 — same: a count never breaks the response.
             logger.warning("DeviceDay counting failed", exc_info=True)
         return response
@@ -180,14 +195,19 @@ class DailyActivityMiddleware:
             return None
         return getattr(user, "code", None) or None
 
-    def _record(self, request):
-        user_code = self._user_code(request)
+    @staticmethod
+    def _keys(user_code, device, today):
+        """The cache keys this request's two gates read, by name; none for no session."""
         if not user_code:
-            return
+            return {}
+        day = today.isoformat()
+        keys = {"da": f"da:{user_code}:{day}"}
+        if device is not None:
+            keys["dd"] = f"dd:{user_code}:{day}:{device}"
+        return keys
 
-        today = timezone.localdate()
-        cache_key = f"da:{user_code}:{today.isoformat()}"
-        if cache.get(cache_key):
+    def _record(self, user_code, today, cache_key, cached):
+        if not user_code or cached.get(cache_key):
             return
 
         from core.models.activity import DailyActivity
@@ -197,21 +217,15 @@ class DailyActivityMiddleware:
         DailyActivity.objects.get_or_create(user_id=user_code, date=today)
         cache.set(cache_key, 1, self.CACHE_TTL)
 
-    def _count_device(self, request, response):
-        user_code = self._user_code(request)
-        if not user_code:
-            return
-        device = device_class(request)
-        if device is None:
+    def _count_device(self, request, response, user_code, device, today, cache_key, cached):
+        if not user_code or device is None:
             return
 
         from core.models.activity import DeviceDay
 
-        today = timezone.localdate()
-        key = f"dd:{user_code}:{today.isoformat()}:{device}"
-        if not cache.get(key):
+        if not cached.get(cache_key):
             self._bump(DeviceDay, today, device, DeviceDay.PEOPLE)
-            cache.set(key, 1, self.CACHE_TTL)
+            cache.set(cache_key, 1, self.CACHE_TTL)
 
         match = getattr(request, "resolver_match", None)
         if (
