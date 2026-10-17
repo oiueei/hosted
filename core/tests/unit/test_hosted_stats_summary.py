@@ -667,3 +667,78 @@ class TestTheDevicesSection:
         assert DEVICES in message.body
         assert "4 / 0 (100 %)" in message.body
         assert DEVICES in message.alternatives[0][0]
+
+
+INTEREST = "Interest in what opens on request (last week)"
+
+
+def _interest(day, need, metric, count):
+    from hosted.models import AccessInterest
+
+    AccessInterest.objects.create(date=day, need=need, metric=metric, count=count)
+
+
+@pytest.mark.django_db
+class TestTheInterestSection:
+    """The Monday email says what the request-access page was read for, and pressed for."""
+
+    NOW = "2026-10-21 12:00"  # Wednesday of ISO week 43; the last closed week is 42.
+
+    def _report(self):
+        with time_machine.travel(self.NOW, tick=False):
+            return build_report()
+
+    def test_each_need_shows_its_seen_and_asked_and_the_share_who_asked(self):
+        _interest(date(2026, 10, 13), "rent", "SEEN", 40)
+        _interest(date(2026, 10, 15), "rent", "SEEN", 10)
+        _interest(date(2026, 10, 14), "rent", "ASKED", 5)
+        _interest(date(2026, 10, 14), "shed", "SEEN", 8)
+        _interest(date(2026, 10, 14), "shed", "ASKED", 2)
+
+        sections = self._report()
+
+        assert _row(sections, INTEREST, "Renting out") == "50 seen · 5 asked (10%)"
+        assert _row(sections, INTEREST, "Shed") == "8 seen · 2 asked (25%)"
+
+    def test_every_need_is_listed_with_zeros_and_a_dash_when_nobody_arrived(self):
+        sections = self._report()
+
+        rows = dict(_section(sections, INTEREST)["rows"])
+        assert rows == {
+            "Library of things": "0 seen · 0 asked (—)",
+            "Renting out": "0 seen · 0 asked (—)",
+            "Shed": "0 seen · 0 asked (—)",
+            "Community": "0 seen · 0 asked (—)",
+        }
+
+    def test_a_row_from_another_week_does_not_come_in(self):
+        _interest(date(2026, 10, 7), "library", "SEEN", 99)  # week 41
+        _interest(date(2026, 10, 20), "library", "SEEN", 77)  # week 43, still running
+        _interest(date(2026, 10, 19), "library", "ASKED", 11)  # its Monday: not last week's
+
+        sections = self._report()
+
+        assert _row(sections, INTEREST, "Library of things") == "0 seen · 0 asked (—)"
+
+    def test_the_last_day_of_the_week_still_counts(self):
+        _interest(date(2026, 10, 18), "community", "SEEN", 4)  # Sunday of week 42
+        _interest(date(2026, 10, 12), "community", "SEEN", 6)  # Monday of week 42
+
+        assert _row(self._report(), INTEREST, "Community") == "10 seen · 0 asked (0%)"
+
+    def test_it_sits_before_the_demo_funnel(self):
+        titles = _titles(self._report())
+
+        assert titles.index(INTEREST) < titles.index("Demo funnel (NOT real metrics)")
+
+    def test_the_monday_email_carries_it_in_text_and_html(self, monkeypatch):
+        monkeypatch.setenv("STATS_EMAIL", "ops@your-domain.test")
+        _interest(date(2026, 10, 14), "rent", "SEEN", 20)
+        _interest(date(2026, 10, 14), "rent", "ASKED", 4)
+        with time_machine.travel(self.NOW, tick=False):
+            call_command("stats_summary", "--email", stdout=StringIO())
+
+        message = mail.outbox[-1]
+        assert INTEREST in message.body
+        assert "20 seen · 4 asked (20%)" in message.body
+        assert INTEREST in message.alternatives[0][0]

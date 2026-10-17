@@ -30,7 +30,7 @@ from core.management.commands.seed_data.common import USERS as _SEED_USERS
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
 from hosted.emails import send_stats_summary_email
 from hosted.metrics import WEEK_TZ, cohorts_as_of, cycle_as_of, real_events, retired_orphans
-from hosted.models import CreatorValidation, Milestone, WeeklySnapshot
+from hosted.models import AccessInterest, CreatorValidation, Milestone, WeeklySnapshot
 
 SEED_USER_CODES = frozenset(u["code"] for u in _SEED_USERS)
 
@@ -157,6 +157,7 @@ def build_report():
         _cycle_section(now),
         _phases_section(),
         _devices_section(),
+        _interest_section(),
         _demo_section(demo, demo_collections),
     ]
     return sections
@@ -582,6 +583,35 @@ def _devices_section():
             ("Form saves (mobile / other)", _cell(week, "form_saves")),
         ],
         "note": f"ISO week {week['week']}; a tablet counts as other",
+    }
+
+
+def _interest_section():
+    """What the request-access page was read for, and pressed for, last week.
+
+    Per need, how many times its section was opened (``SEEN``) and how many times its
+    "Request access" button was pressed (``ASKED``), and the share who asked. The two
+    counters hold numbers only (``AccessInterest``); the week is the last closed ISO
+    week, the one the devices section reads. No arrivals gives a dash, not a division.
+    """
+    today = timezone.localdate()
+    this_monday = today - timedelta(days=today.weekday())
+    start = this_monday - timedelta(weeks=1)
+    totals = {}
+    for need, metric, count in AccessInterest.objects.filter(
+        date__gte=start, date__lt=this_monday
+    ).values_list("need", "metric", "count"):
+        totals[(need, metric)] = totals.get((need, metric), 0) + count
+    rows = []
+    for need, label in AccessInterest.NEED_CHOICES:
+        seen = totals.get((need, AccessInterest.SEEN), 0)
+        asked = totals.get((need, AccessInterest.ASKED), 0)
+        rows.append((label, f"{seen} seen · {asked} asked ({_pct(asked, seen)})"))
+    year, week, _ = start.isocalendar()
+    return {
+        "title": "Interest in what opens on request (last week)",
+        "rows": rows,
+        "note": f"ISO week {year}-W{week:02d}; asked / seen",
     }
 
 
