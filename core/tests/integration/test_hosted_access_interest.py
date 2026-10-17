@@ -8,7 +8,7 @@ number. Whatever fails while counting never costs the reader their page or the
 redirect to the form.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -16,6 +16,8 @@ import time_machine
 from django.contrib import admin
 from django.db import IntegrityError, transaction
 from django.test import RequestFactory, override_settings
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import User
 from hosted.admin import AccessInterestAdmin
@@ -93,6 +95,48 @@ class TestSeen:
         assert statuses[:30] == [204] * 30
         assert statuses[30] == 429
         assert count("rent", "SEEN") == 30
+
+
+@pytest.mark.django_db
+class TestSeenWhateverCookieComesWithIt:
+    """The counter reads nothing of the reader, so no cookie of theirs can refuse it.
+
+    The page is opened from an email by people whose session may have run out; an
+    authentication failure here would send them to /login through the page's own
+    ``apiFetch`` instead of counting a reading.
+    """
+
+    def _client(self):
+        return APIClient(enforce_csrf_checks=True)
+
+    def test_an_invalid_session_cookie_is_counted_and_answers_204(self):
+        client = self._client()
+        client.cookies["access_token"] = "this-is-not-a-token"
+
+        response = seen(client, "rent")
+
+        assert response.status_code == 204
+        assert count("rent", "SEEN") == 1
+
+    def test_an_expired_session_cookie_is_counted_and_answers_204(self, user):
+        token = RefreshToken.for_user(user).access_token
+        token.set_exp(from_time=token.current_time, lifetime=-timedelta(hours=2))
+        client = self._client()
+        client.cookies["access_token"] = str(token)
+
+        response = seen(client, "shed")
+
+        assert response.status_code == 204
+        assert count("shed", "SEEN") == 1
+
+    def test_a_valid_session_without_a_csrf_header_is_counted_and_answers_204(self, user):
+        client = self._client()
+        client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
+
+        response = seen(client, "community")
+
+        assert response.status_code == 204
+        assert count("community", "SEEN") == 1
 
 
 @pytest.mark.django_db
