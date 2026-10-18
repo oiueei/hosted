@@ -83,7 +83,7 @@ export default function CollectionPage() {
     navigate(location.pathname, { replace: true, state: null });
     if (!isPhone) return;
     // Not in the list — a tag filter, past the first page — is the notice alone.
-    const card = document.querySelector(`[data-thing-code="${addedThing}"]`);
+    const card = document.querySelector(`[data-thing-code="${CSS.escape(addedThing)}"]`);
     if (!card) return;
     const { top, bottom } = card.getBoundingClientRect();
     if (top < 0 || bottom > window.innerHeight) {

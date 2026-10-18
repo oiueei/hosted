@@ -42,20 +42,20 @@ describe('useDismissable', () => {
     expect(screen.getByRole('button', { name: 'Trigger' })).toHaveFocus();
   });
 
-  test('a mousedown inside the wrapper does not close the panel', () => {
+  test('a pointerdown inside the wrapper does not close the panel', () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole('button', { name: 'Trigger' }));
 
-    fireEvent.mouseDown(screen.getByText('Panel'));
+    fireEvent.pointerDown(screen.getByText('Panel'));
 
     expect(screen.getByText('Panel')).toBeInTheDocument();
   });
 
-  test('a mousedown outside the wrapper closes the panel', () => {
+  test('a pointerdown outside the wrapper closes the panel', () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole('button', { name: 'Trigger' }));
 
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Outside' }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Outside' }));
 
     expect(screen.queryByText('Panel')).not.toBeInTheDocument();
   });

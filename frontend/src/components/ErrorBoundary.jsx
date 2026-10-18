@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { Button } from 'hds-react';
 import i18n from '../i18n';
 
 /**
@@ -11,7 +12,9 @@ import i18n from '../i18n';
  * Kept deliberately self-contained and resilient: it uses the i18n instance
  * directly (class components can't use the useTranslation hook) with English
  * defaultValues, so the fallback still renders even if the failure is
- * translation- or data-related. Inline styles avoid depending on app CSS.
+ * translation- or data-related. The layout is inline and the buttons are HDS
+ * `Button`s painted with the HDS colour tokens (each with its hex as the fallback
+ * of `var()`), so the fallback does not depend on app CSS or on a theeeme.
  */
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -52,12 +55,25 @@ class ErrorBoundary extends Component {
       marginTop: 24,
       flexWrap: 'wrap',
     };
-    const baseBtn = {
-      borderRadius: 4,
-      padding: '10px 20px',
-      cursor: 'pointer',
-      font: 'inherit',
-      border: '2px solid #1a1a1a',
+    // Black-90 on white: the neutral palette, needing no theeeme (the tree that
+    // would have supplied one is the thing that just failed).
+    const primary = {
+      '--background-color': 'var(--color-black-90, #1a1a1a)',
+      '--background-color-hover': 'var(--color-black-80, #333333)',
+      '--background-color-focus': 'var(--color-black-90, #1a1a1a)',
+      '--border-color': 'var(--color-black-90, #1a1a1a)',
+      '--border-color-focus': 'var(--color-black-90, #1a1a1a)',
+      '--color': 'var(--color-white, #ffffff)',
+      '--color-focus': 'var(--color-white, #ffffff)',
+    };
+    const secondary = {
+      '--background-color': 'var(--color-white, #ffffff)',
+      '--background-color-hover': 'var(--color-black-5, #f2f2f2)',
+      '--background-color-focus': 'var(--color-white, #ffffff)',
+      '--border-color': 'var(--color-black-90, #1a1a1a)',
+      '--border-color-focus': 'var(--color-black-90, #1a1a1a)',
+      '--color': 'var(--color-black-90, #1a1a1a)',
+      '--color-focus': 'var(--color-black-90, #1a1a1a)',
     };
 
     return (
@@ -70,22 +86,18 @@ class ErrorBoundary extends Component {
           )}
         </p>
         <div style={row}>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            style={{ ...baseBtn, background: '#1a1a1a', color: '#fff' }}
-          >
+          <Button type="button" onClick={() => window.location.reload()} style={primary}>
             {t('errorBoundary.reload', 'Reload page')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               window.location.href = '/';
             }}
-            style={{ ...baseBtn, background: '#fff', color: '#1a1a1a' }}
+            style={secondary}
           >
             {t('errorBoundary.home', 'Go home')}
-          </button>
+          </Button>
         </div>
       </div>
     );

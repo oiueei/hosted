@@ -31,6 +31,17 @@ export const KIND_THING_TYPES = {
 };
 
 /**
+ * Whether a price or a deposit is something to show. The API sends them as text
+ * (`"0.00"`), and any non-empty text is truthy in JS, so a bare `thing.deposit &&`
+ * showed "Deposit. 0.00 €". The rule is the one `deriveThingType` uses: only an
+ * amount above zero counts; `null`, `""` and `"0.00"` do not. The forms do not use
+ * it: a zero typed there is still seen and saved.
+ */
+export function hasAmount(value) {
+  return Number(value) > 0;
+}
+
+/**
  * The verb a thing takes in a `kind` collection: it follows the price. A stall gives
  * (no price) or sells (a price), a library lends or rents out, a shed books. The
  * browser's copy of the server's `derive_thing_type`, used to decide what the form
@@ -39,7 +50,7 @@ export const KIND_THING_TYPES = {
  */
 export function deriveThingType(kind, fee) {
   const [free, paid] = KIND_THING_TYPES[kind] || KIND_THING_TYPES.STALL;
-  return paid && Number(fee) > 0 ? paid : free;
+  return paid && hasAmount(fee) ? paid : free;
 }
 
 /** The kind of collection a verb belongs to (`undefined` for none). */
@@ -47,9 +58,12 @@ export function kindOfThingType(type) {
   return Object.keys(KIND_THING_TYPES).find((kind) => KIND_THING_TYPES[kind].includes(type));
 }
 
+// The status tags' colours. Tokens wherever HDS has the colour; the amber pair
+// (requested / pending questions) stays hex because HDS has no amber text
+// colour of this contrast on a light amber ground.
 export const TAG_THEMES = {
   taken: { '--tag-background': '#fff4e5', '--tag-color': '#b54708' },
-  inactive: { '--tag-background': '#e8e8e8', '--tag-color': '#525252' },
+  inactive: { '--tag-background': 'var(--color-black-10)', '--tag-color': 'var(--color-black-70)' },
   pending: { '--tag-background': '#fff4e5', '--tag-color': '#b54708' },
   // Owner-defined collection tags assigned to a thing — neutral bussi tint,
   // distinct from the amber status tags and grey inactive tag.

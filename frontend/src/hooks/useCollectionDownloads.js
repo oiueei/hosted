@@ -20,7 +20,7 @@ import useCalendarExport from './useCalendarExport';
  * `active` names the download that last started, and the status zone
  * renders only that one's state, which is what keeps the page at one
  * message at a time: starting a second download drops the first's
- * outcome, so a finished "3 event(s)" cannot sit beside a half-done
+ * outcome, so a finished "3 events" cannot sit beside a half-done
  * stats file and read as both having completed.
  */
 export default function useCollectionDownloads(code) {

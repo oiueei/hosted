@@ -48,9 +48,6 @@ function renderFaq(props = {}) {
         thingCode="THG001"
         isOwner={false}
         isAuthenticated
-        btnStyle={{}}
-        btnSecondaryStyle={{}}
-        tc={{ color_03: 'copper' }}
         onToast={onToast}
         {...props}
       />
@@ -67,6 +64,27 @@ beforeEach(() => {
 // ════════════════════════════════════════════════════════════════════════
 // Asking — logged-in non-owners only
 // ════════════════════════════════════════════════════════════════════════
+describe('ThingFaqSection — the theeeme', () => {
+  test('paints its own buttons with the viewer’s theeeme, without being handed it', async () => {
+    localStorage.setItem(
+      'theeemeColors',
+      JSON.stringify({
+        color_01: 'copper',
+        color_02: 'white',
+        color_03: 'tram',
+        color_04: 'black',
+        color_05: 'white',
+        color_06: 'black',
+      })
+    );
+    renderFaq();
+
+    const send = await screen.findByRole('button', { name: 'Send question' });
+    expect(send.getAttribute('style')).toContain('--background-color: var(--color-copper)');
+    localStorage.clear();
+  });
+});
+
 describe('ThingFaqSection — asking a question', () => {
   test('a member asks, and the question joins the list', async () => {
     setApi({

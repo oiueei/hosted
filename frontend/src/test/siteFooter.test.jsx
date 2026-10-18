@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, test, expect, vi } from 'vitest';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { axe, toHaveNoViolations } from 'jest-axe';
 
 import SiteFooter from '../components/SiteFooter';
 import { declarations, declarationsInMedia, rulesFor, declared } from './cssRules';
@@ -166,6 +167,9 @@ describe('SiteFooter — one line from 768px', () => {
   const lineWith = async (aboutPath) => {
     vi.resetModules();
     vi.doMock('../deployment', () => ({ aboutPath, externalForms: null, requestAccessPaths: {} }));
+    // The line of doors and text is the same with or without a session; signed in, the
+    // tagline above it (covered below) is not in the way of reading it.
+    localStorage.setItem('userCode', 'ABC123');
     try {
       const { default: Footer } = await import('../components/SiteFooter');
       const { container } = render(
@@ -175,6 +179,7 @@ describe('SiteFooter — one line from 768px', () => {
       );
       return container.querySelector('footer').textContent.replace(/\s+/g, ' ').trim();
     } finally {
+      localStorage.removeItem('userCode');
       vi.doUnmock('../deployment');
     }
   };
@@ -239,5 +244,62 @@ describe('SiteFooter — one line from 768px', () => {
     expect(declarationsInMedia('(min-width: 768px)', '.site-footer-sep', 'display')).toEqual([
       'inline',
     ]);
+  });
+});
+
+expect.extend(toHaveNoViolations);
+
+describe('SiteFooter — the tagline, only without a session', () => {
+  const TAGLINE = 'OIUEEI · share what you have with the people around you';
+  const renderFooter = () =>
+    render(
+      <MemoryRouter>
+        <SiteFooter />
+      </MemoryRouter>
+    );
+
+  beforeEach(() => localStorage.clear());
+
+  test('a signed-out reader sees it, and it leads to /login', () => {
+    renderFooter();
+
+    expect(screen.getByRole('link', { name: TAGLINE })).toHaveAttribute('href', '/login');
+  });
+
+  test('it comes before the doors', () => {
+    renderFooter();
+
+    const tagline = screen.getByRole('link', { name: TAGLINE });
+    const legal = screen.getByRole('link', { name: /privacy & legal/i });
+    expect(tagline.compareDocumentPosition(legal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('someone signed in does not get it', () => {
+    localStorage.setItem('userCode', 'ABC123');
+    renderFooter();
+
+    expect(screen.queryByText(TAGLINE)).toBeNull();
+    expect(screen.getByRole('link', { name: /privacy & legal/i })).toBeInTheDocument();
+  });
+
+  test('it asks nothing of the server', () => {
+    const fetchSpy = vi.fn();
+    globalThis.fetch = fetchSpy;
+    renderFooter();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test('the footer has no accessibility violations with it', async () => {
+    const { container } = renderFooter();
+
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  test('it is a line of its own above the doors from 768px, with a 44px target', () => {
+    expect(declarationsInMedia('(min-width: 768px)', '.site-footer-tagline', 'flex')).toEqual([
+      '0 0 100%',
+    ]);
+    expect(declarations('.site-footer-tagline a', 'min-height')).toEqual(['44px']);
   });
 });

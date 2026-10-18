@@ -104,6 +104,23 @@ describe('RequestThingPage — RESERVE_THING', () => {
     expect(screen.getByLabelText(/What do you need it for/)).toBeInTheDocument();
   });
 
+  test('with a one-day cap the date is labelled “Day”', async () => {
+    setApi({ thing: { ...RESERVE_THING, reservation_max_days: 1 } });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    const label = container.querySelector('label[for="reservation-pickup-date"]');
+    expect(label.textContent).toMatch(/^Day\b/);
+  });
+
+  test('with a longer cap the date is labelled “From”', async () => {
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala polivalent/);
+
+    const label = container.querySelector('label[for="reservation-pickup-date"]');
+    expect(label.textContent).toMatch(/^From\b/);
+  });
+
   test('with a longer cap the duration select is offered', async () => {
     renderPage();
     await screen.findByText(/Reserve Sala polivalent/);
@@ -675,6 +692,15 @@ function typeHourlyPickup(container, display) {
 }
 
 describe('RequestThingPage — RESERVE_THING (HOUR unit)', () => {
+  test('the hourly date is asked as “Which day?”', async () => {
+    setApi({ thing: HOURLY_RESERVE_THING });
+    const { container } = renderPage();
+    await screen.findByText(/Reserve Sala amb hores/);
+
+    const label = container.querySelector('label[for="reservation-pickup-date-hourly"]');
+    expect(label.textContent).toMatch(/^Which day\?/);
+  });
+
   test('renders the hourly pickup field, not the day-count select', async () => {
     setApi({ thing: HOURLY_RESERVE_THING });
     renderPage();

@@ -270,7 +270,7 @@ describe('the thing page — "Requests to me"', () => {
     );
 
     expect(within(panel()).queryByRole('link', { name: REQUESTS })).toBeNull();
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Your account' }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Your account' }));
     fireEvent.click(screen.getByRole('button', { name: 'Your account' }));
     expect(screen.queryByRole('link', { name: REQUESTS })).not.toBeInTheDocument();
   });
@@ -308,7 +308,7 @@ describe('the thing page — what the menu does from here', () => {
 
     fireEvent.click(within(panel()).getByRole('button', { name: 'Download the calendar (ICS)' }));
 
-    const message = await screen.findByText('3 event(s) — check your downloads.');
+    const message = await screen.findByText('3 events — check your downloads.');
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/COL001/calendar-export/', {
       method: 'POST',
     });

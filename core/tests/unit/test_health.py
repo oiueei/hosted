@@ -112,6 +112,22 @@ class TestHealthCheck:
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
+    def test_a_failing_limiter_leaves_a_warning_naming_the_exception_type(self, api_client, caplog):
+        """The limiter fails open, but not silently: an operator reading the logs can
+        tell the throttle stopped counting — and the log names the exception's type,
+        never its message (which can carry the database host)."""
+        boom = OperationalError('connection to server at "cluster.eu-west-1.rds.amazonaws.com"')
+        with (
+            patch("core.urls.is_ratelimited", side_effect=boom),
+            caplog.at_level("WARNING", logger="core.urls"),
+        ):
+            response = api_client.get(HEALTH_URL)
+        assert response.status_code == 200
+        records = [r for r in caplog.records if r.name == "core.urls"]
+        assert len(records) == 1
+        assert "OperationalError" in records[0].getMessage()
+        assert "rds.amazonaws.com" not in records[0].getMessage()
+
     def test_head_works_for_monitors(self, api_client):
         # Uptime monitors often probe with HEAD to save bandwidth.
         assert api_client.head(HEALTH_URL).status_code == 200

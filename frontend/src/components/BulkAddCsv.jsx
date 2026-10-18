@@ -6,6 +6,7 @@ import { CSV_PARSE_OPTIONS } from '../utils/csv';
 import { apiFetch } from '../services/api';
 import { uploadImage, UploadRateLimitedError, UPLOADS_PER_HOUR } from '../utils/uploadImage';
 import { MAX_GALLERY, MAX_ROWS, mapRow, photoNames, validateRows } from '../utils/bulkCsv';
+import { hasAmount } from '../constants/things';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
@@ -282,8 +283,8 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
               <li key={i}>
                 {row.headline}
                 {row.type ? ` — ${t(`types.${row.type}`, row.type)}` : ''}
-                {row.fee ? ` · ${row.fee}` : ''}
-                {row.deposit ? ` · 🔒${row.deposit}` : ''}
+                {hasAmount(row.fee) ? ` · ${row.fee}` : ''}
+                {hasAmount(row.deposit) ? ` · 🔒${row.deposit}` : ''}
                 {row.tags ? ` · ${row.tags.join(', ')}` : ''}
                 {row.photo || row.photos
                   ? ` · 📷 ${[row.photo, row.photos && `+${row.photos.length}`].filter(Boolean).join(' ')}`

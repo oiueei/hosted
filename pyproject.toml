@@ -62,8 +62,14 @@ exclude_lines = [
 # Individual mutants can also be re-checked by name:
 #   mutmut run core.utils.x_get_client_ip__mutmut_4
 #
-# NOTE: .claude/skills/solid-testing/scripts/mutation_test.sh still speaks the
-# mutmut 2.x CLI (--paths-to-mutate / --tests-dir / --runner) and fails on 3.x.
+# Two traps that make a run lie without saying so:
+#   - mutmut 3 SKIPS every function that has a decorator. A view written as
+#     `@method_decorator(ratelimit(...)) def post(...)` is never mutated, so it
+#     can never appear among the survivors: mutate those by hand.
+#   - on macOS + Python 3.14 the children of its `fork` die with exit -11 unless
+#     `no_proxy='*'` is exported; .claude/skills/solid-testing/scripts/mutation_test.sh
+#     exports it and counts the segfaulted mutants in its summary (they were not
+#     judged either way).
 [tool.mutmut]
 source_paths = ["core/"]
 pytest_add_cli_args_test_selection = ["core/tests/"]

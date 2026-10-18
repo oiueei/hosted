@@ -135,6 +135,8 @@ class ThingFAQListView(APIView):
         # API ever hands a co-member the asker's address, and this must not be
         # the one thing that does.
         questioner_name = request.user.name
+        # A thing sits in one collection; read from the prefetch, so no query.
+        collection = next(iter(thing.collections.all()), None)
         for manager in thing.managers():
             if manager.code == request.user.code:
                 continue
@@ -146,6 +148,9 @@ class ThingFAQListView(APIView):
                 payload={
                     "thing_headline": thing.headline,
                     "questioner_name": questioner_name,
+                    # Lets `drop_team_notices_of` find this notice when its reader
+                    # stops running the collection.
+                    "collection_code": collection.code if collection else "",
                     # What settles this notice (an answer or a hide) matches on.
                     "faq_code": faq.code,
                 },

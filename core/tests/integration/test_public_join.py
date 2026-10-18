@@ -8,6 +8,8 @@ joins PUBLIC, ACTIVE collections — never a PRIVATE one — and an unknown/non-
 code is silently ignored (same unified response, no enumeration oracle).
 """
 
+import logging
+
 import pytest
 from django.core import mail
 from django.core.cache import caches
@@ -603,3 +605,77 @@ class TestSignedInJoin:
             == 1
         )
         assert not public.invites.filter(code=user2.code).exists()
+
+
+def _records(security_log):
+    """Only what the ``security`` logger wrote: caplog's handler also sits on the
+    root, so a framework warning ("Too Many Requests") would otherwise count."""
+    return [r for r in security_log.records if r.name == "security"]
+
+
+@pytest.mark.django_db
+class TestTheSecurityLogOfTheSignedInDoor:
+    """``JoinView`` writes who joined what and who the daily ceiling turned away;
+    the signed-in door has to leave the same trail."""
+
+    QUOTA = {
+        "RATELIMIT_ENABLE": True,
+        "CACHES": {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "public-join-security-log",
+            }
+        },
+        "COLLECTION_JOINS_PER_DAY": 1,
+    }
+
+    @staticmethod
+    def _join(client, collection):
+        return client.post(f"/api/v1/collections/{collection.code}/join/")
+
+    def test_a_join_names_the_user_the_collection_and_the_public_door(
+        self, authenticated_client, user, join_setup, security_log
+    ):
+        public = join_setup["public"]
+        security_log.set_level(logging.INFO, logger="security")
+
+        self._join(authenticated_client, public)
+
+        assert [r.levelname for r in _records(security_log)] == ["INFO"]
+        line = _records(security_log)[0].getMessage()
+        assert user.code in line
+        assert public.code in line
+        assert "via public" in line
+
+    def test_joining_again_as_a_member_logs_nothing(
+        self, authenticated_client, join_setup, security_log
+    ):
+        public = join_setup["public"]
+        security_log.set_level(logging.INFO, logger="security")
+        self._join(authenticated_client, public)
+        assert len(_records(security_log)) == 1  # the join itself was logged
+        security_log.clear()
+
+        self._join(authenticated_client, public)
+
+        assert _records(security_log) == []
+
+    @override_settings(**QUOTA)
+    def test_a_refusal_for_the_daily_ceiling_is_a_warning_naming_the_collection(
+        self, user, user2, join_setup, security_log
+    ):
+        caches["default"].clear()
+        public = join_setup["public"]
+        first, second = APIClient(), APIClient()
+        first.force_authenticate(user=user)
+        second.force_authenticate(user=user2)
+        self._join(first, public)
+        security_log.clear()
+
+        assert self._join(second, public).status_code == 429
+
+        assert [r.levelname for r in _records(security_log)] == ["WARNING"]
+        line = _records(security_log)[0].getMessage()
+        assert user2.code in line
+        assert public.code in line
+        assert "COLLECTION_JOINS_PER_DAY" in line

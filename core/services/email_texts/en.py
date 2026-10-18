@@ -301,23 +301,23 @@ TEXTS = {
     # Reservations (RESERVE_THING) — auto-confirmed, so "confirmed", not "requested"
     "reservation_confirmed_subject": "Your reservation of '{thing}' is confirmed",
     "reservation_confirmed_plain": (
-        "Your reservation of '{thing}' is confirmed for {start} to {end}. View the listing: {url}"
+        "Your reservation of '{thing}' is confirmed {when}. View the listing: {url}"
     ),
     "reservation_confirmed_intro": "Your reservation is confirmed:",
     "contact_shared_reservation": "Your email goes with the booking.",
     "reservation_fee_label": "Fee",
     "reservation_where_label": "Where",
     "reservation_notice_subject": "{requester} reserved '{thing}'",
-    "reservation_notice_plain": "{requester} reserved '{thing}' for {start} to {end}.",
+    "reservation_notice_plain": "{requester} reserved '{thing}' {when}.",
     "reservation_notice_intro": "{requester} has reserved:",
     "reservation_note_label": "Their note",
     "reservation_cancelled_subject": "Reservation cancelled: '{thing}'",
     "reservation_cancelled_to_guest_plain": (
-        "{other} has cancelled your reservation of '{thing}' ({start} to {end})."
+        "{other} has cancelled your reservation of '{thing}' ({when})."
     ),
     "reservation_cancelled_to_guest_intro": "{other} has cancelled your reservation of:",
     "reservation_cancelled_to_owner_plain": (
-        "{other} has cancelled their reservation of '{thing}' ({start} to {end})."
+        "{other} has cancelled their reservation of '{thing}' ({when})."
     ),
     "reservation_cancelled_to_owner_intro": "{other} has cancelled their reservation of:",
     "reservation_cancel_confirmation_subject_self": "Your reservation of '{thing}' is cancelled",
@@ -325,15 +325,14 @@ TEXTS = {
     "reservation_cancel_confirmation_intro_self": "Your reservation is cancelled:",
     "reservation_cancel_confirmation_intro_other": "You cancelled {member}'s reservation:",
     "reservation_cancel_confirmation_plain_self": (
-        "Your reservation of '{thing}' ({start} to {end}) is cancelled."
+        "Your reservation of '{thing}' ({when}) is cancelled."
     ),
     "reservation_cancel_confirmation_plain_other": (
-        "You cancelled {member}'s reservation of '{thing}' ({start} to {end})."
+        "You cancelled {member}'s reservation of '{thing}' ({when})."
     ),
     "reservation_reminder_subject": "Your reservation of '{thing}' starts tomorrow",
     "reservation_reminder_plain": (
-        "A friendly nudge: your reservation of '{thing}' runs {start} to {end}. "
-        "View the listing: {url}"
+        "A friendly nudge: your reservation of '{thing}' is {when}. View the listing: {url}"
     ),
     "reservation_reminder_intro": "Your reservation starts tomorrow:",
     # Digest

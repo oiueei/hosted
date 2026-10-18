@@ -10,6 +10,8 @@ opens, what it must never reveal, and that a door which joins people goes
 through the one funnel every other door uses.
 """
 
+import logging
+
 import pytest
 from django.core import mail
 from django.core.cache import caches
@@ -291,3 +293,70 @@ class TestTheOperatorsCeiling:
         assert statuses[0] == 200  # joins…
         assert set(statuses[1:30]) == {200}  # …then idempotent answers…
         assert statuses[30] == 429  # …and the 31st in the hour is refused
+
+
+def _records(security_log):
+    """Only what the ``security`` logger wrote: caplog's handler also sits on the
+    root, so a framework warning ("Too Many Requests") would otherwise count."""
+    return [r for r in security_log.records if r.name == "security"]
+
+
+@pytest.mark.django_db
+class TestTheSecurityLog:
+    """The anonymous door writes who joined what and who was refused for the daily
+    ceiling; this signed-in one has to leave the same trail."""
+
+    QUOTA = {
+        "RATELIMIT_ENABLE": True,
+        "CACHES": {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "share-join-security-log",
+            }
+        },
+        "COLLECTION_JOINS_PER_DAY": 1,
+    }
+
+    def test_a_join_names_the_user_the_collection_and_the_share_door(
+        self, signed_in, user, shared, security_log
+    ):
+        security_log.set_level(logging.INFO, logger="security")
+
+        _post(signed_in)
+
+        assert [r.levelname for r in _records(security_log)] == ["INFO"]
+        line = _records(security_log)[0].getMessage()
+        assert user.code in line
+        assert shared.code in line
+        assert "via share" in line
+
+    def test_opening_the_link_again_as_a_member_logs_nothing(
+        self, signed_in, user, shared, security_log
+    ):
+        security_log.set_level(logging.INFO, logger="security")
+        _post(signed_in)
+        assert len(_records(security_log)) == 1  # the join itself was logged
+        security_log.clear()
+
+        _post(signed_in)
+
+        assert _records(security_log) == []
+
+    @override_settings(**QUOTA)
+    def test_a_refusal_for_the_daily_ceiling_is_a_warning_naming_the_collection(
+        self, user, user2, shared, security_log
+    ):
+        caches["default"].clear()
+        first, second = APIClient(), APIClient()
+        first.force_authenticate(user=user)
+        second.force_authenticate(user=user2)
+        _post(first)
+        security_log.clear()
+
+        assert _post(second).status_code == 429
+
+        assert [r.levelname for r in _records(security_log)] == ["WARNING"]
+        line = _records(security_log)[0].getMessage()
+        assert user2.code in line
+        assert shared.code in line
+        assert "COLLECTION_JOINS_PER_DAY" in line

@@ -48,6 +48,10 @@
     "/me/..",
     "/%2e%2e/me",
     "/%2E%2E/me",
+    "/%2F%2Fevil.com",
+    "/%2f/evil.com",
+    "/%5Cevil.com",
+    "/a%5Cb",
     "/xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   ]
 }

@@ -406,6 +406,75 @@ class TestEveryDownloadCarriesEverything:
         assert b_count == 1
 
 
+class TestWhoseReservationsTheFileHolds:
+    """The file follows the app's rule for who sees whoever asks: a PROPRIETARY
+    collection's curators see everything; in a COMMUNITY one a curator sees only
+    the reservations of things they own (`Thing.can_manage` is just the owner there)."""
+
+    @pytest.fixture
+    def asker(self, db):
+        return User.objects.create(code="ASK001", email="nuria@your-domain.test", name="Núria")
+
+    def _community(self, owner, member):
+        group = Collection.objects.create(
+            code="COM001", owner=owner, headline="La calle", mode=Collection.Mode.COMMUNITY
+        )
+        group.invites.add(member)
+        return group
+
+    def test_a_community_curator_gets_their_own_things_and_not_a_members(
+        self, owner, member, asker
+    ):
+        group = self._community(owner, member)
+        mine = _thing(owner, code="THGOWN", headline="Mi taladro")
+        theirs = _thing(member, code="THGMEM", headline="Su sierra")
+        group.things.add(mine, theirs)
+        _booking(mine, asker, owner, code="BKGOWN")
+        _booking(theirs, asker, member, code="BKGMEM")
+
+        ics, count, _ = build_calendar_export(group, user=owner)
+
+        assert [e["UID"] for e in _events(ics)] == ["BKGOWN@oiueei"]
+        assert count == 1
+        assert b"Su sierra" not in ics
+
+    def test_a_community_curator_who_owns_the_members_thing_too_sees_it(self, owner, member, asker):
+        group = self._community(owner, member)
+        group.co_owners.add(member)  # the member also curates
+        theirs = _thing(member, code="THGMEM", headline="Su sierra")
+        group.things.add(theirs)
+        _booking(theirs, asker, member, code="BKGMEM")
+
+        ics, count, _ = build_calendar_export(group, user=member)
+
+        assert [e["UID"] for e in _events(ics)] == ["BKGMEM@oiueei"]
+        assert count == 1
+
+    def test_a_community_file_asked_for_by_nobody_holds_nothing(self, owner, member, asker):
+        group = self._community(owner, member)
+        mine = _thing(owner)
+        group.things.add(mine)
+        _booking(mine, asker, owner)
+
+        ics, count, cancelled = build_calendar_export(group)
+
+        assert (_events(ics), count, cancelled) == ([], 0, 0)
+
+    def test_a_proprietary_co_curator_sees_the_reservations_of_things_another_curator_owns(
+        self, group, owner, member, asker
+    ):
+        group.invites.add(member)
+        group.co_owners.add(member)
+        founders = _thing(owner, code="THGFND", headline="Del fundador")
+        group.things.add(founders)
+        _booking(founders, asker, owner, code="BKGFND")
+
+        ics, count, _ = build_calendar_export(group, user=member)
+
+        assert [e["UID"] for e in _events(ics)] == ["BKGFND@oiueei"]
+        assert count == 1
+
+
 class TestRfc5545Shape:
     def test_every_line_ends_crlf_and_none_is_blank(self, group, owner, member):
         thing = _thing(owner)

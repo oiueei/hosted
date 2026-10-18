@@ -8,6 +8,7 @@ import {
   IconShield,
 } from 'hds-react';
 import { formatDate } from '../utils/rental';
+import { hasAmount } from '../constants/things';
 
 /**
  * The `thing-card-info` rows shared by ThingPage and ThingLinkbox: type, fee,
@@ -28,7 +29,7 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
           <span>{t('types.' + thing.type)}</span>
         </div>
       )}
-      {thing.fee && (
+      {hasAmount(thing.fee) && (
         <div className="thing-card-info-row">
           <IconEuroSign size="m" aria-hidden="true" />
           <span className="thing-card-info-label">{t('thingPage.priceLabel')}</span>
@@ -39,7 +40,7 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
           both a price and a deposit, and without something to tell them apart
           "10 €" next to "50 €" reads as one 60 € cost instead of a rental fee
           plus a guarantee that comes back. */}
-      {thing.deposit && (
+      {hasAmount(thing.deposit) && (
         <div className="thing-card-info-row">
           <IconLock size="m" aria-hidden="true" />
           <span className="thing-card-info-label">{t('thingPage.depositLabel')}</span>

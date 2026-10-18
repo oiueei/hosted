@@ -42,6 +42,13 @@ import { externalFormUrl } from '../utils/externalForms';
  * `text-align: left`, so the first letter falls on the vertical of the headings and
  * the text above it. The first link loses its left padding for that.
  *
+ * **A line before the doors, only with no session.** `footer.tagline` — what OIUEEI
+ * is for, in one sentence — links to `/login` for someone who is not signed in, the
+ * one place that leads on from a public collection's page. Whether there is a
+ * session is read the way `AccountMenu` reads it (`localStorage.userCode`; the
+ * `useLocation()` above re-renders the footer when a login navigates away from
+ * `/login`), so it asks nothing. The hero is untouched.
+ *
  * The about link is conditional because upstream there is no such page —
  * `/welcome` left with the demo, and what OIUEEI is gets told in the README.
  * A deployment that has one supplies it through `frontend/src/deployment/`.
@@ -60,12 +67,18 @@ export default function SiteFooter() {
   // Where "Contact us" goes: a form a deployment hosts elsewhere, in the reader's
   // language and in a new tab, or the app's own `/contact`.
   const contactUrl = externalFormUrl('contact', i18n.resolvedLanguage || i18n.language);
+  const signedIn = !!localStorage.getItem('userCode');
   return (
     <footer
       className="site-footer"
       style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
     >
       <div className="site-footer-inner">
+        {!signedIn && (
+          <p className="site-footer-tagline">
+            <Link to="/login">{t('footer.tagline')}</Link>
+          </p>
+        )}
         <nav className="site-footer-links" aria-label={t('footer.navLabel')}>
           {/* Only where this deployment has a page saying what it is. Upstream
               there is none, and a footer link to a route that 404s is worse than
