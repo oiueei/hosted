@@ -42,6 +42,18 @@ describe('Toast', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  test.each([
+    ['success', 'Done'],
+    ['error', 'Error'],
+    ['alert', 'Warning'],
+    ['info', 'Notice'],
+  ])('a %s toast is labelled %s, not always "Error"', (type, label) => {
+    render(<Toast toast={{ type, message: 'Something.' }} />);
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+    if (type !== 'error') expect(screen.queryByText('Error')).toBeNull();
+  });
+
   test('a message key is translated where the toast is painted', () => {
     render(<Toast toast={{ type: 'error', messageKey: 'common.connectionError' }} />);
 

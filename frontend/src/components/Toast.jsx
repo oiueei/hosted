@@ -14,6 +14,15 @@ import { useTranslation } from 'react-i18next';
  * six seconds (WCAG 2.2.1, Timing Adjustable). A success only confirms what the
  * page already shows, so letting it go costs nothing.
  */
+// The label says what kind of message this is. A bare "Error" on everything that
+// is not a success mislabelled a warning or a note as a failure.
+const LABEL_KEYS = {
+  success: 'common.done',
+  error: 'common.error',
+  alert: 'common.warning',
+  info: 'common.notice',
+};
+
 export default function Toast({ toast, onClose }) {
   const { t } = useTranslation();
 
@@ -25,7 +34,7 @@ export default function Toast({ toast, onClose }) {
       autoClose={toast.type === 'success'}
       autoCloseDuration={6000}
       aria-live="polite"
-      label={toast.type === 'success' ? t('common.done') : t('common.error')}
+      label={t(LABEL_KEYS[toast.type] || 'common.notice')}
       type={toast.type}
       dismissible
       closeButtonLabelText={t('common.close')}
