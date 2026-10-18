@@ -537,7 +537,7 @@ def test_an_hourly_request_outside_opening_hours_is_refused(
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
     assert resp.data == {
-        "error": "That time falls outside this space's opening hours.",
+        "error": "That time falls outside this collection's opening hours.",
         "code": "reservation_outside_hours",
     }
     assert not BookingPeriod.objects.exists()
@@ -1327,7 +1327,7 @@ def test_a_reservation_past_the_horizon_is_refused(reservations, authenticated_c
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
     assert resp.data == {
-        "error": "This space can only be booked up to 10 days ahead.",
+        "error": "This collection can only be booked up to 10 days ahead.",
         "code": "reservation_beyond_horizon",
         "params": {"days": 10},
     }
