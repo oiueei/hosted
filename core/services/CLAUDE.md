@@ -250,9 +250,11 @@ product decision, written down here so the next change to it starts from the sam
 - **What:** the headlines of the things **created** in that window that are `ACTIVE` or
   `TAKEN`, as a list, plus one button to the collection. Headlines resolve per reader's
   language. Nothing else: no questions, no handovers, no members.
-- **Whom:** every member (`invites`) except those with `notify_news` off or who muted this
-  group (`digest_muted`). The owner gets none for their own group.
-- **Skipped** when nothing was created in the window, or the group has no members. A quiet
+- **Whom:** the whole team: every member (`invites`, which holds the co-curators) **and the
+  founder**, once each, except those with `notify_news` off or who muted this group
+  (`digest_muted`). The founder's footer link and the muting work as for anyone.
+- **Skipped** when nothing was created in the window, or the group has no members (`invites` empty:
+  the founder alone would be told what they added themselves). A quiet
   group therefore sends nothing at all — honest, but it also means a group whose life is
   loans rather than new things never reaches its members this way.
 
