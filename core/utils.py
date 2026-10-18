@@ -150,6 +150,8 @@ def safe_next_path(value):
       it starts with ``/`` and has no ``\\`` in it — and does not start with
       ``//`` (a browser reads both ``//evil.com`` and ``/\\evil.com`` as another
       origin; the whitelist stops the second, the explicit check the first);
+    - once percent-decoded, does not start with ``//`` and has no ``\\`` in it (the
+      same two origins, spelled ``%2F%2F`` and ``%5C``);
     - has no ``..``, in the raw text or once percent-decoded;
     - is not ``/`` alone: with no destination the rule the login always had
       applies (their one collection, or Home), which is better than Home;
@@ -163,7 +165,10 @@ def safe_next_path(value):
     if not _NEXT_PATH_RE.fullmatch(value) or value.startswith("//"):
         return ""
     decoded = unquote(value)
-    if ".." in decoded:
+    # The whitelist lets ``%`` through, and a browser decodes ``%2F`` and ``%5C``
+    # before it reads the path: ``/%2F%2Fevil.com`` and ``/%5Cevil.com`` are the
+    # two forms of another origin once decoded.
+    if decoded.startswith("//") or "\\" in decoded or ".." in decoded:
         return ""
     path = decoded.split("?", 1)[0]
     if path == "/" or path.split("/")[1].lower() in _NEXT_PATH_BLOCKED_ROOTS:
