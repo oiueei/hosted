@@ -34,6 +34,14 @@
  *   deployment: who operates it, what it lets people create, how to ask for
  *   something it holds back. This repository has no answers to give.
  *   Same shape as `aboutPath`: a link to a 404 is worse than one link fewer.
+ * @property {?string} curatorGuidePath
+ *   Where this deployment's guide for whoever runs a group lives, or `null` for
+ *   none. When it is set, two places lead to it, both worded "If you run a group":
+ *   an entry in the collection menu of a curator (beside the downloads) and a
+ *   link in the notice that tells a member they were made a co-curator. Upstream
+ *   there is no such guide (what running a group means in practice is for the
+ *   deployment to say), so nothing is shown. Same shape as `aboutPath` and
+ *   `faqPath`: a link to a 404 is worse than one link fewer.
  * @property {?{contact?: ?Object<string, string>, feedback?: ?Object<string, string>, requestAccess?: ?Object<string, string>}} externalForms
  *   Forms hosted elsewhere that take the place of the app's own ways of writing to
  *   the team, or `null` for none — which is upstream, where
@@ -72,6 +80,10 @@ export const popInPath = null;
 export const aboutPath = null;
 
 export const faqPath = null;
+
+// No guide for whoever runs a group: the collection menu and the co-curator notice
+// carry no link to one. A deployment that has it writes its route here.
+export const curatorGuidePath = null;
 
 // No forms of its own hosted elsewhere: the app's own pages and the server's answers
 // stand (see the docstring). A deployment that has them writes the object here.

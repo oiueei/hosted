@@ -2,7 +2,8 @@
 Management command to send digest emails for collections.
 
 Sends weekly digests on Mondays and monthly digests on the 1st of each month.
-Each digest lists things added since the last digest period.
+Each digest lists things added since the last digest period, and goes to every
+member and to the founder (co-curators are members).
 
 Run daily via Heroku Scheduler.
 """
@@ -43,10 +44,14 @@ class Command(BaseCommand):
 
     def _send_digests(self, frequency, since, until):
         """Send digest emails for collections with the given frequency."""
-        collections = Collection.objects.filter(
-            digest_frequency=frequency,
-            status=Collection.Status.ACTIVE,
-        ).prefetch_related("things", "invites")
+        collections = (
+            Collection.objects.filter(
+                digest_frequency=frequency,
+                status=Collection.Status.ACTIVE,
+            )
+            .select_related("owner")
+            .prefetch_related("things", "invites")
+        )
 
         count = 0
         for collection in collections:
@@ -60,21 +65,27 @@ class Command(BaseCommand):
             if not headlines:
                 continue
 
+            # A group with no members gets no summary: sending it to the founder
+            # alone would tell them what they added themselves.
             invitee_emails = list(collection.invites.values_list("email", flat=True))
             if not invitee_emails:
                 continue
+
+            # The whole team gets it: the founder is not in `invites` (the
+            # co-curators are), so they are added, once.
+            recipients = list(dict.fromkeys([*invitee_emails, collection.owner.email]))
 
             try:
                 send_digest_email(
                     collection_headline=collection.headline,
                     collection_code=collection.code,
                     thing_headlines=headlines,
-                    emails=invitee_emails,
+                    emails=recipients,
                     collection=collection,
                 )
             except Exception as exc:
                 self.stderr.write(self.style.WARNING(f"Digest failed for {collection.code}: {exc}"))
                 continue
-            count += len(invitee_emails)
+            count += len(recipients)
 
         return count

@@ -5,6 +5,7 @@ import { uploadPdf, PDF_MAX_BYTES, PDF_UPLOADS_PER_HOUR } from '../utils/uploadP
 import { UploadRateLimitedError } from '../utils/uploadImage';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
+import { errorKey, translateError } from '../utils/errorKey';
 
 /**
  * Single-PDF upload backed by the same ticketed direct-to-bucket upload as
@@ -57,7 +58,7 @@ export default function PdfUpload({
     setError(null);
 
     if (file.size > PDF_MAX_BYTES) {
-      setError(t('upload.pdfTooLarge'));
+      setError(errorKey('upload.pdfTooLarge'));
       return;
     }
 
@@ -70,8 +71,8 @@ export default function PdfUpload({
       // A refused ticket for the hour is "wait", not "check the file".
       setError(
         err instanceof UploadRateLimitedError
-          ? t('upload.pdfRateLimited', { max: PDF_UPLOADS_PER_HOUR })
-          : t('upload.uploadError')
+          ? errorKey('upload.pdfRateLimited', { max: PDF_UPLOADS_PER_HOUR })
+          : errorKey('upload.uploadError')
       );
     } finally {
       setUploading(false);
@@ -107,7 +108,7 @@ export default function PdfUpload({
           language={hdsLang(i18n.language)}
           buttonLabel={t('upload.addFileGeneric')}
           helperText={uploading ? t('upload.uploading') : helperText || t('upload.pdfHint')}
-          errorText={error || undefined}
+          errorText={error ? translateError(t, error) : undefined}
           invalid={!!error}
         />
       )}

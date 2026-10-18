@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TextInput, Button, Tag } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import { parseLocalized, useLocalized, localizedCounter } from '../utils/localized';
+import { errorKey, translateError } from '../utils/errorKey';
 
 const MAX_TAGS = 12;
 const MAX_LEN = 32;
@@ -39,7 +40,7 @@ export default function TagInput({
     const value = input.trim();
     if (!value || atMax) return;
     if (localizedCounter(value, MAX_LEN).over) {
-      setError(t('tags.tooLong', { limit: MAX_LEN }));
+      setError(errorKey('tags.tooLong', { limit: MAX_LEN }));
       return;
     }
     if (tags.some((tg) => tg.toLowerCase() === value.toLowerCase())) {
@@ -61,7 +62,7 @@ export default function TagInput({
         helperText={`${helperText ? helperText + ' · ' : ''}${tags.length}/${max}`}
         value={input}
         invalid={!!error}
-        errorText={error}
+        errorText={translateError(t, error)}
         onChange={(e) => {
           setInput(e.target.value);
           if (error) setError('');

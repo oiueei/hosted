@@ -3,7 +3,7 @@ import { FileInput, Button, Notification } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import { CSV_PARSE_OPTIONS } from '../utils/csv';
-import { apiFetch } from '../services/api';
+import { apiFetch, apiErrorMessage } from '../services/api';
 import { uploadImage, UploadRateLimitedError, UPLOADS_PER_HOUR } from '../utils/uploadImage';
 import { MAX_GALLERY, MAX_ROWS, mapRow, photoNames, validateRows } from '../utils/bulkCsv';
 import { hasAmount } from '../constants/things';
@@ -11,6 +11,7 @@ import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
 import StatusRegion from './StatusRegion';
+import { errorKey, translateError } from '../utils/errorKey';
 
 // Image extensions recognised inside a ZIP — kept in sync with the backend's
 // The server's `IMAGE_TYPES` allow-list (core/views/upload.py).
@@ -72,10 +73,10 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
   // Here we only translate the validation key into user-facing copy.
   const validate = (parsed) => {
     const key = validateRows(parsed);
-    if (key === 'empty') return t('bulkAdd.empty');
-    if (key === 'tooMany') return t('bulkAdd.tooMany', { max: MAX_ROWS });
-    if (key === 'headlineRequired') return t('bulkAdd.headlineRequired');
-    if (key === 'galleryTooLong') return t('bulkAdd.galleryTooLong', { max: MAX_GALLERY });
+    if (key === 'empty') return errorKey('bulkAdd.empty');
+    if (key === 'tooMany') return errorKey('bulkAdd.tooMany', { max: MAX_ROWS });
+    if (key === 'headlineRequired') return errorKey('bulkAdd.headlineRequired');
+    if (key === 'galleryTooLong') return errorKey('bulkAdd.galleryTooLong', { max: MAX_GALLERY });
     return null;
   };
 
@@ -102,7 +103,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         if (err) setError(err);
         else setRows(parsed);
       },
-      error: () => setError(t('bulkAdd.parseError')),
+      error: () => setError(errorKey('bulkAdd.parseError')),
     });
   };
 
@@ -120,7 +121,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         else if (IMAGE_RE.test(name)) images.set(name.toLowerCase(), entry);
       });
       if (!csvEntry) {
-        setError(t('bulkAdd.zipNoCsv'));
+        setError(errorKey('bulkAdd.zipNoCsv'));
         return;
       }
       const text = await csvEntry.async('string');
@@ -139,22 +140,24 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
           const names = photoNames(parsed);
           const missing = names.filter((name) => !images.has(name.toLowerCase()));
           if (missing.length > 0) {
-            setError(t('bulkAdd.zipMissingImages', { files: missing.join(', ') }));
+            setError(errorKey('bulkAdd.zipMissingImages', { files: missing.join(', ') }));
             return;
           }
           // Each one takes a ticket, and an hour allows `UPLOADS_PER_HOUR` of them: past that
           // the import would stop half-way, so it is refused before the preview.
           if (names.length > UPLOADS_PER_HOUR) {
-            setError(t('bulkAdd.tooManyPhotos', { count: names.length, max: UPLOADS_PER_HOUR }));
+            setError(
+              errorKey('bulkAdd.tooManyPhotos', { count: names.length, max: UPLOADS_PER_HOUR })
+            );
             return;
           }
           setZipImages(images);
           setRows(parsed);
         },
-        error: () => setError(t('bulkAdd.parseError')),
+        error: () => setError(errorKey('bulkAdd.parseError')),
       });
     } catch {
-      setError(t('bulkAdd.zipError'));
+      setError(errorKey('bulkAdd.zipError'));
     }
   };
 
@@ -186,8 +189,8 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         } catch (err) {
           setError(
             err instanceof UploadRateLimitedError
-              ? t('bulkAdd.uploadRateLimited', { max: UPLOADS_PER_HOUR })
-              : t('bulkAdd.imageUploadError')
+              ? errorKey('bulkAdd.uploadRateLimited', { max: UPLOADS_PER_HOUR })
+              : errorKey('bulkAdd.imageUploadError')
           );
           return;
         }
@@ -212,7 +215,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         return;
       }
       if (res.status === 429) {
-        setError(t('common.tooManyAttempts'));
+        setError(errorKey('common.tooManyAttempts'));
         return;
       }
       let data = {};
@@ -223,12 +226,12 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
       }
       if (Array.isArray(data.errors) && data.errors.length > 0) {
         const badRows = data.errors.map((e) => e.row + 1).join(', ');
-        setError(t('bulkAdd.rowErrors', { rows: badRows }));
+        setError(errorKey('bulkAdd.rowErrors', { rows: badRows }));
       } else {
-        setError(data.error || t('bulkAdd.error'));
+        setError(apiErrorMessage(data) || errorKey('bulkAdd.error'));
       }
     } catch {
-      setError(t('common.connectionError'));
+      setError(errorKey('common.connectionError'));
     } finally {
       setImporting(false);
       setUploadProgress(null);
@@ -270,7 +273,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
       <StatusRegion>
         {error && (
           <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-s)' }}>
-            {error}
+            {translateError(t, error)}
           </Notification>
         )}
       </StatusRegion>

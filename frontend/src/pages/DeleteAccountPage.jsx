@@ -6,6 +6,7 @@ import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import StatusRegion from '../components/StatusRegion';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { errorKey, translateError } from '../utils/errorKey';
 
 /**
  * Step one of the right-to-erasure flow (`/me/delete`): states exactly what is
@@ -29,12 +30,12 @@ export default function DeleteAccountPage() {
       if (res.ok) {
         setSent(true);
       } else if (res.status === 429) {
-        setError(t('common.tooManyAttempts'));
+        setError(errorKey('common.tooManyAttempts'));
       } else {
-        setError(t('deleteAccount.error'));
+        setError(errorKey('deleteAccount.error'));
       }
     } catch {
-      setError(t('common.connectionError'));
+      setError(errorKey('common.connectionError'));
     } finally {
       setSending(false);
     }
@@ -76,7 +77,7 @@ export default function DeleteAccountPage() {
                   type="error"
                   style={{ marginBottom: 'var(--spacing-s)' }}
                 >
-                  {error}
+                  {translateError(t, error)}
                 </Notification>
               )}
             </StatusRegion>

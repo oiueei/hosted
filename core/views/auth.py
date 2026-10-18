@@ -44,7 +44,7 @@ from core.services.invitation_service import (
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
 from core.services.team import managers_ready_collections
 from core.utils import doc_asset_url, get_client_ip, redact_email, safe_next_path
-from core.views._helpers import body_dict
+from core.views._helpers import body_dict, refusal_body
 
 security_logger = logging.getLogger("security")
 
@@ -831,7 +831,7 @@ class VerifyLinkView(APIView):
         if not proposal or not proposal.is_valid():
             rsvp.delete()
             return Response(
-                {"error": "This suggestion is no longer pending"},
+                refusal_body("This suggestion is no longer pending", code="proposal_not_pending"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -854,7 +854,7 @@ class VerifyLinkView(APIView):
                 # that is genuinely gone look identical — and it showed both as
                 # "invalid or expired link", telling the owner to stop clicking
                 # a link that was still good.
-                return Response({"error": reason, "retryable": True}, status=code)
+                return Response({**refusal_body(reason), "retryable": True}, status=code)
             approve_proposal(proposal)
             message = "Invitation sent"
         else:

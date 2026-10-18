@@ -18,6 +18,7 @@ import ResponsiveTable from '../components/ResponsiveTable';
 import useTheeeme from '../hooks/useTheeeme';
 import { collectionPath } from '../utils/collectionPath';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { errorKey, translateError } from '../utils/errorKey';
 
 // The groups of the account, each once: the ones it runs first, then the ones it is
 // only a member of; each part keeps the order of its own list. What it runs is what
@@ -80,7 +81,7 @@ export default function UserPage() {
           }
           setUser(data);
         })
-        .catch(() => setError(t('userPage.errorLoading')));
+        .catch(() => setError(errorKey('userPage.errorLoading')));
       return;
     }
 
@@ -91,14 +92,14 @@ export default function UserPage() {
           const data = await res.json();
           setUser(data);
         } else if (res.status === 403) {
-          setError(t('userPage.noPermission'));
+          setError(errorKey('userPage.noPermission'));
         } else if (res.status === 404) {
-          setError(t('userPage.notFound'));
+          setError(errorKey('userPage.notFound'));
         } else {
-          setError(t('userPage.errorLoading'));
+          setError(errorKey('userPage.errorLoading'));
         }
       } catch {
-        setError(t('common.connectionError'));
+        setError(errorKey('common.connectionError'));
       }
     };
     fetchUser();
@@ -124,7 +125,7 @@ export default function UserPage() {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
         <Notification label={t('common.error')} type="error">
-          {error}
+          {translateError(t, error)}
         </Notification>
       </PageLayout>
     );

@@ -1,25 +1,18 @@
 import { useState } from 'react';
 import { Navigate, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { TextInput, TextArea, Select, Button, Accordion } from 'hds-react';
+import { TextInput, TextArea, Button } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
+import CollectionAdvancedFields from '../components/CollectionAdvancedFields';
 import CollectionModeField from '../components/CollectionModeField';
 import useCapabilities, { useCapabilitiesSettled, isOfferable } from '../hooks/useCapabilities';
 import LoadingSpinner from '../components/LoadingSpinner';
-import RentalRulesFields from '../components/RentalRulesFields';
-import ReservationRulesFields from '../components/ReservationRulesFields';
-import ClosedDatesField from '../components/ClosedDatesField';
-import ImageUpload from '../components/ImageUpload';
-import PdfUpload from '../components/PdfUpload';
-import { SUPPORTED_LANGUAGES } from '../i18n';
-import TagInput from '../components/TagInput';
 import LocalizedInfo from '../components/LocalizedInfo';
 import { localizedCounter, localizedHelper } from '../utils/localized';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
-import hdsLang from '../utils/hdsLang';
 import ApprovalNotice from '../components/ApprovalNotice';
 import { collectionPath, kindOfPrefix } from '../utils/collectionPath';
 import { allowedVerbsFor } from '../utils/collectionKind';
@@ -281,157 +274,56 @@ function CreateCollectionForm({ kind }) {
           theeemeColor01={theeemeColors.color_01}
         />
       </div>
-      {/* Everything optional, with a safe default, folds away so the happy path
-            (title, mode, who can add) reads at a glance (DESIGN §3). */}
-      <Accordion
-        heading={t('createCollection.advancedTitle')}
-        language={hdsLang(i18n.language)}
-        headingLevel={2}
-        theme={
-          theeemeColors.color_04
-            ? { '--header-color': `var(--color-${theeemeColors.color_04})` }
-            : undefined
-        }
-      >
-        <div className="form-grid">
-          <div>
-            <TagInput
-              tags={tags}
-              onChange={setTags}
-              label={t('createCollection.tagsLabel')}
-              placeholder={t('createCollection.tagsPlaceholder')}
-              helperText={t('createCollection.tagsHelper')}
-            />
-            <LocalizedInfo id="create-collection-tags-info" variant="tags" />
-          </div>
-          {isReservations ? (
-            <ReservationRulesFields
-              idPrefix="create-collection"
-              reservationUnit={reservationUnit}
-              setReservationUnit={setReservationUnit}
-              reservationMaxDays={reservationMaxDays}
-              setReservationMaxDays={setReservationMaxDays}
-              reservationHorizonDays={reservationHorizonDays}
-              setReservationHorizonDays={setReservationHorizonDays}
-              reservationMaxActivePerMember={reservationMaxActivePerMember}
-              setReservationMaxActivePerMember={setReservationMaxActivePerMember}
-              reservationMinMinutes={reservationMinMinutes}
-              setReservationMinMinutes={setReservationMinMinutes}
-              reservationMaxMinutes={reservationMaxMinutes}
-              setReservationMaxMinutes={setReservationMaxMinutes}
-              openingHours={openingHours}
-              setOpeningHours={setOpeningHours}
-              setOpeningHoursValid={setOpeningHoursValid}
-              rentalWeekdays={rentalWeekdays}
-              setRentalWeekdays={setRentalWeekdays}
-              theeemeColor01={theeemeColors.color_01}
-              theeemeColor06={theeemeColors.color_06}
-            />
-          ) : hasRequestPage ? (
-            <RentalRulesFields
-              idPrefix="create-collection"
-              rentalDurations={rentalDurations}
-              setRentalDurations={setRentalDurations}
-              rentalWeekdays={rentalWeekdays}
-              setRentalWeekdays={setRentalWeekdays}
-              depositPolicy={depositPolicy}
-              setDepositPolicy={setDepositPolicy}
-              theeemeColor01={theeemeColors.color_01}
-              theeemeColor06={theeemeColors.color_06}
-            />
-          ) : null}
-          {hasRequestPage && (
-            <ClosedDatesField
-              id="create-collection-closed-dates"
-              value={closedDates}
-              onChange={setClosedDates}
-            />
-          )}
-          {hasRequestPage && (
-            <div>
-              <p className="weekday-field-helper">{t('requestInfo.helper')}</p>
-              <TextArea
-                id="create-collection-request-info"
-                label={t('requestInfo.label')}
-                value={requestInfo}
-                onChange={(e) => setRequestInfo(e.target.value)}
-                invalid={localizedCounter(requestInfo, 512).over}
-                errorText={
-                  localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
-                }
-                helperText={localizedHelper(requestInfo, 512, t)}
-              />
-              <LocalizedInfo id="create-collection-request-info-info" variant="requestInfo" />
-            </div>
-          )}
-          <div>
-            <p className="weekday-field-helper">{t('emailNote.helper')}</p>
-            <TextArea
-              id="create-collection-email-note"
-              label={t('emailNote.label')}
-              value={emailNote}
-              onChange={(e) => setEmailNote(e.target.value)}
-              invalid={localizedCounter(emailNote, 512).over}
-              errorText={
-                localizedCounter(emailNote, 512).over ? t('emailNote.maxLength') : undefined
-              }
-              helperText={localizedHelper(emailNote, 512, t)}
-            />
-            <LocalizedInfo id="create-collection-email-note-info" variant="emailNote" />
-          </div>
-          <TextInput
-            id="create-collection-home-page"
-            type="url"
-            label={t('homePage.label')}
-            helperText={t('homePage.helper')}
-            placeholder="https://…"
-            value={homePage}
-            onChange={(e) => setHomePage(e.target.value)}
-            maxLength={128}
-          />
-          {/* Same order and same `editCollection.*` keys as EditCollectionPage,
-                so the one field doesn't read differently on the two screens. */}
-          <Select
-            id="create-collection-digest"
-            texts={{ label: t('editCollection.digestLabel'), language: hdsLang(i18n.language) }}
-            helper={t('editCollection.digestHelper')}
-            options={[
-              { label: t('editCollection.digestNone'), value: 'NONE' },
-              { label: t('editCollection.digestWeekly'), value: 'WEEKLY' },
-              { label: t('editCollection.digestMonthly'), value: 'MONTHLY' },
-            ]}
-            value={digestFrequency}
-            onChange={(selectedOptions) => {
-              if (selectedOptions.length > 0) setDigestFrequency(selectedOptions[0].value);
-            }}
-          />
-          <Select
-            id="create-collection-language"
-            texts={{ label: t('collectionLanguage.label'), language: hdsLang(i18n.language) }}
-            helper={t('collectionLanguage.helper')}
-            options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
-            value={language}
-            onChange={(selectedOptions) => {
-              if (selectedOptions.length > 0) {
-                setLanguage(selectedOptions[0].value);
-              }
-            }}
-          />
-          <ImageUpload
-            id="create-collection-thumbnail"
-            label={t('upload.thumbnailLabel')}
-            value={thumbnail}
-            onChange={setThumbnail}
-            folder="oiueei/collections"
-          />
-          <PdfUpload
-            id="create-collection-welcome-doc"
-            label={t('upload.welcomeDocLabel')}
-            onChange={setWelcomeDoc}
-            helperText={t('upload.welcomeDocHelper')}
-          />
-        </div>
-      </Accordion>
+      <CollectionAdvancedFields
+        idPrefix="create-collection"
+        colors={theeemeColors}
+        isReservations={isReservations}
+        hasRequestPage={hasRequestPage}
+        tags={tags}
+        setTags={setTags}
+        reservationRules={{
+          reservationUnit,
+          setReservationUnit,
+          reservationMaxDays,
+          setReservationMaxDays,
+          reservationHorizonDays,
+          setReservationHorizonDays,
+          reservationMaxActivePerMember,
+          setReservationMaxActivePerMember,
+          reservationMinMinutes,
+          setReservationMinMinutes,
+          reservationMaxMinutes,
+          setReservationMaxMinutes,
+          openingHours,
+          setOpeningHours,
+          setOpeningHoursValid,
+          rentalWeekdays,
+          setRentalWeekdays,
+        }}
+        rentalRules={{
+          rentalDurations,
+          setRentalDurations,
+          rentalWeekdays,
+          setRentalWeekdays,
+          depositPolicy,
+          setDepositPolicy,
+        }}
+        closedDates={closedDates}
+        setClosedDates={setClosedDates}
+        requestInfo={requestInfo}
+        setRequestInfo={setRequestInfo}
+        emailNote={emailNote}
+        setEmailNote={setEmailNote}
+        homePage={homePage}
+        setHomePage={setHomePage}
+        digestFrequency={digestFrequency}
+        setDigestFrequency={setDigestFrequency}
+        language={language}
+        setLanguage={setLanguage}
+        thumbnail={thumbnail}
+        setThumbnail={setThumbnail}
+        setWelcomeDoc={setWelcomeDoc}
+      />
       <div className="form-actions">
         <Button fullWidth disabled={submitting} onClick={handleSubmit} style={btnStyle}>
           {submitting ? t('common.creating') : t('common.create')}

@@ -590,10 +590,10 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
 
         ``is_curator`` / ``is_member`` follow ``CollectionSerializer`` (a co-owner is
         a curator, never a member); ``digest_frequency`` and ``is_digest_muted`` feed
-        the member's "Mute the summary"; ``has_date_things`` is the rule the
-        collection page uses for the calendar entry — always for a library or a
-        shed, for a stall whether it holds a date-based thing (one query, a stall's
-        curator only).
+        the "Mute the summary" entry of a member and of a curator;
+        ``has_date_things`` is the rule the collection page uses for the calendar
+        entry — always for a library or a shed, for a stall whether it holds a
+        date-based thing (one query, a stall's curator only).
         """
         request = self.context.get("request")
         wanted = self._requested_collection_code()
@@ -614,9 +614,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             return None
 
         sends_digest = collection.digest_frequency != Collection.DigestFrequency.NONE
-        is_digest_muted = (
-            is_member and sends_digest and collection.code in self._viewer_muted_collection_codes()
-        )
+        # The digest goes to the members and the founder, so a curator may mute it too.
+        is_digest_muted = sends_digest and collection.code in self._viewer_muted_collection_codes()
         has_date_things = is_curator and self._collection_has_date_things(collection)
 
         return {

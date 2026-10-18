@@ -220,6 +220,25 @@ def test_member_can_mute_and_unmute_a_collection_digest(db, noti_user):
     assert client.get(f"/api/v1/collections/{collection.code}/").data["is_digest_muted"] is False
 
 
+def test_the_founder_can_mute_and_unmute_the_digest_they_now_receive(db):
+    """The summary goes to the whole team, the founder included, so the founder has
+    the same switch: accepted, and read back as `is_digest_muted`."""
+    owner = User.objects.create(code="DGOWN7", email="lala7@your-domain.test", name="Founder")
+    collection = Collection.objects.create(code="DGCOL7", owner=owner, headline="Group")
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(owner).access_token}")
+    url = f"/api/v1/collections/{collection.code}/digest/"
+    assert client.get(f"/api/v1/collections/{collection.code}/").data["is_digest_muted"] is False
+
+    assert client.post(url, {"muted": True}, format="json").status_code == 200
+    assert collection.digest_muted.filter(code=owner.code).exists()
+    assert client.get(f"/api/v1/collections/{collection.code}/").data["is_digest_muted"] is True
+
+    assert client.post(url, {"muted": False}, format="json").status_code == 200
+    assert not collection.digest_muted.filter(code=owner.code).exists()
+    assert client.get(f"/api/v1/collections/{collection.code}/").data["is_digest_muted"] is False
+
+
 def test_digest_pref_rejects_a_body_without_a_boolean(db, noti_user):
     """A missing or non-boolean `muted` is a 400, not a silent un-mute.
 

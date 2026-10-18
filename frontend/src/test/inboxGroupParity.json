@@ -1,5 +1,5 @@
 {
-  "_about": "Shared by core/tests/integration/test_inbox_group_dismiss.py and frontend/src/utils/inboxGroups.test.js. Which in-app notices the inbox folds into its one 'requests and reservations' card, and which DELETE /inbox/?group=bookings dismisses: the ones that are for whoever MANAGES a request or reservation (core.models.InAppNotification.team_booking_notices on the server, utils/inboxGroups.js in the browser). A copy for the person who asked or held the reservation is not in the set — the card links to the team's page, not theirs. Every payload is the shape its producer in core/services/booking_service.py writes today; a row's `grouped` is the answer both sides must give.",
+  "_about": "Shared by core/tests/integration/test_inbox_group_dismiss.py and frontend/src/utils/inboxGroups.test.js. Which in-app notices the inbox folds into its one 'requests and reservations' card, and which DELETE /inbox/?group=bookings dismisses: the ones that are for whoever MANAGES a request or reservation (core.models.InAppNotification.team_booking_notices on the server, utils/inboxGroups.js in the browser). A copy for the person who asked or held the reservation is not in the set — the card links to the team's page, not theirs. Every payload is the shape its producer in core/services/booking_service.py writes today; a row's `grouped` is the answer both sides must give. `informative` is the second answer both sides must give: the notices that only inform (core.models.InAppNotification.informative_notices; isInformativeNotice in the browser) are folded into one 'updates' card once there are many, and DELETE /inbox/?group=info dismisses exactly them. A notice that asks for an action, or that belongs to the team's requests and reservations, is not informative.",
   "rows": [
     {
       "what": "a loan request, dated",
@@ -13,7 +13,8 @@
         "start_date": "2026-10-13",
         "end_date": "2026-10-13"
       },
-      "grouped": true
+      "grouped": true,
+      "informative": false
     },
     {
       "what": "a gift request, no dates",
@@ -25,7 +26,8 @@
         "thing_code": "THG002",
         "collection_code": "COL001"
       },
-      "grouped": true
+      "grouped": true,
+      "informative": false
     },
     {
       "what": "a decision a teammate made",
@@ -40,7 +42,8 @@
         "thing_code": "THG001",
         "collection_code": "COL001"
       },
-      "grouped": true
+      "grouped": true,
+      "informative": false
     },
     {
       "what": "a decision the reader made themselves",
@@ -55,7 +58,8 @@
         "thing_code": "THG001",
         "collection_code": "COL001"
       },
-      "grouped": true
+      "grouped": true,
+      "informative": false
     },
     {
       "what": "a confirmed reservation",
@@ -71,7 +75,8 @@
         "thing_code": "THG003",
         "collection_code": "COL002"
       },
-      "grouped": true
+      "grouped": true,
+      "informative": false
     },
     {
       "what": "a cancellation told to a manager who did not cancel",
@@ -86,7 +91,8 @@
         "thing_code": "THG003",
         "cancelled_by_owner": false
       },
-      "grouped": true
+      "grouped": true,
+      "informative": false
     },
     {
       "what": "a manager's own record of cancelling somebody else's reservation",
@@ -102,7 +108,8 @@
         "by_you": true,
         "member_name": "Lili"
       },
-      "grouped": true
+      "grouped": true,
+      "informative": false
     },
     {
       "what": "the same, the member having set no name (the key is there, empty)",
@@ -118,7 +125,8 @@
         "by_you": true,
         "member_name": ""
       },
-      "grouped": true
+      "grouped": true,
+      "informative": false
     },
     {
       "what": "a cancellation told to the member whose reservation a manager cancelled",
@@ -133,7 +141,8 @@
         "thing_code": "THG003",
         "cancelled_by_owner": true
       },
-      "grouped": false
+      "grouped": false,
+      "informative": true
     },
     {
       "what": "a member's own record of cancelling their own reservation",
@@ -148,7 +157,8 @@
         "thing_code": "THG003",
         "by_you": true
       },
-      "grouped": false
+      "grouped": false,
+      "informative": true
     },
     {
       "what": "a cancellation written before the payload said who it was for",
@@ -158,7 +168,8 @@
         "other_name": "Lili",
         "thing_code": "THG003"
       },
-      "grouped": false
+      "grouped": false,
+      "informative": true
     },
     {
       "what": "the requester's own 'confirmed' notice",
@@ -169,7 +180,8 @@
         "thing_code": "THG001",
         "collection_code": "COL001"
       },
-      "grouped": false
+      "grouped": false,
+      "informative": true
     },
     {
       "what": "the requester's own 'declined' notice",
@@ -180,7 +192,8 @@
         "thing_code": "THG001",
         "collection_code": "COL001"
       },
-      "grouped": false
+      "grouped": false,
+      "informative": true
     },
     {
       "what": "a question asked on a thing",
@@ -191,7 +204,8 @@
         "thing_code": "THG001",
         "collection_code": "COL001"
       },
-      "grouped": false
+      "grouped": false,
+      "informative": false
     },
     {
       "what": "a message to the group",
@@ -202,7 +216,8 @@
         "message": "Hello",
         "collection_code": "COL001"
       },
-      "grouped": false
+      "grouped": false,
+      "informative": true
     },
     {
       "what": "a recommendation waiting for an answer",
@@ -213,7 +228,120 @@
         "email": "lele@your-domain.test",
         "collection_code": "COL001"
       },
-      "grouped": false
+      "grouped": false,
+      "informative": false
+    },
+    {
+      "what": "a report about a listing",
+      "type": "THING_REPORTED",
+      "payload": {
+        "thing_headline": "Drill",
+        "thing_code": "THG001"
+      },
+      "grouped": false,
+      "informative": false
+    },
+    {
+      "what": "a member left the group",
+      "type": "MEMBER_LEFT",
+      "payload": {
+        "collection_headline": "Tools",
+        "member_name": "Lili",
+        "collection_code": "COL001",
+        "things_deleted": 0
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "a question was answered",
+      "type": "FAQ_ANSWERED",
+      "payload": {
+        "thing_headline": "Drill",
+        "owner_name": "Lala",
+        "thing_code": "THG001",
+        "collection_code": "COL001"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "a question was hidden",
+      "type": "FAQ_HIDDEN",
+      "payload": {
+        "thing_headline": "Drill",
+        "owner_name": "Lala"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "an invitation was declined",
+      "type": "INVITE_REJECTED",
+      "payload": {
+        "collection_headline": "Tools",
+        "collection_code": "COL001"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "someone was made co-curator",
+      "type": "PROMOTED_CO_OWNER",
+      "payload": {
+        "collection_headline": "Tools",
+        "collection_code": "COL001"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "someone stopped being co-curator",
+      "type": "DEMOTED_CO_OWNER",
+      "payload": {
+        "collection_headline": "Tools",
+        "collection_code": "COL001"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "a suggestion was approved",
+      "type": "INVITE_PROPOSAL_APPROVED",
+      "payload": {
+        "collection_headline": "Tools",
+        "collection_code": "COL001"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "a suggestion was declined",
+      "type": "INVITE_PROPOSAL_DECLINED",
+      "payload": {
+        "collection_headline": "Tools",
+        "collection_code": "COL001"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "a member was removed from a group",
+      "type": "COLLECTION_REVOKED",
+      "payload": {
+        "collection_headline": "Tools"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
+      "what": "a group was deleted",
+      "type": "COLLECTION_DELETED",
+      "payload": {
+        "collection_headline": "Tools"
+      },
+      "grouped": false,
+      "informative": true
     }
   ]
 }

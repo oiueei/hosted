@@ -309,6 +309,7 @@ TEXTS = {
         "Si ja has fet la devolució, pots ignorar aquest correu."
     ),
     "view_thing_cta": "Veure la publicació",
+    "demo_note": "Aquest grup és de demostració: les seves coses i persones són d'exemple.",
     # Reserves d'espai (RESERVE_THING) — confirmació automàtica, sense decisió
     "reservation_confirmed_subject": "La teva reserva de '{thing}' està confirmada",
     "reservation_confirmed_plain": (

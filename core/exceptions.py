@@ -2,6 +2,7 @@
 
 from django_ratelimit.exceptions import Ratelimited
 from rest_framework import serializers, status
+from rest_framework.exceptions import ErrorDetail
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
@@ -9,7 +10,19 @@ from rest_framework.views import exception_handler
 # carries no top-level ``code``, so the handler lifts one of these from the nested
 # ``ErrorDetail``; the field still carries the English sentence for a client that
 # does not know the code. Every code here needs a ``requestErrors.<code>`` string.
-CODED_VALIDATION_REFUSALS = frozenset({"no_prices_here", "priced_things_remain"})
+CODED_VALIDATION_REFUSALS = frozenset({"no_prices_here", "priced_things_remain", "things_limit"})
+
+
+class RefusedField(serializers.ValidationError):
+    """A 400 on one field that carries a ``Refusal``'s code *and* its params.
+
+    The handler below lifts the code to the top of the body; the params ride with
+    the exception because DRF's ``ErrorDetail`` keeps a code but nothing else.
+    """
+
+    def __init__(self, field, refusal):
+        super().__init__({field: [ErrorDetail(str(refusal), code=refusal.code)]})
+        self.params = dict(refusal.params)
 
 
 def _refusal_codes(detail):
@@ -49,4 +62,7 @@ def api_exception_handler(exc, context):
         codes = _refusal_codes(exc.detail)
         if len(codes) == 1:
             response.data["code"] = next(iter(codes))
+            params = getattr(exc, "params", None)
+            if params:
+                response.data["params"] = params
     return response

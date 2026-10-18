@@ -11,9 +11,10 @@ from rest_framework.views import APIView
 from ..models.collection import Collection
 from ..models.notification import InAppNotification
 
-# The one group `DELETE /inbox/?group=` knows: the request and reservation notices
-# that are for the team that manages them.
+# The two groups `DELETE /inbox/?group=` knows: the request and reservation notices
+# that are for the team that manages them, and the notices that only inform.
 BOOKINGS_GROUP = "bookings"
+INFO_GROUP = "info"
 
 
 class InboxView(APIView):
@@ -92,10 +93,14 @@ class InboxView(APIView):
             if group is None:
                 # Dismiss targets a specific notification, or one named group.
                 raise MethodNotAllowed("DELETE")
-            if group != BOOKINGS_GROUP:
-                return Response({"error": "Unknown group"}, status=400)
             mine = InAppNotification.objects.filter(user=request.user)
-            self._scoped(request, InAppNotification.team_booking_notices(mine)).delete()
+            if group == BOOKINGS_GROUP:
+                chosen = InAppNotification.team_booking_notices(mine)
+            elif group == INFO_GROUP:
+                chosen = InAppNotification.informative_notices(mine)
+            else:
+                return Response({"error": "Unknown group"}, status=400)
+            self._scoped(request, chosen).delete()
             return Response(status=204)
         notification = get_object_or_404(InAppNotification, code=code, user=request.user)
         notification.delete()

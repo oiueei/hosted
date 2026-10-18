@@ -1,10 +1,15 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
-vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
+vi.mock('../services/api', async (importOriginal) => ({
+  ...(await importOriginal()),
+  apiFetch: vi.fn(),
+}));
 
 import { apiFetch } from '../services/api';
 import BulkInviteCsv from '../components/BulkInviteCsv';
+import i18n from '../i18n';
+import { switchLanguage } from './settle';
 
 const fileInput = (container) => container.querySelector('input[type="file"]');
 const pick = (container, file) =>
@@ -145,6 +150,33 @@ describe('BulkInviteCsv', () => {
 
     expect(await screen.findByText('This collection is inactive.')).toBeInTheDocument();
     expect(onInvited).not.toHaveBeenCalled();
+  });
+
+  test("says a coded refusal in the reader's language, not the server's English", async () => {
+    await switchLanguage(i18n, 'es');
+    try {
+      apiFetch.mockResolvedValue(
+        jsonResponse(
+          {
+            error: 'At most 100 invitations can be sent at once.',
+            code: 'too_many_invites',
+            params: { max: 100 },
+          },
+          false
+        )
+      );
+      const { container } = renderBulkInvite();
+
+      pick(container, csvFile('email\nlala@your-domain.test'));
+      fireEvent.click(await screen.findByRole('button', { name: /invitaci/i }));
+
+      expect(
+        await screen.findByText('Se pueden enviar como máximo 100 invitaciones de una vez.')
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/At most 100/)).not.toBeInTheDocument();
+    } finally {
+      await switchLanguage(i18n, 'en');
+    }
   });
 
   test('surfaces a rate limit', async () => {

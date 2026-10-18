@@ -64,6 +64,28 @@ class InAppNotification(models.Model):
         db_table = "in_app_notifications"
         ordering = ["-created"]
 
+    # The notice types that ask their reader to do something: decide a request,
+    # answer a question, approve a suggestion, look at a report. Everything else
+    # only informs. A new type has to land in one of the two (a test holds it),
+    # so "does this ask, or only tell?" is decided when the type is made.
+    ACTION_NOTICE_TYPES = frozenset(
+        {"BOOKING_REQUESTED", "FAQ_QUESTION", "INVITE_PROPOSED", "THING_REPORTED"}
+    )
+
+    @classmethod
+    def informative_notices(cls, queryset=None):
+        """The notices that only inform: neither ask for an action nor belong to the
+        team's request and reservation group.
+
+        The inbox folds these into one card once there are many
+        (``DELETE /inbox/?group=info`` dismisses exactly this set).
+        ``frontend/src/utils/inboxGroups.js`` mirrors the rule and
+        ``frontend/src/test/inboxGroupParity.json`` holds the two together.
+        """
+        base = cls.objects.all() if queryset is None else queryset
+        team = cls.team_booking_notices(base).values("pk")
+        return base.exclude(type__in=cls.ACTION_NOTICE_TYPES).exclude(pk__in=team)
+
     @classmethod
     def team_booking_notices(cls, queryset=None):
         """The request and reservation notices that reach whoever **manages** them.

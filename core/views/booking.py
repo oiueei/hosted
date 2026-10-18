@@ -37,7 +37,7 @@ from core.services.booking_service import (
 )
 from core.services.email_service import send_return_overdue_email
 from core.services.team import managers_ready_collections
-from core.views._helpers import get_viewable_thing, viewer_code
+from core.views._helpers import get_viewable_thing, refusal_body, viewer_code
 
 
 class ThingCalendarView(APIView):
@@ -172,13 +172,13 @@ class BookingCancelView(APIView):
         # Only the requester can cancel
         if booking.requester_code_id != request.user.code:
             return Response(
-                {"error": "Not authorized"},
+                refusal_body("Not authorized", code="not_allowed"),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         if not booking.is_valid():
             return Response(
-                {"error": "Booking expired or already processed"},
+                refusal_body("Booking expired or already processed", code="booking_not_pending"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -187,7 +187,7 @@ class BookingCancelView(APIView):
         # A concurrent transition already processed this booking — no-op.
         if thing is None:
             return Response(
-                {"error": "Booking expired or already processed"},
+                refusal_body("Booking expired or already processed", code="booking_not_pending"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -228,13 +228,13 @@ class BookingActionView(APIView):
             or booking.thing_code.can_manage(request.user.code)
         ):
             return Response(
-                {"error": "Not authorized"},
+                refusal_body("Not authorized", code="not_allowed"),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         if not booking.is_valid():
             return Response(
-                {"error": "Booking expired or already processed"},
+                refusal_body("Booking expired or already processed", code="booking_not_pending"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -247,7 +247,7 @@ class BookingActionView(APIView):
         # already transitioned this booking — the service no-ops and returns None.
         if thing is None:
             return Response(
-                {"error": "Booking expired or already processed"},
+                refusal_body("Booking expired or already processed", code="booking_not_pending"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -281,7 +281,10 @@ class BookingRemindReturnView(APIView):
         )
 
         if not booking.thing_code.can_manage(request.user.code):
-            return Response({"error": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                refusal_body("Not authorized", code="not_allowed"),
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         if not booking.can_be_return_reminded():
             return Response(

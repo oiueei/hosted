@@ -298,6 +298,7 @@ TEXTS = {
         "If you've already returned it, you can ignore this email."
     ),
     "view_thing_cta": "View the listing",
+    "demo_note": "This group is a demo: its things and its people are examples.",
     # Reservations (RESERVE_THING) — auto-confirmed, so "confirmed", not "requested"
     "reservation_confirmed_subject": "Your reservation of '{thing}' is confirmed",
     "reservation_confirmed_plain": (

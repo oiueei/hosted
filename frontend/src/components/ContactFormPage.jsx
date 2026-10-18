@@ -6,6 +6,7 @@ import PageLayout from './PageLayout';
 import useTheeeme from '../hooks/useTheeeme';
 import StatusRegion from './StatusRegion';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { errorKey, translateError } from '../utils/errorKey';
 
 /**
  * The shared operator-message form, rendered by `ContactPage` with its own copy
@@ -46,12 +47,12 @@ export default function ContactFormPage({ docTitleKey, titleKey, introKey, idPre
       if (res.ok) {
         setSent(true);
       } else if (res.status === 429) {
-        setError(t('common.tooManyAttempts'));
+        setError(errorKey('common.tooManyAttempts'));
       } else {
-        setError(t('contact.error'));
+        setError(errorKey('contact.error'));
       }
     } catch {
-      setError(t('common.connectionError'));
+      setError(errorKey('common.connectionError'));
     } finally {
       setSending(false);
     }
@@ -97,7 +98,7 @@ export default function ContactFormPage({ docTitleKey, titleKey, introKey, idPre
             <StatusRegion>
               {error && (
                 <Notification label={t('common.error')} type="error">
-                  {error}
+                  {translateError(t, error)}
                 </Notification>
               )}
             </StatusRegion>

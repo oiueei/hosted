@@ -27,6 +27,7 @@ import CancelReservationDialog from '../components/CancelReservationDialog';
 import ResponsiveTable from '../components/ResponsiveTable';
 import { collectionThingPath } from '../utils/collectionPath';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { errorKey, translateError } from '../utils/errorKey';
 
 /**
  * The owner's side of MyBookingsPage: every request made on their things, in one
@@ -106,10 +107,10 @@ export default function OwnerBookingsPage() {
           setBookings(data.results);
           setNext(data.next || null);
         } else {
-          setError(t('ownerBookings.errorLoading'));
+          setError(errorKey('ownerBookings.errorLoading'));
         }
       } catch {
-        setError(t('common.connectionError'));
+        setError(errorKey('common.connectionError'));
       }
     };
     fetchBookings();
@@ -223,7 +224,7 @@ export default function OwnerBookingsPage() {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
         <Notification label={t('common.error')} type="error">
-          {error}
+          {translateError(t, error)}
         </Notification>
       </PageLayout>
     );

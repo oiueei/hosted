@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TextArea } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import { openingHoursWeek } from '../utils/rental';
+import { errorKey, translateError } from '../utils/errorKey';
 
 /**
  * The weekly opening-hours editor for an HOUR-unit reservations collection:
@@ -101,11 +102,11 @@ export default function OpeningHoursField({
     try {
       parsed = JSON.parse(draft);
     } catch {
-      setError(t('openingHours.invalidJson'));
+      setError(errorKey('openingHours.invalidJson'));
       return;
     }
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      setError(t('openingHours.invalidJson'));
+      setError(errorKey('openingHours.invalidJson'));
       return;
     }
     setError('');
@@ -128,7 +129,7 @@ export default function OpeningHoursField({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         invalid={!!error}
-        errorText={error}
+        errorText={translateError(t, error)}
       />
       {week && (
         <div className="opening-hours-preview">

@@ -34,32 +34,32 @@ USERS = [
 COLLECTIONS = [
     {
         "code": "La1aC1",
-        "headline": "Lala's off on sabbatical, flogging it all for a tenner!",
+        "headline": "DEMO · Lala's off on sabbatical, flogging it all for a tenner!",
         "description": "Three rules, mate: cash only, you come fetch it yerself, deadline's the 25th. Anything left? Straight to the local orphanage!",
     },
     {
         "code": "l0l0C1",
-        "headline": "Lolo's Leafy Lounge – Snag a free succulent baby!",
+        "headline": "DEMO · Lolo's Leafy Lounge – Snag a free succulent baby!",
         "description": "Drop by to meet my succulent squad – echeverias, jades, sedums – and I'll gift you a cutting. Easy-peasy care guide thrown in. Only rule: name your new leafy friend!",
     },
     {
         "code": "l1l1C1",
-        "headline": "Lili's Lending – time to share our things!",
+        "headline": "DEMO · Lili's Lending – time to share our things!",
         "description": "Need a drill, steam cleaner, sturdy ladder, luggage scale or muffin mega-kit? Lili's lending library has your back – all for a token fee!",
     },
     {
         "code": "1u1uC1",
-        "headline": "Tools for us!",
+        "headline": "DEMO · Tools for us!",
         "description": "We upload the tools we have here and make them available to the rest of the group. Take good care of them: they're ours and we all need them.",
     },
     {
         "code": "L3L3C1",
-        "headline": "The Sunday swap-meet in the courtyard",
+        "headline": "DEMO · The Sunday swap-meet in the courtyard",
         "description": "Every Sunday we set up a swap-meet, a party and a lunch in the courtyard. Bring down what you no longer use and take home what you need: everything here is a gift. Co-op neighbours only.",
     },
     {
         "code": "1u1uRe",
-        "headline": "Lulu's workshop — book a spot",
+        "headline": "DEMO · Lulu's workshop — book a spot",
         "description": "Reserve a bench or the meeting corner to use here in the workshop. It's yours for the day (or up to three), nothing leaves the room, and the booking is confirmed straight away. Open Monday to Friday.",
     },
 ]

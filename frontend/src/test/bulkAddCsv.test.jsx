@@ -2,7 +2,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 import JSZip from 'jszip';
 
-vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
+vi.mock('../services/api', async (importOriginal) => ({
+  ...(await importOriginal()),
+  apiFetch: vi.fn(),
+}));
 // The ticketed upload path is covered in src/utils/uploadImage.test.js; here it
 // only has to receive the right File and hand back a public_id.
 // The real constants and error classes stay; only the upload is stubbed. `UPLOADS_PER_HOUR`

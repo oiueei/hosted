@@ -296,6 +296,55 @@ describe('SiteFooter — the tagline, only without a session', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
+  test('on /login it is not there: it would link to the page it is on', () => {
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <SiteFooter />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText(TAGLINE)).toBeNull();
+    expect(screen.getByRole('link', { name: /privacy & legal/i })).toBeInTheDocument();
+  });
+
+  test('on any other page without a session it is', () => {
+    render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <SiteFooter />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('link', { name: TAGLINE })).toHaveAttribute('href', '/login');
+  });
+
+  test('a deployment with a page of its own about OIUEEI does not get it, signed out or not', async () => {
+    // That page is already in this footer ("What OIUEEI is"); the deployment's own
+    // pages may not want a link to /login. The module is mocked, as above, so this
+    // holds whatever `deployment/` really holds.
+    vi.resetModules();
+    vi.doMock('../deployment', () => ({
+      aboutPath: '/about-us',
+      externalForms: null,
+      requestAccessPaths: {},
+    }));
+    try {
+      const { default: Footer } = await import('../components/SiteFooter');
+      render(
+        <MemoryRouter initialEntries={['/collections/COL001']}>
+          <Footer />
+        </MemoryRouter>
+      );
+
+      expect(screen.queryByText(TAGLINE)).toBeNull();
+      expect(screen.getByRole('link', { name: /what oiueei is/i })).toHaveAttribute(
+        'href',
+        '/about-us'
+      );
+    } finally {
+      vi.doUnmock('../deployment');
+    }
+  });
+
   test('it is a line of its own above the doors from 768px, with a 44px target', () => {
     expect(declarationsInMedia('(min-width: 768px)', '.site-footer-tagline', 'flex')).toEqual([
       '0 0 100%',

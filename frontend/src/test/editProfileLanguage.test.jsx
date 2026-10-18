@@ -16,6 +16,7 @@ import { apiFetch } from '../services/api';
 import * as capabilities from '../hooks/useCapabilities';
 import i18n from '../i18n';
 import EditProfilePage from '../pages/EditProfilePage';
+import en from '../i18n/locales/en.json';
 
 // A fresh copy per test: several tests here change `language` on the fixture,
 // and a shared object would make them order-dependent.
@@ -53,6 +54,20 @@ beforeEach(async () => {
   // The first test in this file switches the live i18n singleton to Spanish
   // and leaves it there — reset so later tests don't depend on run order.
   await i18n.changeLanguage('en');
+});
+
+describe('EditProfilePage language Select — its help line', () => {
+  test('is on the page and in the select’s accessible name', async () => {
+    renderPage();
+    await screen.findByDisplayValue('Original name');
+
+    const help = en.editProfile.languageHelper;
+    expect(screen.getByText(help)).toBeInTheDocument();
+    // HDS 6 hands the line to a screen reader inside the control's own name.
+    expect(screen.getByRole('combobox', { name: /Language/ })).toHaveAccessibleName(
+      expect.stringContaining(help)
+    );
+  });
 });
 
 describe('EditProfilePage language Select', () => {
