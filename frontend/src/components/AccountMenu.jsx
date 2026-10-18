@@ -37,7 +37,7 @@ const PANEL_ID = 'account-menu-panel';
  * `/me/edit`).
  *
  * A plain navigation disclosure — a button that shows/hides a `<nav>` of
- * `Link`s — not `ShareCollectionMenu`'s HDS-`Select`-as-menu trick: every
+ * `Link`s — not an HDS `Select` dressed as a menu: every
  * option here is a **route**, not an action, and a `Select` announces itself
  * as a combobox to a screen reader (an accessibility risk). No `role="menu"` either — that role expects arrow-key
  * navigation between actions; this is `Tab`-navigable links, so the native

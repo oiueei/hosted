@@ -822,7 +822,6 @@
   },
   "shareMenu": {
     "label": "Compartir colección",
-    "placeholder": "Elige una opción…",
     "email": "Email",
     "copy": "Copiar enlace de invitación",
     "whatsapp": "WhatsApp",

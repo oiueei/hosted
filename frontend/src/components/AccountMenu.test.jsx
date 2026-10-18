@@ -14,7 +14,7 @@ expect.extend(toHaveNoViolations);
 /**
  * The routes one click away from every hero (2026-09-28) — see the
  * component's own docstring for why this is a plain disclosure, not
- * ShareCollectionMenu's HDS-Select trick. Every scenario here mirrors a line
+ * an HDS Select dressed as a menu. Every scenario here mirrors a line
  * from that plan: the trigger's accessible name, aria-expanded toggling,
  * the link set and its order, Escape returning focus, a click outside
  * closing it, no session meaning no render, and an axe pass with the panel

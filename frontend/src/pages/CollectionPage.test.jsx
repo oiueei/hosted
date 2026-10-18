@@ -229,7 +229,7 @@ describe('CollectionPage hero corners', () => {
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /collection options/i })).toBeInTheDocument();
-    expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
+    expect(screen.getByRole('button', { name: 'Share collection' })).toBeInTheDocument(); // ShareCollectionMenu
     expect(contactInCorner()).toBeNull();
     expect(screen.queryByRole('link', { name: /contact us/i })).toBeNull();
   });
@@ -247,7 +247,7 @@ describe('CollectionPage hero corners', () => {
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Share collection' })).not.toBeInTheDocument();
     expect(contactInCorner()).toBeNull();
   });
 
@@ -258,7 +258,7 @@ describe('CollectionPage hero corners', () => {
     await screen.findByText('Things from the kitchen');
 
     expect(screen.getByRole('button', { name: /your account/i })).toBeInTheDocument();
-    expect(screen.getByRole('combobox')).toBeInTheDocument(); // ShareCollectionMenu
+    expect(screen.getByRole('button', { name: 'Share collection' })).toBeInTheDocument(); // ShareCollectionMenu
     expect(contactInCorner()).toBeNull();
   });
 
@@ -268,11 +268,11 @@ describe('CollectionPage hero corners', () => {
     renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC' });
     await screen.findByText('Things from the kitchen');
 
-    fireEvent.click(screen.getByRole('combobox'));
-    expect(screen.queryByRole('option', { name: /rotate link/i })).toBeNull();
-    expect(screen.queryByRole('option', { name: /stop sharing/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Share collection' }));
+    expect(screen.queryByRole('button', { name: /rotate link/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /stop sharing/i })).toBeNull();
 
-    fireEvent.click(screen.getByRole('option', { name: 'Copy invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invite link' }));
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/collections/COL001`)
     );
@@ -284,7 +284,7 @@ describe('CollectionPage hero corners', () => {
     renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC', is_member: false });
     await screen.findByText('Things from the kitchen');
 
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Share collection' })).not.toBeInTheDocument();
     expect(contactInCorner()).toBeNull();
   });
 
@@ -292,7 +292,7 @@ describe('CollectionPage hero corners', () => {
     renderCollection({ ...MEMBER_VIEW, visibility: 'PUBLIC', is_member: false });
     await screen.findByText('Things from the kitchen');
 
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Share collection' })).not.toBeInTheDocument();
   });
 });
 

@@ -828,7 +828,6 @@
   },
   "shareMenu": {
     "label": "Share collection",
-    "placeholder": "Choose a way…",
     "email": "Email",
     "copy": "Copy invite link",
     "whatsapp": "WhatsApp",

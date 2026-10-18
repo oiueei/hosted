@@ -190,8 +190,8 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     renderCollection();
     await screen.findByText('Test Thing');
 
-    fireEvent.click(screen.getByRole('combobox', { name: /Share collection/ }));
-    fireEvent.click(await screen.findByRole('option', { name: 'QR code' }));
+    fireEvent.click(screen.getByRole('button', { name: /Share collection/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'QR code' }));
 
     // The Dialog renders in a portal on document.body, and the code itself is a
     // lazy chunk: wait for the drawing, not for the box that will hold it.

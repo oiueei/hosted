@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState } from 'react';
+import { lazy, Suspense, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
@@ -11,10 +11,9 @@ import {
   IconShare,
   IconWhatsapp,
   LoadingSpinner,
-  Select,
 } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
-import hdsLang from '../utils/hdsLang';
+import useDismissable from '../hooks/useDismissable';
 import { apiFetch } from '../services/api';
 import Toast from './Toast';
 import { collectionPath } from '../utils/collectionPath';
@@ -32,15 +31,13 @@ const QRCodeSVG = lazy(() => import('qrcode.react').then((m) => ({ default: m.QR
  * right for the founder, a co-curator and a member.
  *
  * Presents as a single discreet `IconShare` in the hero's top-right, the last of
- * the corner's controls — the `.share-corner` rule in App.css restyles the Select's
- * own trigger (its `icon` prop renders inside the one `<button role="combobox">`)
- * to a 44px icon-only control, hiding the placeholder text and the arrow, while
- * every bit of HDS's open/close/Escape/outside-click/keyboard behaviour and the
- * button's composed `aria-label` (from `texts.label`) stay exactly as shipped.
- *
- * HDS Select is a form input by design — value persists after selection.
- * Here we hijack `onChange`/`onClose` to fire the action and reset the
- * value, so the Select behaves as a one-shot menu of share actions.
+ * the corner's controls: a plain disclosure, the same gesture as `AccountMenu`
+ * and `CollectionMenu` — a `<button aria-expanded aria-controls>` that shows a
+ * panel of buttons, closed by Escape (focus back on the trigger), a click outside
+ * (`useDismissable`) and focus moving out of the menu. It was an HDS `Select`
+ * dressed as an icon, which a screen reader announces as a combobox; HDS v6 has no
+ * menu. Every entry is a `<button>`, not a link: they are actions that first need
+ * the link to share, which for a PRIVATE collection is minted on demand.
  *
  * PRIVATE collections use a `/share/{token}` pop-in link: the backend
  * `share_token` is generated on demand the first time the owner triggers any
@@ -63,12 +60,17 @@ export default function ShareCollectionMenu({
   collectionHeadline,
   isPublic,
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
   const [toast, setToast] = useState(null);
   const [qrUrl, setQrUrl] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [open, setOpen] = useState(false);
   const cachedUrlRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const buttonRef = useRef(null);
+  const panelId = `share-menu-panel-${useId()}`;
+  useDismissable({ open, setOpen, wrapperRef, buttonRef });
 
   const ensureShareUrl = async () => {
     if (cachedUrlRef.current) return cachedUrlRef.current;
@@ -169,42 +171,47 @@ export default function ShareCollectionMenu({
     }
   };
 
-  const options = [
-    {
-      value: 'email',
-      label: t('shareMenu.email'),
-      iconStart: <IconEnvelope aria-hidden="true" />,
-    },
-    {
-      value: 'copy',
-      label: t('shareMenu.copy'),
-      iconStart: <IconCopy aria-hidden="true" />,
-    },
+  // Picking an entry closes the panel and puts the focus back on the trigger (the
+  // pressed button goes with the panel; a dialog that opens next returns the focus
+  // to the trigger when it closes).
+  const pick = (value) => {
+    setOpen(false);
+    buttonRef.current?.focus();
+    if (value === 'rotate' || value === 'revoke') setConfirmAction(value);
+    else trigger(value);
+  };
+
+  const entries = [
+    { value: 'email', label: t('shareMenu.email'), icon: <IconEnvelope aria-hidden="true" /> },
+    { value: 'copy', label: t('shareMenu.copy'), icon: <IconCopy aria-hidden="true" /> },
     {
       value: 'whatsapp',
       label: t('shareMenu.whatsapp'),
-      iconStart: <IconWhatsapp aria-hidden="true" />,
+      icon: <IconWhatsapp aria-hidden="true" />,
     },
-    {
-      value: 'qr',
-      label: t('shareMenu.qr'),
-      iconStart: <IconCamera aria-hidden="true" />,
-    },
-    ...(isPublic
-      ? []
-      : [
-          {
-            value: 'rotate',
-            label: t('shareMenu.rotate'),
-            iconStart: <IconArrowRedo aria-hidden="true" />,
-          },
-          {
-            value: 'revoke',
-            label: t('shareMenu.revoke'),
-            iconStart: <IconCrossCircle aria-hidden="true" />,
-          },
-        ]),
+    { value: 'qr', label: t('shareMenu.qr'), icon: <IconCamera aria-hidden="true" /> },
   ];
+  // Taking a link back only exists for a PRIVATE collection (see above).
+  const credentialEntries = isPublic
+    ? []
+    : [
+        {
+          value: 'rotate',
+          label: t('shareMenu.rotate'),
+          icon: <IconArrowRedo aria-hidden="true" />,
+        },
+        {
+          value: 'revoke',
+          label: t('shareMenu.revoke'),
+          icon: <IconCrossCircle aria-hidden="true" />,
+        },
+      ];
+  const entryButton = (entry) => (
+    <button key={entry.value} type="button" onClick={() => pick(entry.value)}>
+      {entry.icon}
+      <span>{entry.label}</span>
+    </button>
+  );
 
   const qrTitle = t('shareMenu.qrTitle', { headline: collectionHeadline });
   const titleId = `share-qr-title-${collectionCode}`;
@@ -212,33 +219,40 @@ export default function ShareCollectionMenu({
 
   return (
     <>
-      {/* One discreet icon in the hero's top-right, in the corner row. The
-          Select's own trigger is restyled to a 44px icon-only button in
-          `.share-corner` (App.css) — HDS keeps all the open/close/keyboard
-          logic and composes the button's accessible name from `texts.label`. */}
-      <div className="share-corner">
-        <Select
-          id={`share-menu-${collectionCode}`}
-          icon={<IconShare aria-hidden="true" />}
-          texts={{
-            label: t('shareMenu.label'),
-            placeholder: t('shareMenu.placeholder'),
-            language: hdsLang(i18n.language),
-          }}
-          options={options}
-          value={[]}
-          onChange={(selected) => {
-            const picked = selected && selected.length > 0 ? selected[0] : null;
-            if (!picked || !picked.value) return;
-            if (picked.value === 'rotate' || picked.value === 'revoke') {
-              setConfirmAction(picked.value);
-            } else {
-              trigger(picked.value);
-            }
-          }}
-          visibleOptions={options.length}
-        />
-      </div>
+      {/* One discreet icon in the hero's top-right, in the corner row. Focus leaving
+          the whole menu closes the panel; a `null` `relatedTarget` is not "left"
+          (Safari does not focus a clicked button), as in `AccountMenu`. */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <span
+        className="share-menu"
+        ref={wrapperRef}
+        onBlur={(e) => {
+          if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+        }}
+      >
+        <button
+          type="button"
+          ref={buttonRef}
+          className="share-menu-trigger"
+          aria-label={t('shareMenu.label')}
+          aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <IconShare aria-hidden="true" />
+        </button>
+        {open && (
+          <div id={panelId} className="share-menu-panel">
+            {entries.map(entryButton)}
+            {credentialEntries.length > 0 && (
+              <>
+                <hr className="share-menu-divider" />
+                {credentialEntries.map(entryButton)}
+              </>
+            )}
+          </div>
+        )}
+      </span>
       {qrUrl && (
         <Dialog
           id={`share-qr-${collectionCode}`}

@@ -968,7 +968,7 @@ describe('the collection menu for a member', () => {
 
     const account = screen.getByRole('button', { name: 'Your account' });
     const menu = screen.getByRole('button', { name: TRIGGER });
-    const share = container.querySelector('.hero-corners .share-corner');
+    const share = container.querySelector('.hero-corners .share-menu');
     expect(share).not.toBeNull();
     expect(account.compareDocumentPosition(menu)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(menu.compareDocumentPosition(share)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);

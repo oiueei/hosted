@@ -822,7 +822,6 @@
   },
   "shareMenu": {
     "label": "Comparteix la col·lecció",
-    "placeholder": "Tria una opció…",
     "email": "Correu",
     "copy": "Copia l'enllaç d'invitació",
     "whatsapp": "WhatsApp",
