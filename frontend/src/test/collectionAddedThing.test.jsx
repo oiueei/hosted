@@ -213,6 +213,17 @@ describe('CollectionPage after adding a thing, on a phone', () => {
     expect(document.querySelector('.thing-card--just-added')).toBeNull();
   });
 
+  test('a code with selector characters in it is looked up as text, not as a selector', async () => {
+    // The state comes from the router; a quote or a bracket in it must not make the
+    // lookup throw and take the page down.
+    renderArriving({ addedThing: 'A"] , [x' });
+
+    expect(await screen.findByText('Thing uploaded!')).toBeInTheDocument();
+    await effectHasRun();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(screen.getByText('Blue chair')).toBeInTheDocument();
+  });
+
   test('arriving with no state does nothing at all', async () => {
     renderArriving(null);
     await screen.findByText('Blue chair');
