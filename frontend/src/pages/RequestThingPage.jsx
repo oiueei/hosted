@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification, TextArea } from 'hds-react';
-import { DATE_TYPES } from '../constants/things';
+import { DATE_TYPES, hasAmount } from '../constants/things';
 import {
   isPickupDisabled,
   reservationPickupDisabled,
@@ -463,7 +463,7 @@ export default function RequestThingPage() {
         />
       ) : (
         <>
-          {thing.fee && (
+          {hasAmount(thing.fee) && (
             <p>
               <strong>{t('request.priceLabel')}</strong>{' '}
               {t('request.priceValue', { fee: thing.fee })}

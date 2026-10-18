@@ -32,3 +32,27 @@ describe('ThingInfoRows — deposit row', () => {
     expect(screen.getByText(/50\.00 €/)).toBeInTheDocument();
   });
 });
+
+describe('ThingInfoRows — an amount of zero is not shown', () => {
+  // The API sends the amounts as text, and "0.00" is truthy in JS.
+  test.each([['0.00'], ['0'], [''], [null]])('no price and no deposit row for %j', (zero) => {
+    render(
+      <ThingInfoRows thing={{ type: 'LEND_THING', fee: zero, deposit: zero }} isDateBased={false} />
+    );
+
+    expect(screen.queryByText('Price.')).toBeNull();
+    expect(screen.queryByText('Deposit.')).toBeNull();
+  });
+
+  test('a positive price and deposit are shown', () => {
+    render(
+      <ThingInfoRows
+        thing={{ type: 'RENT_THING', fee: '5.00', deposit: '5.00' }}
+        isDateBased={false}
+      />
+    );
+
+    expect(screen.getByText('Price.')).toBeInTheDocument();
+    expect(screen.getByText('Deposit.')).toBeInTheDocument();
+  });
+});
