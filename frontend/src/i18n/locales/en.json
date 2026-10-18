@@ -603,7 +603,7 @@
     "rejected": "Request declined. We've let them know.",
     "errorActing": "Couldn't answer that request. Please try again.",
     "errorLoading": "Error loading requests.",
-    "emptyCta": "Share a collection",
+    "emptyCta": "See my collections",
     "captionPending": "Requests waiting for your answer",
     "captionPast": "Requests you have already answered",
     "cancelReservation": "Cancel reservation",
