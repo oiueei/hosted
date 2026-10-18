@@ -94,9 +94,9 @@ export default defineConfig(({ mode }) => ({
       // tests that name a behaviour; a change that lands under this line means
       // the code needs covering, never that the line needs lowering.
       thresholds: {
-        statements: 92,
-        branches: 87,
-        functions: 87,
+        statements: 93,
+        branches: 88,
+        functions: 89,
         lines: 94,
       },
     },
