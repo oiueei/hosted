@@ -2073,3 +2073,24 @@ def test_every_email_that_links_a_thing_names_only_a_group_its_reader_may_open(
         assert "/stall/COLL01/things/THNG01" in half
     for half in (plain, html):
         assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_the_capacity_alarm_says_its_header_once_in_the_plain_text():
+    """The alert's explanation is its parent line; `_send` already puts it on the first
+    line of the plain text, so the body must not repeat it."""
+    from core.models import Collection, User
+
+    owner = User.objects.create(code="ALRMO3", email="lala3@your-domain.test", name="Lala")
+    collection = Collection.objects.create(
+        code="ALRMC3", owner=owner, headline="Busy", status="ACTIVE"
+    )
+    User.objects.create(code="ALRMS3", email="lala4@your-domain.test", is_superuser=True)
+    mail.outbox.clear()
+
+    email_service.send_collection_capacity_alarm(collection, "things", 501, 500)
+
+    plain = mail.outbox[0].body
+    assert plain.count("A collection has crossed the mass-upload alarm threshold.") == 1
+    assert plain.startswith("A collection has crossed")
+    assert "  Collection: Busy (ALRMC3)" in plain

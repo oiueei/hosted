@@ -2641,7 +2641,9 @@ def send_collection_capacity_alarm(collection, counter, count, threshold):
         "notified. Review it if the volume looks wrong for this account."
     )
     blocks = []
-    plain_lines = [header, ""]
+    # `_send` puts `header` on the first line of the plain text; repeating it here
+    # printed it twice.
+    plain_lines = []
     for label, value in rows:
         blocks.append(_field(label, value))
         plain_lines.append(f"  {label}: {value}")
