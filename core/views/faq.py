@@ -24,7 +24,7 @@ from core.services.email_service import (
     send_faq_question_email,
 )
 from core.services.team import managers_ready_collections
-from core.views._helpers import deny_if_cannot_view, viewer_code
+from core.views._helpers import deny_if_cannot_view, refusal_body, viewer_code
 
 
 def _clear_faq_question_notifications(faq):
@@ -108,7 +108,10 @@ class ThingFAQListView(APIView):
         # don't ask).
         if thing.can_manage(request.user.code):
             return Response(
-                {"error": "You manage this thing — you answer its questions, you don't ask them"},
+                refusal_body(
+                    "You manage this thing — you answer its questions, you don't ask them",
+                    code="manager_cannot_ask",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -185,7 +188,7 @@ class FAQDetailView(APIView):
             # Only a manager of the thing or the questioner can see hidden FAQs
             if not thing.can_manage(request.user.code) and faq.questioner_id != request.user.code:
                 return Response(
-                    {"error": "FAQ not found"},
+                    refusal_body("FAQ not found", code="faq_not_found"),
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
@@ -218,7 +221,10 @@ class FAQAnswerView(APIView):
 
         if not thing.can_manage(request.user.code):
             return Response(
-                {"error": "Only a manager of this thing can answer questions"},
+                refusal_body(
+                    "Only a manager of this thing can answer questions",
+                    code="only_managers_answer",
+                ),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -275,7 +281,10 @@ class FAQVisibilityView(APIView):
 
         if not thing.can_manage(request.user.code):
             return Response(
-                {"error": "Only a manager of this thing can change FAQ visibility"},
+                refusal_body(
+                    "Only a manager of this thing can change FAQ visibility",
+                    code="only_managers_change_visibility",
+                ),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -334,6 +343,6 @@ class FAQVisibilityView(APIView):
             )
         else:
             return Response(
-                {"error": "Invalid action"},
+                refusal_body("Invalid action", code="invalid_faq_action"),
                 status=status.HTTP_400_BAD_REQUEST,
             )

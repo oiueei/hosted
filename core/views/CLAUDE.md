@@ -1335,3 +1335,5 @@ Business logic is extracted into `core/services/`:
 ## Coded refusals in the views (`refusal_body`)
 
 A view that turns a request down writes `Response(refusal_body("English sentence", code="x", key="error"|"detail", **params), status=…)` (`core/views/_helpers.py`). The sentence stays under the key the view always used; `code` (and `params`, when the sentence interpolates something) is what the SPA words in the reader's language from `requestErrors.<code>`. A `Refusal` (`capacity_violation`, the invitation quota) carries its own code, so `refusal_body(refusal)` is enough. Every code needs a string in the three locales (`test_refusal_codes.py` reads the sources, so a new file with codes goes in its `SOURCES`); a param named `max`, `days`, `min` or `step` doubles as the plural `count`, so such a code is written as `<code>_one` / `<code>_other`.
+
+A field-keyed 400 that must carry a code and its params (the single-create thing ceiling, `things_limit`) is raised as `core.exceptions.RefusedField(field, refusal)`: the handler lifts the code to the top of the body, as for `CODED_VALIDATION_REFUSALS`, and `params` with it.

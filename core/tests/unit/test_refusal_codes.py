@@ -24,6 +24,8 @@ SOURCES = [
     ROOT / "core" / "services" / "booking_service.py",
     ROOT / "core" / "services" / "invitation_service.py",
     ROOT / "core" / "views" / "collections.py",
+    ROOT / "core" / "views" / "things.py",
+    ROOT / "core" / "views" / "faq.py",
     ROOT / "core" / "views" / "booking.py",
     ROOT / "core" / "views" / "_helpers.py",
     ROOT / "core" / "serializers" / "collection.py",
