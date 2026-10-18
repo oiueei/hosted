@@ -5,6 +5,8 @@ IMPORTANT: All email action links use RSVP codes as intermediaries.
 Never expose real codes (booking_code, reservation_code, etc.) in URLs.
 """
 
+import logging
+
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import path
@@ -68,6 +70,8 @@ from .views.transfers import ThingTransferView
 from .views.upload import UploadTicketView
 from .views.users import UserDetailView
 
+logger = logging.getLogger(__name__)
+
 
 def health_check(request):
     """Liveness + database health, for uptime monitors.
@@ -115,7 +119,10 @@ def health_check(request):
             method=("GET", "HEAD"),
             increment=True,
         )
-    except Exception:
+    except Exception as exc:
+        # Fail open: a broken limiter must not turn the monitor's probe into an
+        # outage, but it must not go unseen either.
+        logger.warning("Health check rate limiter failed: %s", type(exc).__name__)
         limited = False
     if limited:
         return JsonResponse({"status": "throttled"}, status=429)
