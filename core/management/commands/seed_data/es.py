@@ -37,32 +37,32 @@ USERS = [
 COLLECTIONS = [
     {
         "code": "La1aC1",
-        "headline": "Lala se va de sabático, ¡todo se vende por diez pavos!",
+        "headline": "DEMO · Lala se va de sabático, ¡todo se vende por diez pavos!",
         "description": "Tres reglas, colega: solo efectivo, te lo llevas tú, fecha límite el 25. ¿Queda algo? ¡Al orfanato del barrio de cabeza!",
     },
     {
         "code": "l0l0C1",
-        "headline": "El salón verde de Lolo – ¡llévate una suculenta gratis!",
+        "headline": "DEMO · El salón verde de Lolo – ¡llévate una suculenta gratis!",
         "description": "Pásate a conocer a mi escuadrón suculento – echeverias, jades, sedums – y te regalo un esqueje. Guía fácil de cuidados incluida. Única regla: ¡ponle nombre a tu nueva amiga verde!",
     },
     {
         "code": "l1l1C1",
-        "headline": "Préstamos de Lili – ¡hora de compartir las cosas!",
+        "headline": "DEMO · Préstamos de Lili – ¡hora de compartir las cosas!",
         "description": "¿Necesitas taladro, limpiador de vapor, escalera sólida, báscula de equipaje o mega kit de magdalenas? La biblioteca de préstamos de Lili te cubre – ¡todo a un coste simbólico!",
     },
     {
         "code": "1u1uC1",
-        "headline": "¡Herramientas para nosotros!",
+        "headline": "DEMO · ¡Herramientas para nosotros!",
         "description": "Subimos aquí las herramientas que tenemos y las ponemos a disposición del resto del grupo. Cuidadlas bien: son nuestras y las necesitamos entre todas y todos.",
     },
     {
         "code": "L3L3C1",
-        "headline": "El mercadillo de los domingos en el patio",
+        "headline": "DEMO · El mercadillo de los domingos en el patio",
         "description": "Cada domingo montamos mercadillo, fiesta y comida en el patio. Baja lo que ya no uses y llévate lo que te haga falta: aquí todo se regala. Solo para vecinas y vecinos de la cooperativa.",
     },
     {
         "code": "1u1uRe",
-        "headline": "El taller de Lulu — reserva un sitio",
+        "headline": "DEMO · El taller de Lulu — reserva un sitio",
         "description": "Reserva un banco o el rincón de reuniones para usarlo aquí, en el taller. Es tuyo por un día (o hasta tres), nada sale de la sala y la reserva se confirma al momento. Abierto de lunes a viernes.",
     },
 ]
