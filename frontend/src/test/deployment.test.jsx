@@ -63,8 +63,15 @@ describe('the module keeps its contract', () => {
        App.jsx, LoginPage, SiteFooter, CollectionPage and VerifyPage read. The
        behaviours themselves are pinned below with the module mocked, which
        works identically wherever it runs. */
-    const { deploymentRoutes, deploymentI18n, popInPath, aboutPath, faqPath, externalForms } =
-      await import('../deployment');
+    const {
+      deploymentRoutes,
+      deploymentI18n,
+      popInPath,
+      aboutPath,
+      faqPath,
+      externalForms,
+      requestAccessPaths,
+    } = await import('../deployment');
 
     expect(Array.isArray(deploymentRoutes)).toBe(true);
     deploymentRoutes.forEach((route) => {
@@ -80,6 +87,11 @@ describe('the module keeps its contract', () => {
     // requestAccess }`, each `{ es, ca, en }` of addresses, or null / absent. Core
     // reads them through `utils/externalForms.js`.
     expect(externalForms === null || typeof externalForms === 'object').toBe(true);
+    // Where a request for access goes inside the app, by withheld value: a plain object
+    // of routes (`{}` upstream), read by `ApprovalNotice`.
+    expect(typeof requestAccessPaths).toBe('object');
+    expect(requestAccessPaths).not.toBeNull();
+    Object.values(requestAccessPaths).forEach((path) => expect(path).toMatch(/^\//));
     ['contact', 'feedback', 'requestAccess'].forEach((kind) => {
       const urls = externalForms?.[kind];
       if (!urls) return;
@@ -102,6 +114,7 @@ describe('a deployment that adds a route', () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: App } = await import('../App');
 
@@ -120,6 +133,7 @@ describe('a deployment that adds a route', () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: App } = await import('../App');
 
@@ -148,6 +162,7 @@ describe('the open-door button follows popInPath', () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -172,6 +187,7 @@ describe('the open-door button follows popInPath', () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -194,6 +210,7 @@ describe('the open-door button follows popInPath', () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -215,6 +232,7 @@ describe('without an open door, /login says that it works by invitation', () => 
     faqPath: null,
     deploymentI18n: {},
     externalForms: null,
+    requestAccessPaths: {},
   });
 
   test('the line stands where the button would be, after the form', async () => {
@@ -284,6 +302,7 @@ describe('the faq link follows faqPath', () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -307,6 +326,7 @@ describe('the faq link follows faqPath', () => {
       faqPath: '/help',
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -329,6 +349,7 @@ describe('the faq link follows faqPath', () => {
       faqPath: '/help',
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -358,6 +379,7 @@ describe('the faq link follows faqPath', () => {
       faqPath: '/help',
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: LoginPage } = await import('../pages/LoginPage');
 
@@ -399,6 +421,7 @@ describe('the door’s two secondary buttons read as the question alone, in ever
       faqPath: '/help',
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     ({ default: i18n } = await import('../i18n'));
     await switchLanguage(i18n, language);
@@ -424,6 +447,7 @@ describe('the about link follows aboutPath', () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     const { default: SiteFooter } = await import('../components/SiteFooter');
 
@@ -489,6 +513,7 @@ describe("the dashboard's second button follows aboutPath", () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     mockEmptyDashboard();
     await renderHome();
@@ -516,6 +541,7 @@ describe("the dashboard's second button follows aboutPath", () => {
       faqPath: null,
       deploymentI18n: {},
       externalForms: null,
+      requestAccessPaths: {},
     }));
     mockEmptyDashboard();
     await renderHome();

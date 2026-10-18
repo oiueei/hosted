@@ -1,5 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { axe, toHaveNoViolations } from 'jest-axe';
+
+expect.extend(toHaveNoViolations);
 
 import ApprovalNotice from '../components/ApprovalNotice';
 import { isOfferable } from '../hooks/useCapabilities';
@@ -198,5 +202,133 @@ describe('isOfferable — the predicate the forms filter with', () => {
 
     expect(isOfferable(capabilities, 'thing_types', 'LEND_THING', 'LEND_THING')).toBe(true);
     expect(isOfferable(capabilities, 'thing_types', 'RENT_THING', 'LEND_THING')).toBe(false);
+  });
+});
+
+// A deployment may send a request for access to a page of its own instead of to a form
+// hosted elsewhere: `requestAccessPaths` maps a withheld value to a route of the app.
+// The module is mocked, since upstream's map is empty and a replacement can only be
+// exercised this way (the mock gives every export of the module).
+describe('a deployment that has a page of its own to ask on', () => {
+  const KINDS = [
+    { value: 'STALL', label: 'Stall' },
+    { value: 'LIBRARY', label: 'Library' },
+    { value: 'SHED', label: 'Shed' },
+  ];
+
+  afterEach(() => {
+    vi.doUnmock('../deployment');
+    vi.doUnmock('../utils/externalForms');
+  });
+
+  const Where = () => <p data-testid="where">{useLocation().pathname}</p>;
+
+  async function setUp({ paths, form = null, requestUrl = null, held = ['LIBRARY', 'SHED'] }) {
+    vi.resetModules();
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath: null,
+      faqPath: null,
+      externalForms: null,
+      deploymentI18n: {},
+      requestAccessPaths: paths,
+    }));
+    vi.doMock('../utils/externalForms', () => ({ externalFormUrl: () => form }));
+    mockCapabilities({
+      collection_kinds: KINDS.map((k) => k.value).filter((v) => !held.includes(v)),
+      collection_modes: ['PROPRIETARY'],
+      thing_types: [],
+      request_url: requestUrl,
+    });
+    const { default: Notice } = await import('../components/ApprovalNotice');
+    return render(
+      <MemoryRouter initialEntries={['/new']}>
+        <Routes>
+          <Route
+            path="/new"
+            element={
+              <>
+                <Notice kind="collection_kinds" catalogue={KINDS} />
+                <Where />
+              </>
+            }
+          />
+          <Route path="*" element={<Where />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  test('a withheld value with a page sends the request there, in the same tab', async () => {
+    await setUp({ paths: { LIBRARY: '/access/library' }, requestUrl: 'https://example.test/ask/' });
+
+    const button = await screen.findByRole('link', { name: 'Request access' });
+    expect(button).toHaveAttribute('href', '/access/library');
+    expect(button).not.toHaveAttribute('target');
+    expect(button).not.toHaveAttribute('rel');
+    expect(button).toHaveAccessibleName('Request access');
+    expect(button.className).toMatch(/hds-button/);
+    expect(button.parentElement).toHaveClass('button-row-wide');
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+  });
+
+  test('a plain click navigates inside the app', async () => {
+    await setUp({ paths: { LIBRARY: '/access/library' } });
+
+    fireEvent.click(await screen.findByRole('link', { name: 'Request access' }));
+
+    expect(await screen.findByTestId('where')).toHaveTextContent('/access/library');
+  });
+
+  test('the first withheld value, in the order of the catalogue, that has a page decides', async () => {
+    await setUp({ paths: { SHED: '/access/shed', LIBRARY: '/access/library' } });
+
+    const button = await screen.findByRole('link', { name: 'Request access' });
+    expect(button).toHaveAttribute('href', '/access/library');
+  });
+
+  test('a withheld value with no page keeps opening the address it always did, in a new tab', async () => {
+    await setUp({
+      paths: { LIBRARY: '/access/library' },
+      held: ['SHED'],
+      form: 'https://forms.example/acceso',
+    });
+
+    const button = await screen.findByRole('link', { name: /^Request access/ });
+    expect(button).toHaveAttribute('href', 'https://forms.example/acceso');
+    expect(button).toHaveAttribute('target', '_blank');
+    expect(button).toHaveAccessibleName('Request access. Opens in a new tab.');
+  });
+
+  test('the sentence above does not change', async () => {
+    const { container } = await setUp({ paths: { LIBRARY: '/access/library' } });
+
+    await screen.findByRole('link', { name: 'Request access' });
+    expect(container.querySelector('p.approval-notice')).toHaveTextContent(
+      'Some options need approval on this deployment: Library, Shed.'
+    );
+  });
+
+  test('upstream, with no pages, nothing changes: the server’s address in a new tab', async () => {
+    await setUp({ paths: {}, requestUrl: 'https://example.test/ask/' });
+
+    const button = await screen.findByRole('link', { name: /^Request access/ });
+    expect(button).toHaveAttribute('href', 'https://example.test/ask/');
+    expect(button).toHaveAttribute('target', '_blank');
+  });
+
+  test('upstream, with no address of any kind, it is still the sentence and no button', async () => {
+    await setUp({ paths: {} });
+
+    expect(await screen.findByText(/not available/i)).toBeInTheDocument();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  test('no axe violations', async () => {
+    const { container } = await setUp({ paths: { LIBRARY: '/access/library' } });
+
+    await screen.findByRole('link', { name: 'Request access' });
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

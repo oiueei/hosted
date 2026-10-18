@@ -42,7 +42,11 @@ describe('SiteFooter', () => {
        *does* have an about page — where the real export is a path and asserting
        its absence would fail on the branch this indirection exists to serve. */
     vi.resetModules();
-    vi.doMock('../deployment', () => ({ aboutPath: null, externalForms: null }));
+    vi.doMock('../deployment', () => ({
+      aboutPath: null,
+      externalForms: null,
+      requestAccessPaths: {},
+    }));
     const { default: Footer } = await import('../components/SiteFooter');
 
     render(
@@ -158,7 +162,7 @@ describe('SiteFooter — one line from 768px', () => {
      that has the other shape. */
   const lineWith = async (aboutPath) => {
     vi.resetModules();
-    vi.doMock('../deployment', () => ({ aboutPath, externalForms: null }));
+    vi.doMock('../deployment', () => ({ aboutPath, externalForms: null, requestAccessPaths: {} }));
     try {
       const { default: Footer } = await import('../components/SiteFooter');
       const { container } = render(

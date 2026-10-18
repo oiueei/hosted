@@ -36,6 +36,7 @@ async function loadI18n(deploymentI18n = {}) {
     deploymentRoutes: [],
     popInPath: null,
     aboutPath: null,
+    requestAccessPaths: {},
     deploymentI18n,
   }));
   const { default: i18n } = await import('../i18n');

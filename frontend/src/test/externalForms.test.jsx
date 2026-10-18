@@ -52,6 +52,7 @@ async function setUp({ externalForms = FORMS, language = 'en', feedbackEnv = '' 
     faqPath: null,
     deploymentI18n: {},
     externalForms,
+    requestAccessPaths: {},
   }));
   ({ default: i18n } = await import('../i18n'));
   await act(async () => {
