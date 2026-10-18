@@ -160,6 +160,7 @@ describe('the thing page — who has the collection menu', () => {
       'Download the calendar (ICS)',
       'Download the stats (CSV)',
       'Download the whole collection (JSON)',
+      'Mute the summary',
     ]);
     expect(within(panel()).getByRole('link', { name: 'Add thing' })).toHaveAttribute(
       'href',
@@ -358,6 +359,24 @@ describe('the thing page — what the menu does from here', () => {
     expect(posts).toHaveLength(1);
     expect(JSON.parse(posts[0][1].body)).toEqual({ muted: true });
     await openMenu();
+    expect(
+      within(panel()).getByRole('button', { name: 'Get the summary again' })
+    ).toBeInTheDocument();
+  });
+
+  test('a curator has the summary switch too, and only where the group sends one', async () => {
+    setApi({ menu: { ...CURATOR_MENU, digest_frequency: 'NONE' } });
+    renderThing();
+    await openMenu();
+
+    expect(within(panel()).queryByRole('button', { name: 'Mute the summary' })).toBeNull();
+  });
+
+  test('a curator who had muted it is offered to turn it back on', async () => {
+    setApi({ menu: { ...CURATOR_MENU, is_digest_muted: true } });
+    renderThing();
+    await openMenu();
+
     expect(
       within(panel()).getByRole('button', { name: 'Get the summary again' })
     ).toBeInTheDocument();
