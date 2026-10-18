@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { uploadImage, uploadErrorKey, UPLOADS_PER_HOUR } from '../utils/uploadImage';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
+import { errorKey, translateError } from '../utils/errorKey';
 
 const MAX_IMAGES = 8;
 
@@ -36,7 +37,7 @@ export default function GalleryUpload({ items = [], onChange }) {
 
     const remaining = MAX_IMAGES - items.length;
     if (remaining <= 0) {
-      setError(t('gallery.maxImages', { max: MAX_IMAGES }));
+      setError(errorKey('gallery.maxImages', { max: MAX_IMAGES }));
       return;
     }
 
@@ -52,12 +53,12 @@ export default function GalleryUpload({ items = [], onChange }) {
         uploaded.push(await uploadImage(original, 'oiueei/things'));
       }
       // Selected more than the remaining slots — keep what fit, flag the cap.
-      if (truncated) setError(t('gallery.maxImages', { max: MAX_IMAGES }));
+      if (truncated) setError(errorKey('gallery.maxImages', { max: MAX_IMAGES }));
     } catch (err) {
       // Two failures are worth naming, because the person can do something about each:
       // their file is too big, or the hour's allowance of photos is used up. Everything
       // else is ours to apologise for.
-      setError(t(uploadErrorKey(err), { max: UPLOADS_PER_HOUR }));
+      setError(errorKey(uploadErrorKey(err), { max: UPLOADS_PER_HOUR }));
     } finally {
       if (uploaded.length) onChange([...items, ...uploaded]);
       setUploading(false);
@@ -100,7 +101,7 @@ export default function GalleryUpload({ items = [], onChange }) {
               ? t('gallery.maxImages', { max: MAX_IMAGES })
               : t('gallery.uploadHelper', { max: MAX_IMAGES })
         }
-        errorText={error || undefined}
+        errorText={error ? translateError(t, error) : undefined}
         invalid={!!error}
       />
     </div>

@@ -9,6 +9,7 @@ import { safeNextPath } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { errorKey, translateError } from '../utils/errorKey';
 
 export default function VerifyPage() {
   const { code } = useParams();
@@ -43,7 +44,7 @@ export default function VerifyPage() {
     // Don't let a stalled network leave the user stuck on "Verifying…" forever:
     // after 15s with no response, fall through to the existing error screen.
     const timer = setTimeout(() => {
-      if (!settled) setError(t('common.connectionError'));
+      if (!settled) setError(errorKey('common.connectionError'));
     }, 15000);
     const verify = async () => {
       try {
@@ -88,7 +89,7 @@ export default function VerifyPage() {
               // refuse, and "invalid or expired — ask whoever invited you" would
               // send them looking for an invitation that is not the problem.
               setNoLongerManages(true);
-              setError(t('verify.noLongerManages'));
+              setError(errorKey('verify.noLongerManages'));
             } else if (done.retryable) {
               // "Not now", not "never". An approval the deployment's daily
               // invitation cap or the group's member ceiling refuses leaves the
@@ -100,9 +101,9 @@ export default function VerifyPage() {
               // The reason is the server's own sentence, the same one the
               // in-app approval shows (see ManageInvitesPage).
               setLinkAlive(true);
-              setError(done.error || t('verify.invalidOrExpired'));
+              setError(done.error || errorKey('verify.invalidOrExpired'));
             } else {
-              setError(t('verify.invalidOrExpired'));
+              setError(errorKey('verify.invalidOrExpired'));
             }
           }
         } else if (res.ok && data.action === 'COLLECTION_REJECT') {
@@ -151,10 +152,10 @@ export default function VerifyPage() {
             navigate('/');
           }
         } else {
-          setError(t('verify.invalidOrExpired'));
+          setError(errorKey('verify.invalidOrExpired'));
         }
       } catch {
-        setError(t('common.connectionError'));
+        setError(errorKey('common.connectionError'));
       } finally {
         settled = true;
         clearTimeout(timer);
@@ -198,10 +199,10 @@ export default function VerifyPage() {
         setSuccess(t('verify.accountDeletedBody'));
       } else {
         setDeletePreview(null);
-        setError(t('verify.invalidOrExpired'));
+        setError(errorKey('verify.invalidOrExpired'));
       }
     } catch {
-      setError(t('common.connectionError'));
+      setError(errorKey('common.connectionError'));
     } finally {
       setDeleting(false);
     }
@@ -245,7 +246,7 @@ export default function VerifyPage() {
     return (
       <PageLayout title={t('verify.oops')} heroActions={exitAction}>
         <Notification label={t('common.error')} type="error">
-          {error}
+          {translateError(t, error)}
         </Notification>
         {!noLongerManages && (
           <p className="section-mt">{t(linkAlive ? 'verify.refusalHelp' : 'verify.expiredHelp')}</p>

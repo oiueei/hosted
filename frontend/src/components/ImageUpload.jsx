@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { uploadImage, uploadErrorKey, UPLOADS_PER_HOUR } from '../utils/uploadImage';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
+import { errorKey, translateError } from '../utils/errorKey';
 
 /**
  * Single-image upload component backed by a ticketed direct-to-bucket upload.
@@ -70,7 +71,7 @@ export default function ImageUpload({
       // Two failures are worth naming, because the person can do something about each:
       // their file is too big, or the hour's allowance of photos is used up. Everything
       // else is ours to apologise for.
-      setError(t(uploadErrorKey(err), { max: UPLOADS_PER_HOUR }));
+      setError(errorKey(uploadErrorKey(err), { max: UPLOADS_PER_HOUR }));
     } finally {
       setUploading(false);
     }
@@ -104,7 +105,7 @@ export default function ImageUpload({
           language={hdsLang(i18n.language)}
           buttonLabel={t('upload.addFile')}
           helperText={uploading ? t('upload.uploading') : helperText || t('upload.acceptHint')}
-          errorText={error || undefined}
+          errorText={error ? translateError(t, error) : undefined}
           invalid={!!error}
         />
       )}

@@ -9,6 +9,7 @@ import hdsLang from '../utils/hdsLang';
 import InfoPopover from './InfoPopover';
 import StatusRegion from './StatusRegion';
 import BulkInviteResult from './BulkInviteResult';
+import { errorKey, translateError } from '../utils/errorKey';
 
 const MAX_ROWS = 100;
 // An "email" column (required) and an optional "name" column.
@@ -74,16 +75,16 @@ export default function BulkInviteCsv({ collectionCode, onInvited }) {
           .filter((row) => Object.keys(row).length > 0);
 
         if (parsed.length === 0) {
-          setError(t('bulkInvite.empty'));
+          setError(errorKey('bulkInvite.empty'));
         } else if (parsed.length > MAX_ROWS) {
-          setError(t('bulkInvite.tooMany', { max: MAX_ROWS }));
+          setError(errorKey('bulkInvite.tooMany', { max: MAX_ROWS }));
         } else if (parsed.some((row) => !row.email)) {
-          setError(t('bulkInvite.emailRequired'));
+          setError(errorKey('bulkInvite.emailRequired'));
         } else {
           setRows(parsed);
         }
       },
-      error: () => setError(t('bulkInvite.parseError')),
+      error: () => setError(errorKey('bulkInvite.parseError')),
     });
   };
 
@@ -105,7 +106,7 @@ export default function BulkInviteCsv({ collectionCode, onInvited }) {
         return;
       }
       if (res.status === 429) {
-        setError(t('common.tooManyAttempts'));
+        setError(errorKey('common.tooManyAttempts'));
         return;
       }
       let data = {};
@@ -114,9 +115,9 @@ export default function BulkInviteCsv({ collectionCode, onInvited }) {
       } catch {
         data = {};
       }
-      setError(data.error || t('bulkInvite.error'));
+      setError(data.error || errorKey('bulkInvite.error'));
     } catch {
-      setError(t('common.connectionError'));
+      setError(errorKey('common.connectionError'));
     } finally {
       setSending(false);
       sendLockRef.current = false;
@@ -146,7 +147,7 @@ export default function BulkInviteCsv({ collectionCode, onInvited }) {
       <StatusRegion>
         {error && (
           <Notification type="error" size="small" style={{ marginTop: 'var(--spacing-s)' }}>
-            {error}
+            {translateError(t, error)}
           </Notification>
         )}
       </StatusRegion>
