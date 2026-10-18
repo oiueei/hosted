@@ -10,9 +10,12 @@
   },
   "calendarExport": {
     "downloadButton": "Descarregar el calendari (ICS)",
-    "done": "{{count}} esdeveniment(s) — mira les teves baixades.",
-    "alsoCancelled": "Inclou {{count}} reserva(es) cancel·lada(es), marcades perquè el teu calendari les pugui treure.",
-    "doneOnlyCancelled": "No hi ha res de previst, però sí {{count}} reserva(es) cancel·lada(es): importa el fitxer perquè el teu calendari les pugui treure.",
+    "done_one": "{{count}} esdeveniment — mira les teves baixades.",
+    "done_other": "{{count}} esdeveniments — mira les teves baixades.",
+    "alsoCancelled_one": "Inclou {{count}} reserva cancel·lada, marcada perquè el teu calendari la pugui treure.",
+    "alsoCancelled_other": "Inclou {{count}} reserves cancel·lades, marcades perquè el teu calendari les pugui treure.",
+    "doneOnlyCancelled_one": "No hi ha res de previst, però sí {{count}} reserva cancel·lada: importa el fitxer perquè el teu calendari la pugui treure.",
+    "doneOnlyCancelled_other": "No hi ha res de previst, però sí {{count}} reserves cancel·lades: importa el fitxer perquè el teu calendari les pugui treure.",
     "nothingNew": "No hi ha res de previst al calendari.",
     "error": "No hem pogut preparar el fitxer de calendari. Torna-ho a provar d'aquí un moment."
   },

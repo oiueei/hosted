@@ -10,9 +10,12 @@
   },
   "calendarExport": {
     "downloadButton": "Descargar el calendario (ICS)",
-    "done": "{{count}} evento(s) — mira tus descargas.",
-    "alsoCancelled": "Incluye {{count}} reserva(s) cancelada(s), marcadas para que tu calendario pueda quitarlas.",
-    "doneOnlyCancelled": "No hay nada próximo, pero sí {{count}} reserva(s) cancelada(s): importa el fichero para que tu calendario pueda quitarlas.",
+    "done_one": "{{count}} evento — mira tus descargas.",
+    "done_other": "{{count}} eventos — mira tus descargas.",
+    "alsoCancelled_one": "Incluye {{count}} reserva cancelada, marcada para que tu calendario pueda quitarla.",
+    "alsoCancelled_other": "Incluye {{count}} reservas canceladas, marcadas para que tu calendario pueda quitarlas.",
+    "doneOnlyCancelled_one": "No hay nada próximo, pero sí {{count}} reserva cancelada: importa el fichero para que tu calendario pueda quitarla.",
+    "doneOnlyCancelled_other": "No hay nada próximo, pero sí {{count}} reservas canceladas: importa el fichero para que tu calendario pueda quitarlas.",
     "nothingNew": "No hay nada próximo en el calendario.",
     "error": "No hemos podido preparar el fichero de calendario. Prueba de nuevo en un momento."
   },

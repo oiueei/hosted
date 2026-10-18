@@ -10,9 +10,12 @@
   },
   "calendarExport": {
     "downloadButton": "Download the calendar (ICS)",
-    "done": "{{count}} event(s) — check your downloads.",
-    "alsoCancelled": "It includes {{count}} cancelled reservation(s), marked so your calendar can drop them.",
-    "doneOnlyCancelled": "Nothing coming up, but {{count}} cancelled reservation(s) — import the file so your calendar can drop them.",
+    "done_one": "{{count}} event — check your downloads.",
+    "done_other": "{{count}} events — check your downloads.",
+    "alsoCancelled_one": "It includes {{count}} cancelled reservation, marked so your calendar can drop it.",
+    "alsoCancelled_other": "It includes {{count}} cancelled reservations, marked so your calendar can drop them.",
+    "doneOnlyCancelled_one": "Nothing coming up, but {{count}} cancelled reservation — import the file so your calendar can drop it.",
+    "doneOnlyCancelled_other": "Nothing coming up, but {{count}} cancelled reservations — import the file so your calendar can drop them.",
     "nothingNew": "Nothing coming up in the calendar.",
     "error": "Couldn't build the calendar file. Please try again in a moment."
   },
