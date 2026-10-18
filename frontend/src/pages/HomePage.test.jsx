@@ -85,6 +85,24 @@ describe('HomePage — no way to a page that no longer exists', () => {
  * empty state and "Create your first collection" above the one thing a member
  * has, which on a phone sat below the fold under the hero's buttons.
  */
+describe('HomePage — the greeting', () => {
+  test('greets by name when there is one', async () => {
+    mockDashboard({ mine: [MINE] });
+    renderHome();
+
+    expect(await screen.findByRole('heading', { name: 'Hello, Lulu' })).toBeInTheDocument();
+  });
+
+  test('without a name it just says hello, and the address appears nowhere in it', async () => {
+    mockDashboard({ mine: [MINE], user: { ...USER, name: '' } });
+    renderHome();
+
+    const heading = await screen.findByRole('heading', { name: 'Hello!' });
+    expect(heading).toBeInTheDocument();
+    expect(screen.queryByText(/lulu1@your-domain\.test/)).toBeNull();
+  });
+});
+
 describe('HomePage — which section leads', () => {
   test('a member who owns nothing sees their groups first, the invitation to create after', async () => {
     mockDashboard({ mine: [], invited: [GROUP] });

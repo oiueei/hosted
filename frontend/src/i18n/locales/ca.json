@@ -226,6 +226,7 @@
   },
   "home": {
     "greeting": "Hola, {{name}}",
+    "greetingNoName": "Hola!",
     "createCollection": "Crear col·lecció",
     "myProfile": "El meu perfil",
     "myRequests": "Les meves sol·licituds",

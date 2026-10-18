@@ -232,6 +232,7 @@
   },
   "home": {
     "greeting": "Hello, {{name}}",
+    "greetingNoName": "Hello!",
     "createCollection": "Create collection",
     "myProfile": "My profile",
     "myRequests": "My requests",
