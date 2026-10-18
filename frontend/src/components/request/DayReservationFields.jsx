@@ -70,7 +70,10 @@ export default function DayReservationFields({
       )}
       <DateInput
         id="reservation-pickup-date"
-        label={t('reservation.pickupLabel')}
+        // With a one-day cap there is no span to start: it is just the day.
+        label={t(
+          reservationMax === 1 ? 'reservation.pickupLabelSingle' : 'reservation.pickupLabel'
+        )}
         helperText={t('reservation.pickupHelper')}
         value={startDate}
         onChange={(value) => onStartDate(value)}
