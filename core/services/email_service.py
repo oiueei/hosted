@@ -1125,6 +1125,22 @@ def _fmt_when(booking):
     )
 
 
+def _with_demo_note(collection, T, blocks, plain):
+    """Put the "this group is a demo" line first in a message about a demo collection.
+
+    ``collection`` is the one the sender was handed: nothing is looked up here, so a
+    sender that only knows a thing (a reminder, a question, a report) or a code, not
+    the collection itself, carries no line — the collection's title already says
+    "DEMO ·". A real group (or none) returns ``blocks`` and ``plain`` untouched. The
+    line is the first block, right under the ``<h1>``, and the first line of the plain
+    text after the header ``_send`` puts on top.
+    """
+    if not getattr(collection, "is_onboarding", False):
+        return blocks, plain
+    note = T("demo_note")
+    return [_para(note), *blocks], f"{note}\n\n{plain}"
+
+
 def _booking_detail_blocks(booking, lang=None):
     """Date/quantity detail blocks shared by the three booking emails."""
     if booking.start_date and booking.end_date:
@@ -1308,6 +1324,7 @@ def send_collection_invite_email(
     source_note = T("invite_source_note")
     blocks.append(_para(source_note))
     plain = f"{plain} {source_note}"
+    blocks, plain = _with_demo_note(collection, T, blocks, plain)
     _send(
         email,
         subject,
@@ -1431,15 +1448,13 @@ def send_collection_welcome_doc_email(collection_headline, doc_url, email, colle
     headline = L(collection_headline)
     subject = T("welcome_doc_subject").format(collection=headline)
     plain = T("welcome_doc_plain").format(collection=headline, url=doc_url)
-    html = _render_email(
-        [
-            _para(T("welcome_doc_intro")),
-            _cta(doc_url, T("welcome_doc_link_label"), T("cta_fallback")),
-            _para(T("welcome_doc_outro")),
-        ],
-        lang=lang,
-        header=headline,
-    )
+    blocks = [
+        _para(T("welcome_doc_intro")),
+        _cta(doc_url, T("welcome_doc_link_label"), T("cta_fallback")),
+        _para(T("welcome_doc_outro")),
+    ]
+    blocks, plain = _with_demo_note(collection, T, blocks, plain)
+    html = _render_email(blocks, lang=lang, header=headline)
     _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang, header=headline)
 
 
@@ -1596,6 +1611,7 @@ def send_collection_revoke_email(
         deleted = T("revoke_things").format(things=", ".join(L(t) for t in things))
         plain = f"{plain} {deleted}"
         blocks.append(_para(deleted))
+    blocks, plain = _with_demo_note(collection, T, blocks, plain)
     html = _render_email(blocks, lang=lang, header=headline)
     _send(email, subject, plain, html, CATEGORY_MANDATORY, user=user, lang=lang, header=headline)
 
@@ -1748,6 +1764,7 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
         if note_plain:
             plain += "\n\n" + note_plain
             html_blocks.extend(note_blocks)
+    html_blocks, plain = _with_demo_note(collection, T, html_blocks, plain)
     html = _render_email(html_blocks, lang=lang, header=header)
     _send(
         booking.requester_email,
@@ -1768,11 +1785,9 @@ def send_invite_rejected_email(invitee_name, collection_headline, owner_email, c
     headline = L(collection_headline)
     subject = T("invite_rejected_subject")
     plain = T("invite_rejected_plain").format(invitee=invitee_name, collection=headline)
-    html = _render_email(
-        [_para(T("invite_rejected_intro").format(invitee=invitee_name))],
-        lang=lang,
-        header=headline,
-    )
+    blocks = [_para(T("invite_rejected_intro").format(invitee=invitee_name))]
+    blocks, plain = _with_demo_note(collection, T, blocks, plain)
+    html = _render_email(blocks, lang=lang, header=headline)
     _send(
         owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=headline
     )
@@ -1832,18 +1847,16 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
         plain += "\n\n" + note_plain
 
     subject = T("confirmation_subject").format(action=action)
-    html = _render_email(
-        [
-            _para(T("confirmation_intro").format(action=action)),
-            *_booking_detail_blocks(booking, lang),
-            _para(outro),
-            _para(contact_shared),
-            _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
-            *note_blocks,
-        ],
-        lang=lang,
-        header=header,
-    )
+    blocks = [
+        _para(T("confirmation_intro").format(action=action)),
+        *_booking_detail_blocks(booking, lang),
+        _para(outro),
+        _para(contact_shared),
+        _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
+        *note_blocks,
+    ]
+    blocks, plain = _with_demo_note(collection, T, blocks, plain)
+    html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester.email,
         subject,
@@ -1893,10 +1906,12 @@ def send_email_note_test_email(curator, collection, note):
             blocks.append(_strong(name))
         plain_parts.append(note_plain)
         blocks.extend(note_blocks)
+    plain = "\n\n".join(plain_parts)
+    blocks, plain = _with_demo_note(collection, T, blocks, plain)
     _send(
         curator.email,
         T("email_note_test_subject").format(collection=headline),
-        "\n\n".join(plain_parts),
+        plain,
         _render_email(blocks, lang=lang, header=headline),
         CATEGORY_MANDATORY,
         user=user,
@@ -2117,21 +2132,20 @@ def send_broadcast_email(
         T, L = _texts(lang), _local(lang)
         headline = L(collection_headline)
         owner = _member_name(owner_name, lang)
+        blocks, plain = _with_demo_note(
+            collection,
+            T,
+            [
+                _para(T("broadcast_intro").format(owner=owner)),
+                _para(message),
+                _cta(collection_url, T("broadcast_open_cta"), T("cta_fallback")),
+            ],
+            T("broadcast_plain").format(owner=owner, message=message, url=collection_url),
+        )
         return (
             T("broadcast_subject").format(collection=headline),
-            _headline_prefix(
-                headline,
-                T("broadcast_plain").format(owner=owner, message=message, url=collection_url),
-            ),
-            _render_email(
-                [
-                    _para(T("broadcast_intro").format(owner=owner)),
-                    _para(message),
-                    _cta(collection_url, T("broadcast_open_cta"), T("cta_fallback")),
-                ],
-                lang=lang,
-                header=headline,
-            ),
+            _headline_prefix(headline, plain),
+            _render_email(blocks, lang=lang, header=headline),
         )
 
     _send_per_language(
@@ -2353,6 +2367,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     if note_plain:
         plain += "\n\n" + note_plain
         blocks.extend(note_blocks)
+    blocks, plain = _with_demo_note(collection, T, blocks, plain)
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester.email,
@@ -2402,6 +2417,7 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     if booking.project_note:
         plain += "\n\n" + T("reservation_note_label") + ": " + booking.project_note
         blocks.append(_field(T("reservation_note_label"), booking.project_note))
+    blocks, plain = _with_demo_note(collection, T, blocks, plain)
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         owner_email,
@@ -2565,20 +2581,20 @@ def send_digest_email(
         headline = L(collection_headline)
         headlines = [L(h) for h in thing_headlines]
         things_plain = "\n".join(f"  - {h}" for h in headlines)
+        blocks, plain = _with_demo_note(
+            collection,
+            T,
+            [
+                _para(T("digest_intro")),
+                _list(headlines),
+                _cta(collection_url, T("view_collection_cta"), T("cta_fallback")),
+            ],
+            T("digest_plain").format(things=things_plain, url=collection_url),
+        )
         return (
             T("digest_subject").format(collection=headline),
-            _headline_prefix(
-                headline, T("digest_plain").format(things=things_plain, url=collection_url)
-            ),
-            _render_email(
-                [
-                    _para(T("digest_intro")),
-                    _list(headlines),
-                    _cta(collection_url, T("view_collection_cta"), T("cta_fallback")),
-                ],
-                lang=lang,
-                header=headline,
-            ),
+            _headline_prefix(headline, plain),
+            _render_email(blocks, lang=lang, header=headline),
         )
 
     # The per-collection unsubscribe, appended after the generic preferences
