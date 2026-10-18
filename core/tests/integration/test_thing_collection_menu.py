@@ -204,8 +204,20 @@ class TestWhatItHolds:
         assert menu["digest_frequency"] == "NONE"
         assert menu["is_digest_muted"] is False
 
-    def test_a_curator_is_never_reported_as_having_muted(self, group, thing, user):
+    def test_a_curator_who_muted_the_summary_is_reported_as_having_muted(self, group, thing, user):
+        """The summary goes to the whole team, the founder included, so a curator
+        reads their own switch like a member."""
         group.digest_frequency = Collection.DigestFrequency.WEEKLY
+        group.save(update_fields=["digest_frequency"])
+        assert (
+            _read(_client(user), thing, group.code)["collection_menu"]["is_digest_muted"] is False
+        )
+        group.digest_muted.add(user)
+
+        assert _read(_client(user), thing, group.code)["collection_menu"]["is_digest_muted"] is True
+
+    def test_a_group_with_no_summary_reports_nobody_as_muted(self, group, thing, user):
+        group.digest_frequency = Collection.DigestFrequency.NONE
         group.save(update_fields=["digest_frequency"])
         group.digest_muted.add(user)
 
@@ -314,16 +326,34 @@ class TestWhatItCosts:
         self, group, thing, user
     ):
         assert group.allowed_thing_types == []
+        group.digest_frequency = Collection.DigestFrequency.NONE  # the summary is asked below
+        group.save(update_fields=["digest_frequency"])
 
         framed = self._count(user, thing, group.code)
         unframed = self._count_unframed(user, thing)
 
         assert framed - unframed <= 1, f"{unframed} queries unframed, {framed} framed"
 
+    def test_a_curator_pays_one_query_for_the_summary_switch_and_only_when_there_is_one(
+        self, group, thing, user
+    ):
+        group.kind = "LIBRARY"
+        group.allowed_thing_types = ["LEND_THING", "RENT_THING"]
+        group.digest_frequency = Collection.DigestFrequency.NONE
+        group.save(update_fields=["kind", "allowed_thing_types", "digest_frequency"])
+        without = self._count(user, thing, group.code)
+        group.digest_frequency = Collection.DigestFrequency.WEEKLY
+        group.save(update_fields=["digest_frequency"])
+
+        with_summary = self._count(user, thing, group.code)
+
+        assert with_summary - without == 1, f"{without} without a summary, {with_summary} with"
+
     def test_a_library_asks_no_calendar_question_at_all(self, group, thing, user):
         group.kind = "LIBRARY"
         group.allowed_thing_types = ["LEND_THING", "RENT_THING"]
-        group.save(update_fields=["kind", "allowed_thing_types"])
+        group.digest_frequency = Collection.DigestFrequency.NONE
+        group.save(update_fields=["kind", "allowed_thing_types", "digest_frequency"])
 
         framed_library = self._count(user, thing, group.code)
         unframed = self._count_unframed(user, thing)

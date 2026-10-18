@@ -21,13 +21,16 @@ from core.services.email_service import (
     send_invitation_proposal_email,
     send_proposal_declined_email,
 )
+from core.utils import Refusal
 
 # ── The daily invitation-email quota ────────────────────────────────────────
 # Lives here rather than in the views because both senders are here now, and a
 # service reaching back into a view for it was a layering inversion. The views
 # import these.
 _INVITE_QUOTA_TTL = 60 * 60 * 24  # ~24h; the date is in the key, so it rolls over anyway.
-_INVITE_QUOTA_MESSAGE = "Daily invitation limit reached. Try again tomorrow."
+_INVITE_QUOTA_MESSAGE = Refusal(
+    "Daily invitation limit reached. Try again tomorrow.", "invite_quota_exhausted"
+)
 
 
 def _invite_quota_cap():

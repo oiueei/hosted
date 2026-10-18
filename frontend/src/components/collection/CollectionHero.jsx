@@ -174,7 +174,7 @@ export default function CollectionHero({
                 hasDateThings={hasDateThings}
                 downloads={downloads}
                 welcomeDocUrl={collection.welcome_doc_url || ''}
-                digest={isMember && sendsDigest ? digestPref : null}
+                digest={(isMember || isCurator) && sendsDigest ? digestPref : null}
               />
             )}
             {canShare && (

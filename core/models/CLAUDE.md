@@ -462,6 +462,8 @@ For security considerations, view patterns, service layer, and utilities documen
 
 `InAppNotification.team_booking_notices(queryset=None)` selects the request/reservation notices that are for whoever **manages** a request (`BOOKING_REQUESTED`, `BOOKING_DECIDED`, `RESERVATION_MADE`, and a manager's copies of `RESERVATION_CANCELLED`) — never a copy for the person who asked or held the reservation; the rule and its reason are in its docstring and in `core/views/CLAUDE.md` (Inbox Views).
 
+`InAppNotification.ACTION_NOTICE_TYPES` lists the types that ask their reader to do something; `InAppNotification.informative_notices(queryset=None)` is every other notice that is not in the team group above — the ones the inbox folds into one card and `DELETE /inbox/?group=info` dismisses. `core/tests/unit/test_notice_budget.py` makes each `Type` be decided as asking, team-group or informing, so a new type cannot ship unclassified.
+
 The `InAppNotification` model stores in-app inbox notifications. Every user-action email that targets another party also creates an `InAppNotification` for that party. Rendered by the shared `InboxNotifications` component as dismissible HDS `Notification` banners — on `HomePage` (all of them) and, filtered by `collection_code`, on a collection's own page for the owner **and any invited member** — each viewer sees only their own rows regardless, so this reaches a COMMUNITY member whose own contributed thing got a booking request, not only the collection owner.
 
 ### Fields

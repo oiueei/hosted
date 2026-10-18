@@ -299,6 +299,7 @@ TEXTS = {
         "Si ya has hecho la devolución, puedes ignorar este correo."
     ),
     "view_thing_cta": "Ver la publicación",
+    "demo_note": "Este grupo es de demostración: sus cosas y sus personas son de ejemplo.",
     # Reservas de espacio (RESERVE_THING) — confirmación automática, sin decisión
     "reservation_confirmed_subject": "Tu reserva de '{thing}' está confirmada",
     "reservation_confirmed_plain": (

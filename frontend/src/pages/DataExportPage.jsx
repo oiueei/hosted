@@ -7,6 +7,7 @@ import downloadBlob, { filenameFromResponse } from '../utils/downloadBlob';
 import StatusRegion from '../components/StatusRegion';
 import useTheeeme from '../hooks/useTheeeme';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { errorKey, translateError } from '../utils/errorKey';
 
 // Mirrors export_service.build_account_export's top-level keys, in the order
 // the manifest lists them — this is what "what you take" actually is, not a
@@ -62,12 +63,12 @@ export default function DataExportPage() {
       if (res.ok) {
         downloadBlob(await res.blob(), filenameFromResponse(res, 'oiueei-my-data.json'));
       } else if (res.status === 429) {
-        setError(t('common.tooManyAttempts'));
+        setError(errorKey('common.tooManyAttempts'));
       } else {
-        setError(t('dataExport.error'));
+        setError(errorKey('dataExport.error'));
       }
     } catch {
-      setError(t('common.connectionError'));
+      setError(errorKey('common.connectionError'));
     } finally {
       setDownloading(false);
     }
@@ -102,7 +103,7 @@ export default function DataExportPage() {
               type="error"
               style={{ marginBottom: 'var(--spacing-s)' }}
             >
-              {error}
+              {translateError(t, error)}
             </Notification>
           )}
         </StatusRegion>

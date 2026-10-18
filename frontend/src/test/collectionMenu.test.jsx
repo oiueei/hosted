@@ -939,7 +939,7 @@ describe('the collection menu for a member', () => {
     expect(await screen.findByTestId('leave-page')).toHaveTextContent('Tool library');
   });
 
-  test('a curator keeps their own menu, with the document first when there is one — and no member entries', async () => {
+  test('a curator keeps their own menu, with the document first when there is one — and no leaving', async () => {
     renderCollection({ ...COLLECTION, welcome_doc_url: DOC, digest_frequency: 'WEEKLY' });
     await openMenu();
 
@@ -950,8 +950,43 @@ describe('the collection menu for a member', () => {
       'Manage members',
       'Invite many at once (CSV)',
     ]);
-    expect(within(panel()).queryByRole('button', { name: MUTE })).toBeNull();
     expect(within(panel()).queryByRole('link', { name: LEAVE })).toBeNull();
+  });
+
+  test('a curator can silence the summary they now receive: it is the last entry, after a divider', async () => {
+    renderMember({ ...COLLECTION, digest_frequency: 'WEEKLY' });
+    await openMenu();
+
+    expect(entries().at(-1)).toBe(MUTE);
+    expect(panel().querySelectorAll('.collection-menu-divider').length).toBeGreaterThan(0);
+  });
+
+  test('a curator’s group with no summary has no switch for it', async () => {
+    renderMember({ ...COLLECTION, digest_frequency: 'NONE' });
+    await openMenu();
+
+    expect(within(panel()).queryByRole('button', { name: MUTE })).toBeNull();
+    expect(within(panel()).queryByRole('button', { name: UNMUTE })).toBeNull();
+  });
+
+  test('a curator silences it: the POST goes, the entry flips, and a muted one offers the way back', async () => {
+    renderMember({ ...COLLECTION, digest_frequency: 'WEEKLY' });
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: MUTE }));
+
+    await waitFor(() => expect(digestPosts()).toHaveLength(1));
+    expect(JSON.parse(digestPosts()[0][1].body)).toEqual({ muted: true });
+    await openMenu();
+    expect(within(panel()).getByRole('button', { name: UNMUTE })).toBeInTheDocument();
+  });
+
+  test('a curator who had muted it is offered to turn it back on', async () => {
+    renderMember({ ...COLLECTION, digest_frequency: 'WEEKLY', is_digest_muted: true });
+    await openMenu();
+
+    expect(within(panel()).getByRole('button', { name: UNMUTE })).toBeInTheDocument();
+    expect(within(panel()).queryByRole('button', { name: MUTE })).toBeNull();
   });
 
   test('a curator without a document has the menu it always had', async () => {

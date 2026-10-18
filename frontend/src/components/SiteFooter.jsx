@@ -42,12 +42,17 @@ import { externalFormUrl } from '../utils/externalForms';
  * `text-align: left`, so the first letter falls on the vertical of the headings and
  * the text above it. The first link loses its left padding for that.
  *
- * **A line before the doors, only with no session.** `footer.tagline` — what OIUEEI
- * is for, in one sentence — links to `/login` for someone who is not signed in, the
- * one place that leads on from a public collection's page. Whether there is a
- * session is read the way `AccountMenu` reads it (`localStorage.userCode`; the
- * `useLocation()` above re-renders the footer when a login navigates away from
- * `/login`), so it asks nothing. The hero is untouched.
+ * **A line before the doors, only upstream and only with no session.**
+ * `footer.tagline` — what OIUEEI is for, in one sentence — links to `/login` for
+ * someone who is not signed in, the one place that leads on from a public
+ * collection's page. It shows only when **all three** hold:
+ * - there is no session (read the way `AccountMenu` reads it, `localStorage.userCode`;
+ *   `useLocation()` re-renders the footer when a login navigates, so it asks nothing);
+ * - `aboutPath` is null: a deployment with its own page about OIUEEI already says
+ *   it in this footer (the "What OIUEEI is" link), and its own pages may not want a
+ *   link to `/login` at all;
+ * - the page is not `/login`, where it would link to itself.
+ * The hero is untouched.
  *
  * The about link is conditional because upstream there is no such page —
  * `/welcome` left with the demo, and what OIUEEI is gets told in the README.
@@ -61,20 +66,20 @@ import { externalFormUrl } from '../utils/externalForms';
  * Contact us · Made with ♥︎ in …".
  */
 export default function SiteFooter() {
-  useLocation();
+  const { pathname } = useLocation();
   const { t, i18n } = useTranslation();
   const { tc } = useTheeeme();
   // Where "Contact us" goes: a form a deployment hosts elsewhere, in the reader's
   // language and in a new tab, or the app's own `/contact`.
   const contactUrl = externalFormUrl('contact', i18n.resolvedLanguage || i18n.language);
-  const signedIn = !!localStorage.getItem('userCode');
+  const showTagline = !localStorage.getItem('userCode') && !aboutPath && pathname !== '/login';
   return (
     <footer
       className="site-footer"
       style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
     >
       <div className="site-footer-inner">
-        {!signedIn && (
+        {showTagline && (
           <p className="site-footer-tagline">
             <Link to="/login">{t('footer.tagline')}</Link>
           </p>

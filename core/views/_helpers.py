@@ -22,6 +22,26 @@ def body_dict(request):
     return request.data if isinstance(request.data, dict) else {}
 
 
+def refusal_body(message, *, code=None, key="error", **params):
+    """The body of a coded refusal: ``{key: <the English sentence>, "code", "params"}``.
+
+    The same shape ``BookingRequestError.as_body`` and the co-curator ceiling use, so
+    the SPA says the refusal in the reader's language (``requestErrors.<code>``) and a
+    client that does not know the code still shows the sentence. ``key`` is the one the
+    view always used (``"error"`` or ``"detail"``). A ``Refusal`` carries its own code and
+    params (``capacity_violation``, the invitation quota): ``refusal_body(refusal)`` is
+    enough. ``params`` is left out when the sentence interpolates nothing.
+    """
+    body = {key: str(message)}
+    code = code or getattr(message, "code", None)
+    if code:
+        body["code"] = code
+        params = params or dict(getattr(message, "params", {}))
+        if params:
+            body["params"] = params
+    return body
+
+
 def viewer_code(request):
     """The requesting user's code, or ``None`` for an anonymous visitor.
 

@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Koros } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
-import AccountMenu from '../components/AccountMenu';
+import PageLayout from '../components/PageLayout';
 import ButtonLink from '../components/ButtonLink';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
@@ -9,41 +8,19 @@ export default function NotFoundPage() {
   const { t } = useTranslation();
   useDocumentTitle(t('titles.notFound'));
 
-  const { tc, btnStyle } = useTheeeme();
+  const { btnStyle } = useTheeeme();
   const isLoggedIn = !!localStorage.getItem('userCode');
 
   return (
-    <div
-      className="form-page"
-      style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
+    <PageLayout
+      title={t('notFound.title')}
+      heroActions={
+        <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>
+          {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
+        </ButtonLink>
+      }
     >
-      <div
-        className="form-hero"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
-      >
-        <div
-          className="form-hero-content"
-          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
-        >
-          <span className="hero-corners">
-            <AccountMenu />
-          </span>
-          <h1 className="form-hero-title">{t('notFound.title')}</h1>
-          <div className="button-row-wide">
-            <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>
-              {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
-            </ButtonLink>
-          </div>
-        </div>
-        <Koros
-          className="form-hero-koros"
-          type={localStorage.getItem('koro') || 'basic'}
-          style={tc.color_02 ? { fill: `var(--color-${tc.color_02})` } : undefined}
-        />
-      </div>
-      <div className="page-container">
-        <p>{t('notFound.message')}</p>
-      </div>
-    </div>
+      <p>{t('notFound.message')}</p>
+    </PageLayout>
   );
 }

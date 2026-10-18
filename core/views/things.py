@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
+from core.exceptions import RefusedField
 from core.models import Collection, Thing
 from core.models.collection import KIND_THING_TYPES
 from core.models.event import Event
@@ -33,7 +34,7 @@ from core.services.creator_policy import (
 )
 from core.services.deletion_events import deleting_as
 from core.utils import parse_localized
-from core.views._helpers import type_validity_error, verb_from_price, viewer_code
+from core.views._helpers import refusal_body, type_validity_error, verb_from_price, viewer_code
 
 
 def _resolve_tag_aliases(tags, vocabulary):
@@ -205,7 +206,7 @@ class ThingViewSet(ModelViewSet):
             # refused add leaves nothing orphaned behind it.
             full = collection.capacity_violation("things", adding=1)
             if full:
-                raise ValidationError({"collection_code": full})
+                raise RefusedField("collection_code", full)
 
         # Tags must come from the collection's owner-defined vocabulary.
         tags = serializer.validated_data.get("tags", [])
@@ -304,7 +305,10 @@ class ThingViewSet(ModelViewSet):
     def activate(self, request, code=None):
         thing = self.get_object()
         if thing.status != Thing.Status.INACTIVE:
-            return Response({"error": "Thing is not inactive."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                refusal_body("Thing is not inactive.", code="thing_not_inactive"),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         thing.status = Thing.Status.ACTIVE
         thing.save(update_fields=["status"])
         thing.deal.clear()
@@ -318,7 +322,8 @@ class ThingViewSet(ModelViewSet):
         thing = self.get_object()
         if thing.status != Thing.Status.ACTIVE:
             return Response(
-                {"error": "Only active things can be hidden."}, status=status.HTTP_400_BAD_REQUEST
+                refusal_body("Only active things can be hidden.", code="thing_not_active"),
+                status=status.HTTP_400_BAD_REQUEST,
             )
         thing.status = Thing.Status.INACTIVE
         thing.save(update_fields=["status"])
@@ -344,16 +349,26 @@ class ThingBulkCreateView(APIView):
         collection = get_object_or_404(Collection, code=collection_code)
         if not collection.can_add_thing(request.user.code):
             return Response(
-                {"error": "You do not have permission to add things to this collection."},
+                refusal_body(
+                    "You do not have permission to add things to this collection.",
+                    code="cannot_add_things",
+                ),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         rows = request.data.get("rows") if isinstance(request.data, dict) else None
         if not isinstance(rows, list) or not rows:
-            return Response({"error": "No rows to import."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                refusal_body("No rows to import.", code="no_rows_to_import"),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if len(rows) > self.MAX_ROWS:
             return Response(
-                {"error": f"At most {self.MAX_ROWS} rows can be imported at once."},
+                refusal_body(
+                    f"At most {self.MAX_ROWS} rows can be imported at once.",
+                    code="too_many_rows",
+                    max=self.MAX_ROWS,
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -447,7 +462,7 @@ class ThingBulkCreateView(APIView):
         # time. All-or-nothing, like every other failure on this endpoint.
         full = collection.capacity_violation("things", adding=len(validated))
         if full:
-            return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(refusal_body(full), status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
             # Re-check under a row lock. The count above was read outside the
@@ -464,7 +479,7 @@ class ThingBulkCreateView(APIView):
                 locked = Collection.objects.select_for_update().get(code=collection.code)
                 full = locked.capacity_violation("things", adding=len(validated))
                 if full:
-                    return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(refusal_body(full), status=status.HTTP_400_BAD_REQUEST)
             created = [Thing.objects.create(owner=request.user, **data) for data in validated]
             collection.things.add(*created)
             for thing in created:

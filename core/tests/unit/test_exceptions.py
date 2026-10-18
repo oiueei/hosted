@@ -85,5 +85,10 @@ def test_a_code_outside_the_set_is_never_lifted():
 def test_every_lifted_code_is_translated_in_the_three_locales():
     for lang in ("en", "es", "ca"):
         table = json.loads((LOCALES / f"{lang}.json").read_text())["requestErrors"]
-        missing = sorted(code for code in CODED_VALIDATION_REFUSALS if code not in table)
+        # A code whose params carry a count is written as a plural pair.
+        missing = sorted(
+            code
+            for code in CODED_VALIDATION_REFUSALS
+            if code not in table and f"{code}_other" not in table
+        )
         assert not missing, f"{lang}.json requestErrors has no string for: {missing}"

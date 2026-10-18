@@ -216,8 +216,11 @@ export default function EditProfilePage() {
         <KoroSelector value={koro} onChange={setKoro} />
         <Select
           id="edit-profile-language"
-          texts={{ label: t('editProfile.languageLabel'), language: hdsLang(i18n.language) }}
-          helper={t('editProfile.languageHelper')}
+          texts={{
+            label: t('editProfile.languageLabel'),
+            assistive: t('editProfile.languageHelper'),
+            language: hdsLang(i18n.language),
+          }}
           options={[
             { label: t('editProfile.languageAutomatic'), value: '' },
             ...SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code })),

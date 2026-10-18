@@ -9,6 +9,7 @@ import StatusRegion from '../components/StatusRegion';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useTheeeme from '../hooks/useTheeeme';
 import { collectionPath } from '../utils/collectionPath';
+import { errorKey, translateError } from '../utils/errorKey';
 
 /**
  * `/share/{token}` landing. Renders the shared `MagicLinkJoinPage`, but first
@@ -74,17 +75,17 @@ export default function SharePage() {
         return;
       }
       if (res.status === 404) {
-        setJoinError(t('share.linkGone'));
+        setJoinError(errorKey('share.linkGone'));
       } else if (res.status === 429) {
         // The hourly limit has no body; the operator's daily ceiling says why.
-        setJoinError((await extractApiError(res)) || t('common.tooManyAttempts'));
+        setJoinError((await extractApiError(res)) || errorKey('common.tooManyAttempts'));
       } else {
-        setJoinError((await extractApiError(res)) || t('joinToAct.error'));
+        setJoinError((await extractApiError(res)) || errorKey('joinToAct.error'));
       }
     } catch (err) {
       // A session that ran out is `apiFetch` already redirecting to the login;
       // saying "connection error" over that would be a lie for a moment.
-      if (err?.message !== 'Unauthorised') setJoinError(t('common.connectionError'));
+      if (err?.message !== 'Unauthorised') setJoinError(errorKey('common.connectionError'));
     } finally {
       joiningRef.current = false;
       setJoining(false);
@@ -104,7 +105,7 @@ export default function SharePage() {
               label={t('common.error')}
               style={{ marginTop: 'var(--spacing-s)' }}
             >
-              {joinError}
+              {translateError(t, joinError)}
             </Notification>
           )}
         </StatusRegion>

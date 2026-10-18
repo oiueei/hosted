@@ -280,7 +280,9 @@ export default function ThingPage() {
       hasDateThings={menu.has_date_things}
       downloads={downloads}
       welcomeDocUrl={menu.welcome_doc_url || ''}
-      digest={menu.is_member && menu.digest_frequency !== 'NONE' ? digestPref : null}
+      digest={
+        (menu.is_member || menu.is_curator) && menu.digest_frequency !== 'NONE' ? digestPref : null
+      }
     />
   ) : undefined;
 

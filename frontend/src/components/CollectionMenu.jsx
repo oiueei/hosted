@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { IconDocumentGroup, Notification } from 'hds-react';
 import useDismissable from '../hooks/useDismissable';
 import useReceivesRequests from '../hooks/useReceivesRequests';
+import { curatorGuidePath } from '../deployment';
 import StatusRegion from './StatusRegion';
 import { useCollectionBase } from '../hooks/useCollectionBase';
 import { collectionPath } from '../utils/collectionPath';
@@ -103,6 +104,11 @@ export default function CollectionMenu({
     download();
   };
   const welcomeDocLabel = t('collectionPage.welcomeDoc');
+  const digestButton = digest && (
+    <button type="button" disabled={digest.busy} onClick={runAndClose(digest.toggle)}>
+      {digest.muted ? t('collectionMenu.unmuteDigest') : t('collectionMenu.muteDigest')}
+    </button>
+  );
 
   return (
     <span className="collection-menu" ref={wrapperRef}>
@@ -186,14 +192,24 @@ export default function CollectionMenu({
               >
                 {t('collectionExport.downloadButton')}
               </button>
+              {/* The deployment's guide for whoever runs a group, where it has one. */}
+              {curatorGuidePath && (
+                <Link to={curatorGuidePath} onClick={close}>
+                  {t('curatorGuide.link')}
+                </Link>
+              )}
+              {/* The summary goes to the whole team, the founder included, so whoever
+                  runs the group has the switch too. */}
+              {digest && (
+                <>
+                  <hr className="collection-menu-divider" />
+                  {digestButton}
+                </>
+              )}
             </>
           ) : (
             <>
-              {digest && (
-                <button type="button" disabled={digest.busy} onClick={runAndClose(digest.toggle)}>
-                  {digest.muted ? t('collectionMenu.unmuteDigest') : t('collectionMenu.muteDigest')}
-                </button>
-              )}
+              {digest && digestButton}
               {(welcomeDocUrl || digest) && <hr className="collection-menu-divider" />}
               {/* The same link as "My groups" on the own profile, with the same state:
                   the confirmation page has nothing else to name the group with. */}

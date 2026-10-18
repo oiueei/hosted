@@ -15,6 +15,7 @@ import ButtonLink from '../components/ButtonLink';
 import CancelReservationDialog from '../components/CancelReservationDialog';
 import ResponsiveTable from '../components/ResponsiveTable';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { errorKey, translateError } from '../utils/errorKey';
 
 // Booking status is a semantic state — HDS StatusLabel owns this (no hardcoded
 // green/red hex). The thing *type* stays a plain Tag (it's a category, not a state).
@@ -61,10 +62,10 @@ export default function MyBookingsPage() {
           setBookings(data.results);
           setNext(data.next || null);
         } else {
-          setError(t('myBookings.errorLoading'));
+          setError(errorKey('myBookings.errorLoading'));
         }
       } catch {
-        setError(t('common.connectionError'));
+        setError(errorKey('common.connectionError'));
       }
     };
     fetchBookings();
@@ -125,7 +126,7 @@ export default function MyBookingsPage() {
     return (
       <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
         <Notification label={t('common.error')} type="error">
-          {error}
+          {translateError(t, error)}
         </Notification>
       </PageLayout>
     );

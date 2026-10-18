@@ -1,6 +1,11 @@
 import { describe, test, expect } from 'vitest';
 import parity from '../test/inboxGroupParity.json';
-import { isTeamBookingNotice, localToday, summarizeOwnerBookings } from './inboxGroups';
+import {
+  isInformativeNotice,
+  isTeamBookingNotice,
+  localToday,
+  summarizeOwnerBookings,
+} from './inboxGroups';
 
 // The same table `core/tests/integration/test_inbox_group_dismiss.py` runs against
 // the server's rule: whether the card folds a notice and whether the X's DELETE
@@ -15,6 +20,17 @@ describe('which notices the inbox folds into its summary card', () => {
 
   test.each(parity.rows.map((row) => [row.what, row]))('%s', (_what, row) => {
     expect(isTeamBookingNotice({ type: row.type, payload: row.payload })).toBe(row.grouped);
+  });
+});
+
+describe('which notices only inform', () => {
+  test('the shared table has both answers', () => {
+    expect(parity.rows.some((row) => row.informative)).toBe(true);
+    expect(parity.rows.some((row) => !row.informative)).toBe(true);
+  });
+
+  test.each(parity.rows.map((row) => [row.what, row]))('%s', (_what, row) => {
+    expect(isInformativeNotice({ type: row.type, payload: row.payload })).toBe(row.informative);
   });
 });
 

@@ -20,6 +20,7 @@ import CreateCollectionPage from '../pages/CreateCollectionPage';
 import EditCollectionPage from '../pages/EditCollectionPage';
 import { dropHdsStyles } from './dropHdsStyles';
 import { settle } from './settle';
+import en from '../i18n/locales/en.json';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
@@ -866,5 +867,59 @@ describe('collection texts that open like a language map and are not one', () =>
       target: { value: 'Herramientas {del taller}' },
     });
     expect(screen.queryByText(/Read as plain text/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Four selects were handed their help line as `helper=`, a prop the HDS 6 `Select`
+ * does not read, so the sentence never reached the page. HDS 6 takes it as
+ * `texts.assistive`; it prints the line and says it to a screen reader inside the
+ * control's own `aria-label` (it sets no `aria-describedby`): these check that each
+ * line is in the DOM *and* in its select's accessible name.
+ */
+describe('the help line of the selects reaches the page and the control’s accessible name', () => {
+  const DIGEST = 'Automatically email members and whoever runs the group a summary of new things.';
+  const LANGUAGE =
+    "The language the group's emails are written in. Any member who has set their own language reads them in theirs.";
+  const STATUS = en.editCollection.statusHelper;
+
+  const field = (name) => screen.getByRole('combobox', { name });
+
+  test('Create: the summary and the language of the group messages', async () => {
+    await renderCreate();
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+
+    expect(await screen.findByText(DIGEST)).toBeInTheDocument();
+    expect(field(/Digest emails/)).toHaveAccessibleName(expect.stringContaining(DIGEST));
+    expect(screen.getByText(LANGUAGE)).toBeInTheDocument();
+    expect(field(/Language of the group messages/)).toHaveAccessibleName(
+      expect.stringContaining(LANGUAGE)
+    );
+  });
+
+  test('Edit: the status, the summary and the language of the group messages', async () => {
+    await renderEdit({
+      headline: 'Loaded Name',
+      mode: 'PROPRIETARY',
+      allowed_thing_types: ['GIFT_THING'],
+    });
+    await screen.findByDisplayValue('Loaded Name');
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+
+    expect(await screen.findByText(STATUS)).toBeInTheDocument();
+    expect(field(/^Status/)).toHaveAccessibleName(expect.stringContaining(STATUS));
+    expect(screen.getByText(DIGEST)).toBeInTheDocument();
+    expect(field(/Digest emails/)).toHaveAccessibleName(expect.stringContaining(DIGEST));
+    expect(field(/Language of the group messages/)).toHaveAccessibleName(
+      expect.stringContaining(LANGUAGE)
+    );
+  });
+
+  test('the forms have no accessibility violations with the help lines in', async () => {
+    const { container } = await renderCreate();
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    await screen.findByText(DIGEST);
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

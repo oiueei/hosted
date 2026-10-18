@@ -714,10 +714,14 @@ class TestSendDigestsCommand:
         out = StringIO()
         call_command("send_digests", stdout=out)
 
-        assert len(mail.outbox) == 1
-        assert "New Widget" in mail.outbox[0].body
-        assert "leleDGW@your-domain.test" in mail.outbox[0].to
-        assert "Sent 1 digest" in out.getvalue()
+        # The member and the founder: the whole team gets the summary.
+        assert len(mail.outbox) == 2
+        assert all("New Widget" in m.body for m in mail.outbox)
+        assert {m.to[0] for m in mail.outbox} == {
+            "leleDGW@your-domain.test",
+            "lalaDGW@your-domain.test",
+        }
+        assert "Sent 2 digest" in out.getvalue()
 
     @time_machine.travel(date(2026, 4, 21))  # a Tuesday
     def test_weekly_digest_not_on_tuesday(self):
@@ -739,8 +743,8 @@ class TestSendDigestsCommand:
         out = StringIO()
         call_command("send_digests", stdout=out)
 
-        assert len(mail.outbox) == 1
-        assert "Sent 1 digest" in out.getvalue()
+        assert len(mail.outbox) == 2
+        assert "Sent 2 digest" in out.getvalue()
 
     @time_machine.travel(date(2026, 4, 20))  # a Monday
     def test_skips_none_frequency(self):
@@ -811,12 +815,91 @@ class TestSendDigestsCommand:
             call_command("send_digests", stdout=out, stderr=err)
 
         assert len(calls) == 2, "the run carried on to the second collection"
-        assert len(mail.outbox) == 1, "the healthy collection still got its digest"
+        # The healthy collection still got its digest: its member and its founder.
+        assert len(mail.outbox) == 2
         # The failure is reported, not swallowed: an operator reading the
         # scheduler log has to be able to see which collection went wrong.
         assert calls[0] in err.getvalue()
         # And it is not counted as delivered.
-        assert "Sent 1 digest" in out.getvalue()
+        assert "Sent 2 digest" in out.getvalue()
+
+    @time_machine.travel(date(2026, 4, 20))  # a Monday
+    def test_the_founder_gets_it_too(self):
+        monday = date(2026, 4, 20)
+        _, owner, _ = self._setup_collection_with_things(
+            "DGF", "WEEKLY", thing_days_ago=3, anchor_date=monday
+        )
+
+        call_command("send_digests", stdout=StringIO())
+
+        assert owner.email in [m.to[0] for m in mail.outbox]
+
+    @time_machine.travel(date(2026, 4, 20))  # a Monday
+    def test_a_co_curator_still_gets_it_once(self):
+        """Co-curators are in `invites`, the founder is added to them: nobody
+        twice."""
+        monday = date(2026, 4, 20)
+        collection, owner, invitee = self._setup_collection_with_things(
+            "DGG", "WEEKLY", thing_days_ago=3, anchor_date=monday
+        )
+        collection.co_owners.add(invitee)
+
+        out = StringIO()
+        call_command("send_digests", stdout=out)
+
+        recipients = [m.to[0] for m in mail.outbox]
+        assert sorted(recipients) == sorted([invitee.email, owner.email])
+        assert "Sent 2 digest" in out.getvalue()
+
+    @time_machine.travel(date(2026, 4, 20))  # a Monday
+    def test_a_founder_who_muted_the_group_does_not_get_it(self):
+        monday = date(2026, 4, 20)
+        collection, owner, invitee = self._setup_collection_with_things(
+            "DGH", "WEEKLY", thing_days_ago=3, anchor_date=monday
+        )
+        collection.digest_muted.add(owner)
+
+        call_command("send_digests", stdout=StringIO())
+
+        assert [m.to[0] for m in mail.outbox] == [invitee.email]
+
+    @time_machine.travel(date(2026, 4, 20))  # a Monday
+    def test_a_founder_who_opted_out_of_news_does_not_get_it(self):
+        monday = date(2026, 4, 20)
+        _, owner, invitee = self._setup_collection_with_things(
+            "DGJ", "WEEKLY", thing_days_ago=3, anchor_date=monday
+        )
+        User.objects.filter(pk=owner.pk).update(notify_news=False)
+
+        call_command("send_digests", stdout=StringIO())
+
+        assert [m.to[0] for m in mail.outbox] == [invitee.email]
+
+    @time_machine.travel(date(2026, 4, 20))  # a Monday
+    def test_the_founders_footer_link_mutes_the_group_for_them_and_the_next_digest_skips_them(
+        self,
+    ):
+        """The link at the foot of the digest is built for the founder like for anyone,
+        and following it takes them out of the next one."""
+        import re
+
+        from rest_framework.test import APIClient
+
+        monday = date(2026, 4, 20)
+        collection, owner, invitee = self._setup_collection_with_things(
+            "DGK", "WEEKLY", thing_days_ago=3, anchor_date=monday
+        )
+        call_command("send_digests", stdout=StringIO())
+        founders = next(m for m in mail.outbox if m.to[0] == owner.email)
+        token = re.search(r"/digest/mute/([^\s\"<>)]+)", founders.body).group(1)
+
+        res = APIClient().post(f"/api/v1/digest/mute/{token}/")
+
+        assert res.status_code == 200
+        assert collection.digest_muted.filter(pk=owner.pk).exists()
+        mail.outbox.clear()
+        call_command("send_digests", stdout=StringIO())
+        assert [m.to[0] for m in mail.outbox] == [invitee.email]
 
 
 @pytest.mark.django_db

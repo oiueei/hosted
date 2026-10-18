@@ -52,6 +52,14 @@ _LANG_ORDER = ["es", "ca", "en"]
 # User codes that identify demo accounts — used by --reset to scope deletion.
 DEMO_USER_CODES = ["La1aN1", "L3L3oo", "l1l13S", "l0l0oh", "1u1ucs"]
 
+
+def _place_characters(relation, wanted_codes):
+    """Make the demo characters in ``relation`` exactly ``wanted_codes``, touching no one else."""
+    wanted = set(wanted_codes)
+    relation.add(*User.objects.filter(code__in=wanted))
+    relation.remove(*relation.filter(code__in=DEMO_USER_CODES).exclude(code__in=wanted))
+
+
 # Demo fixture images live in their own storage folder, cleanly separated from
 # real user uploads (which land in oiueei/{users,things,collections,documents}/).
 # The seed stores bare ids (see common.py); this prefix is applied at seed time so
@@ -244,11 +252,19 @@ class Command(BaseCommand):
                 "closed_dates": data.get("closed_dates", []),
             }
             col, _ = Collection.objects.update_or_create(code=data["code"], defaults=defaults)
-            col.invites.set(User.objects.filter(code__in=data.get("invites", [])))
+            # Only the demo characters are the seed's to place: on a deployment
+            # where real people joined a demo collection, replacing the whole
+            # list would put every one of them out of a group they belong to.
+            # Add the characters it should hold, take out the ones it should not,
+            # and leave anybody else exactly where they are.
+            _place_characters(col.invites, data.get("invites", []))
             # A subset of invites, promoted — co_owners ⊆ invites is the invariant
             # the promote endpoint enforces, and re-running the seed must not
             # violate it either.
-            col.co_owners.set(User.objects.filter(code__in=data.get("co_owners", [])))
+            _place_characters(col.co_owners, data.get("co_owners", []))
+            col.co_owners.remove(
+                *col.co_owners.filter(code__in=DEMO_USER_CODES).exclude(pk__in=col.invites.all())
+            )
 
     def _seed_invitations(self, invitations):
         """Invitations the guest has not answered yet (COLLECTION_INVITE RSVPs).

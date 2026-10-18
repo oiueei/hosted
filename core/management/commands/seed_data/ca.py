@@ -39,32 +39,32 @@ USERS = [
 COLLECTIONS = [
     {
         "code": "La1aC1",
-        "headline": "La Lala se'n va de sabàtic: tot es ven per deu peles!",
+        "headline": "DEMO · La Lala se'n va de sabàtic: tot es ven per deu peles!",
         "description": "Tres regles, company: només efectiu, ho reculls tu, data límit el 25. Queda res? Directe a l'orfenat del barri!",
     },
     {
         "code": "l0l0C1",
-        "headline": "El saló verd d'en Lolo – emporta't una suculenta gratis!",
+        "headline": "DEMO · El saló verd d'en Lolo – emporta't una suculenta gratis!",
         "description": "Passa a conèixer el meu esquadró suculent – echeveries, jades, sèdums – i et regalo un esqueix. Guia fàcil de cures inclosa. Única regla: posa-li nom a la teva nova amiga verda!",
     },
     {
         "code": "l1l1C1",
-        "headline": "Préstecs de la Lili – hora de compartir les coses!",
+        "headline": "DEMO · Préstecs de la Lili – hora de compartir les coses!",
         "description": "Necessites trepant, vaporeta, escala sòlida, bàscula d'equipatge o un mega kit de magdalenes? La biblioteca de préstecs de la Lili t'ho cobreix – tot a un cost simbòlic!",
     },
     {
         "code": "1u1uC1",
-        "headline": "Eines per a nosaltres!",
+        "headline": "DEMO · Eines per a nosaltres!",
         "description": "Pugem aquí les eines que tenim i les posem a disposició de la resta del grup. Cuideu-les bé: són nostres i les necessitem entre totes i tots.",
     },
     {
         "code": "L3L3C1",
-        "headline": "El mercadet dels diumenges al pati",
+        "headline": "DEMO · El mercadet dels diumenges al pati",
         "description": "Cada diumenge muntem mercadet, festa i dinar al pati. Baixa el que ja no facis servir i emporta't el que et faci falta: aquí tot es regala. Només per a veïnes i veïns de la cooperativa.",
     },
     {
         "code": "1u1uRe",
-        "headline": "El taller de la Lulu — reserva un lloc",
+        "headline": "DEMO · El taller de la Lulu — reserva un lloc",
         "description": "Reserva un banc o el racó de reunions per usar-lo aquí, al taller. És teu per un dia (o fins a tres), res no surt de la sala i la reserva es confirma a l'instant. Obert de dilluns a divendres.",
     },
 ]

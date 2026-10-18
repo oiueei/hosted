@@ -90,6 +90,7 @@ We do not manipulate users. Our design must be honest and transparent at every i
 - No notifications designed to create anxiety or compulsion
 - No interfaces that make it harder to cancel, unsubscribe, or opt out than to sign up
 - No confirmshaming ("No thanks, I don't want to save money")
+- **Notices have a budget.** One notice per fact and per person; what only informs is folded by default; no new notice type ships without saying whether it informs or asks for an action (`InAppNotification`'s two lists, held by a test).
 
 **When designing a new view:** if a pattern benefits us at the expense of the user's understanding or autonomy, remove it.
 

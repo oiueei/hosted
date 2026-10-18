@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from core.models import Report, Thing
 from core.models.notification import InAppNotification
 from core.services.email_service import send_thing_reported_email
-from core.views._helpers import deny_if_cannot_view
+from core.views._helpers import deny_if_cannot_view, refusal_body
 
 
 class ThingReportView(APIView):
@@ -40,7 +40,7 @@ class ThingReportView(APIView):
         # Reporting your own listing makes no sense — and would notify yourself.
         if thing.is_owner(request.user.code):
             return Response(
-                {"error": "You can't report your own listing"},
+                refusal_body("You can't report your own listing", code="cannot_report_own_thing"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
