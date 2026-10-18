@@ -96,6 +96,17 @@ describe('HomePage — which section leads', () => {
     expect(screen.getByRole('link', { name: 'Create your first collection' })).toBeInTheDocument();
   });
 
+  test('a new account is told what a collection is, including that it can be public', async () => {
+    mockDashboard({ mine: [], invited: [] });
+    renderHome();
+
+    expect(
+      await screen.findByText(
+        'A collection is a shareable list — gifts, loans, rentals, sales, or something to book. You decide whether only the people you invite can see it, or anyone with the link.'
+      )
+    ).toBeInTheDocument();
+  });
+
   test('someone who runs a collection keeps it first', async () => {
     mockDashboard({ mine: [MINE], invited: [GROUP] });
     renderHome();
