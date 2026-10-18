@@ -1085,7 +1085,15 @@ def _fmt_dates(start, end):
 def _when_phrase(booking, T):
     """The dates of a booking as a phrase inside a sentence, in the reader's
     language: "from the 5th to the 8th", or "on the 5th" for a single day."""
-    start, end = _fmt_date(booking.start_date), _fmt_date(booking.end_date)
+    return _phrase_for(T, _fmt_date(booking.start_date), _fmt_date(booking.end_date))
+
+
+def _phrase_for(T, start, end):
+    """``start``/``end`` as the phrase of a sentence: "from A to B", or "on A" when
+    they are the same, already formatted, day (a one-day reservation read "from
+    05/10/2026 to 05/10/2026"). An hourly reservation's start carries its time, so
+    it is never equal to its end and stays a range. Same catalogue phrases as
+    ``_when_phrase``, which does it for a booking's own dates."""
     if start == end:
         return T("when_day").format(start=start)
     return T("when_range").format(start=start, end=end)
@@ -2321,7 +2329,7 @@ def send_reservation_confirmed_email(requester, thing, booking, collection=None)
     start, end = _fmt_when(booking)
     subject = T("reservation_confirmed_subject").format(thing=headline)
     plain = T("reservation_confirmed_plain").format(
-        thing=headline, start=start, end=end, url=thing_url
+        thing=headline, when=_phrase_for(T, start, end), url=thing_url
     )
     blocks = [
         _para(T("reservation_confirmed_intro")),
@@ -2373,7 +2381,7 @@ def send_reservation_notice_email(owner_email, requester, thing, booking, collec
     start, end = _fmt_when(booking)
     subject = T("reservation_notice_subject").format(requester=requester_name, thing=headline)
     plain = T("reservation_notice_plain").format(
-        requester=requester_name, thing=headline, start=start, end=end
+        requester=requester_name, thing=headline, when=_phrase_for(T, start, end)
     )
     # The requester's own address, so the owner can reach them directly: a
     # RESERVE_THING requester is always a collection member by
@@ -2426,7 +2434,7 @@ def send_reservation_cancelled_email(
     start, end = _fmt_when(booking)
     subject = T("reservation_cancelled_subject").format(thing=headline)
     plain = T(f"reservation_cancelled_{side}_plain").format(
-        other=other, thing=headline, start=start, end=end
+        other=other, thing=headline, when=_phrase_for(T, start, end)
     )
     html = _render_email(
         [
@@ -2477,10 +2485,10 @@ def send_reservation_cancel_confirmation_email(
     plain_key = f"reservation_cancel_confirmation_plain_{side}"
     if is_own_reservation:
         intro = T(intro_key)
-        plain = T(plain_key).format(thing=headline, start=start, end=end)
+        plain = T(plain_key).format(thing=headline, when=_phrase_for(T, start, end))
     else:
         intro = T(intro_key).format(member=member)
-        plain = T(plain_key).format(member=member, thing=headline, start=start, end=end)
+        plain = T(plain_key).format(member=member, thing=headline, when=_phrase_for(T, start, end))
 
     html = _render_email(
         [
@@ -2520,7 +2528,7 @@ def send_reservation_reminder_email(requester_email, thing, booking):
     start, end = _fmt_when(booking)
     subject = T("reservation_reminder_subject").format(thing=headline)
     plain = T("reservation_reminder_plain").format(
-        thing=headline, start=start, end=end, url=thing_url
+        thing=headline, when=_phrase_for(T, start, end), url=thing_url
     )
     blocks = [
         _para(T("reservation_reminder_intro")),

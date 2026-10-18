@@ -302,23 +302,23 @@ TEXTS = {
     # Reservas de espacio (RESERVE_THING) — confirmación automática, sin decisión
     "reservation_confirmed_subject": "Tu reserva de '{thing}' está confirmada",
     "reservation_confirmed_plain": (
-        "Tu reserva de '{thing}' está confirmada del {start} al {end}. Ver la publicación: {url}"
+        "Tu reserva de '{thing}' está confirmada {when}. Ver la publicación: {url}"
     ),
     "reservation_confirmed_intro": "Tu reserva está confirmada:",
     "contact_shared_reservation": "Tu email va con la reserva.",
     "reservation_fee_label": "Coste",
     "reservation_where_label": "Dónde",
     "reservation_notice_subject": "{requester} ha reservado '{thing}'",
-    "reservation_notice_plain": "{requester} ha reservado '{thing}' del {start} al {end}.",
+    "reservation_notice_plain": "{requester} ha reservado '{thing}' {when}.",
     "reservation_notice_intro": "{requester} ha reservado:",
     "reservation_note_label": "Su mensaje",
     "reservation_cancelled_subject": "Reserva cancelada: '{thing}'",
     "reservation_cancelled_to_guest_plain": (
-        "{other} ha cancelado tu reserva de '{thing}' (del {start} al {end})."
+        "{other} ha cancelado tu reserva de '{thing}' ({when})."
     ),
     "reservation_cancelled_to_guest_intro": "{other} ha cancelado tu reserva de:",
     "reservation_cancelled_to_owner_plain": (
-        "{other} ha cancelado su reserva de '{thing}' (del {start} al {end})."
+        "{other} ha cancelado su reserva de '{thing}' ({when})."
     ),
     "reservation_cancelled_to_owner_intro": "{other} ha cancelado su reserva de:",
     "reservation_cancel_confirmation_subject_self": "Tu reserva de '{thing}' está cancelada",
@@ -326,14 +326,14 @@ TEXTS = {
     "reservation_cancel_confirmation_intro_self": "Tu reserva está cancelada:",
     "reservation_cancel_confirmation_intro_other": "Has cancelado la reserva de {member}:",
     "reservation_cancel_confirmation_plain_self": (
-        "Tu reserva de '{thing}' (del {start} al {end}) está cancelada."
+        "Tu reserva de '{thing}' ({when}) está cancelada."
     ),
     "reservation_cancel_confirmation_plain_other": (
-        "Has cancelado la reserva de {member} de '{thing}' (del {start} al {end})."
+        "Has cancelado la reserva de {member} de '{thing}' ({when})."
     ),
     "reservation_reminder_subject": "Tu reserva de '{thing}' empieza mañana",
     "reservation_reminder_plain": (
-        "Un recordatorio: tu reserva de '{thing}' va del {start} al {end}. Ver la ficha: {url}"
+        "Un recordatorio: tu reserva de '{thing}' es {when}. Ver la ficha: {url}"
     ),
     "reservation_reminder_intro": "Tu reserva empieza mañana:",
     # Digest

@@ -1555,6 +1555,70 @@ def test_a_day_reservation_confirmation_names_the_days_booked_and_no_other(user,
         assert "07/10/2026" not in part
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("lang", "one_day", "two_days"),
+    [
+        ("en", "on 05/10/2026", "from 05/10/2026 to 06/10/2026"),
+        ("es", "el 05/10/2026", "del 05/10/2026 al 06/10/2026"),
+        ("ca", "el 05/10/2026", "del 05/10/2026 al 06/10/2026"),
+    ],
+)
+def test_the_plain_text_of_every_reservation_email_says_a_single_day_once(
+    user, user2, thing, lang, one_day, two_days
+):
+    """A one-day reservation read "from 05/10/2026 to 05/10/2026" in the plain text of
+    the reservation sentences, while the app and the HTML already said one date.
+    A two-day one keeps its range."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+
+    def booking(end):
+        return BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type=thing.type,
+            requester_code=user2,
+            requester_email=user2.email,
+            owner_code=user,
+            start_date=date(2026, 10, 5),
+            end_date=end,
+            status=BookingPeriod.Status.ACCEPTED,
+        )
+
+    senders = [
+        lambda b: email_service.send_reservation_confirmed_email(user2, thing, b),
+        lambda b: email_service.send_reservation_notice_email(user.email, user2, thing, b),
+        lambda b: email_service.send_reservation_cancelled_email(
+            user2.email, "Lala", thing, b, cancelled_by_owner=True
+        ),
+        lambda b: email_service.send_reservation_cancelled_email(
+            user.email, "Lele", thing, b, cancelled_by_owner=False
+        ),
+        lambda b: email_service.send_reservation_cancel_confirmation_email(
+            user2.email, thing, b, is_own_reservation=True
+        ),
+        lambda b: email_service.send_reservation_cancel_confirmation_email(
+            user.email, thing, b, is_own_reservation=False, member_name="Lele"
+        ),
+        lambda b: email_service.send_reservation_reminder_email(user2.email, thing, b),
+    ]
+    one, two = booking(date(2026, 10, 6)), booking(date(2026, 10, 7))
+    with override_settings(EMAIL_LANGUAGE=lang):
+        for send in senders:
+            mail.outbox.clear()
+            send(one)
+            plain = mail.outbox[0].body
+            assert one_day in plain, plain
+            assert plain.count("05/10/2026") == 1, plain
+            mail.outbox.clear()
+            send(two)
+            assert two_days in mail.outbox[0].body
+
+
 # --- The owner's email note (Collection.email_note) ------------------------------
 
 

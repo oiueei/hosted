@@ -312,24 +312,23 @@ TEXTS = {
     # Reserves d'espai (RESERVE_THING) — confirmació automàtica, sense decisió
     "reservation_confirmed_subject": "La teva reserva de '{thing}' està confirmada",
     "reservation_confirmed_plain": (
-        "La teva reserva de '{thing}' està confirmada del {start} al {end}. "
-        "Veure la publicació: {url}"
+        "La teva reserva de '{thing}' està confirmada {when}. Veure la publicació: {url}"
     ),
     "reservation_confirmed_intro": "La teva reserva està confirmada:",
     "contact_shared_reservation": "El teu email va amb la reserva.",
     "reservation_fee_label": "Cost",
     "reservation_where_label": "On",
     "reservation_notice_subject": "{requester} ha reservat '{thing}'",
-    "reservation_notice_plain": "{requester} ha reservat '{thing}' del {start} al {end}.",
+    "reservation_notice_plain": "{requester} ha reservat '{thing}' {when}.",
     "reservation_notice_intro": "{requester} ha reservat:",
     "reservation_note_label": "El seu missatge",
     "reservation_cancelled_subject": "Reserva cancel·lada: '{thing}'",
     "reservation_cancelled_to_guest_plain": (
-        "{other} ha cancel·lat la teva reserva de '{thing}' (del {start} al {end})."
+        "{other} ha cancel·lat la teva reserva de '{thing}' ({when})."
     ),
     "reservation_cancelled_to_guest_intro": "{other} ha cancel·lat la teva reserva de:",
     "reservation_cancelled_to_owner_plain": (
-        "{other} ha cancel·lat la seva reserva de '{thing}' (del {start} al {end})."
+        "{other} ha cancel·lat la seva reserva de '{thing}' ({when})."
     ),
     "reservation_cancelled_to_owner_intro": "{other} ha cancel·lat la seva reserva de:",
     "reservation_cancel_confirmation_subject_self": "La teva reserva de '{thing}' està cancel·lada",
@@ -337,15 +336,14 @@ TEXTS = {
     "reservation_cancel_confirmation_intro_self": "La teva reserva està cancel·lada:",
     "reservation_cancel_confirmation_intro_other": "Has cancel·lat la reserva de {member}:",
     "reservation_cancel_confirmation_plain_self": (
-        "La teva reserva de '{thing}' (del {start} al {end}) està cancel·lada."
+        "La teva reserva de '{thing}' ({when}) està cancel·lada."
     ),
     "reservation_cancel_confirmation_plain_other": (
-        "Has cancel·lat la reserva de {member} de '{thing}' (del {start} al {end})."
+        "Has cancel·lat la reserva de {member} de '{thing}' ({when})."
     ),
     "reservation_reminder_subject": "La teva reserva de '{thing}' comença demà",
     "reservation_reminder_plain": (
-        "Un recordatori: la teva reserva de '{thing}' va del {start} al {end}. "
-        "Veure la fitxa: {url}"
+        "Un recordatori: la teva reserva de '{thing}' és {when}. Veure la fitxa: {url}"
     ),
     "reservation_reminder_intro": "La teva reserva comença demà:",
     # Digest
