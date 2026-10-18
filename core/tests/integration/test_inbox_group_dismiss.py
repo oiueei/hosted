@@ -242,3 +242,63 @@ class TestAgainstWhatTheServiceReallyWrites:
         assert inbox_of(lala) == []
         assert inbox_of(lele) == []
         assert inbox_of(member) == ["BOOKING_ACCEPTED"]
+
+
+class TestTheInformativeGroupFollowsTheSharedTable:
+    @pytest.mark.parametrize("row", ROWS, ids=[row["what"] for row in ROWS])
+    def test_a_notice_is_dismissed_exactly_when_the_table_says_it_only_informs(self, lala, row):
+        InAppNotification.objects.create(user=lala, type=row["type"], payload=row["payload"])
+
+        res = client_for(lala).delete(URL + "?group=info")
+
+        assert res.status_code == 204
+        still_there = InAppNotification.objects.filter(user=lala).exists()
+        assert still_there is not row["informative"]
+
+    def test_the_table_has_both_answers(self):
+        assert any(row["informative"] for row in ROWS)
+        assert any(not row["informative"] for row in ROWS)
+
+
+class TestWhatTheInformativeGroupTakes:
+    def _fill(self, user, collection_code="COL001"):
+        for kind in ("MEMBER_LEFT", "FAQ_ANSWERED", "BROADCAST"):
+            InAppNotification.objects.create(
+                user=user, type=kind, payload={"collection_code": collection_code}
+            )
+        InAppNotification.objects.create(
+            user=user, type="FAQ_QUESTION", payload={"collection_code": collection_code}
+        )
+
+    def test_only_the_callers_own_informative_notices_and_none_that_ask(self, lala, lele):
+        self._fill(lala)
+        self._fill(lele)
+
+        client_for(lala).delete(URL + "?group=info")
+
+        assert inbox_of(lala) == ["FAQ_QUESTION"]
+        assert len(inbox_of(lele)) == 4
+
+    def test_with_a_collection_only_that_collections(self, lala):
+        self._fill(lala, "COL001")
+        self._fill(lala, "COL002")
+
+        client_for(lala).delete(URL + "?group=info&collection=COL001")
+
+        left = InAppNotification.objects.filter(user=lala)
+        assert left.filter(payload__collection_code="COL001").count() == 1  # the question
+        assert left.filter(payload__collection_code="COL002").count() == 4
+
+    def test_the_teams_booking_notices_are_not_informative(self, lala):
+        InAppNotification.objects.create(
+            user=lala, type="BOOKING_DECIDED", payload={"collection_code": "COL001"}
+        )
+
+        client_for(lala).delete(URL + "?group=info")
+
+        assert inbox_of(lala) == ["BOOKING_DECIDED"]
+
+    def test_an_unknown_group_is_still_a_400(self, lala):
+        res = client_for(lala).delete(URL + "?group=nope")
+
+        assert res.status_code == 400
