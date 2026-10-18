@@ -283,7 +283,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
               <li key={i}>
                 {row.headline}
                 {row.type ? ` — ${t(`types.${row.type}`, row.type)}` : ''}
-                {row.fee ? ` · ${row.fee}` : ''}
+                {hasAmount(row.fee) ? ` · ${row.fee}` : ''}
                 {hasAmount(row.deposit) ? ` · 🔒${row.deposit}` : ''}
                 {row.tags ? ` · ${row.tags.join(', ')}` : ''}
                 {row.photo || row.photos
