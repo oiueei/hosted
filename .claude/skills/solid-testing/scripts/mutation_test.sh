@@ -7,6 +7,15 @@
 #   .claude/skills/solid-testing/scripts/mutation_test.sh              # since @{push}/origin
 #   .claude/skills/solid-testing/scripts/mutation_test.sh v0.10.0      # since a ref
 #
+# Two traps in mutmut 3, both silent:
+#   - it SKIPS functions that carry a decorator, so a view written as
+#     `@method_decorator(ratelimit(...)) def post(...)` is never mutated and can
+#     never show up as a survivor. Mutate those by hand (flip the condition,
+#     watch the test fail), and say so when reporting a "clean" run.
+#   - on macOS + Python 3.14 the forked children die with -11 unless
+#     `no_proxy='*'` is exported (done below); the summary counts the ones that
+#     still do.
+#
 # JS note: for the frontend the equivalent is Stryker (npx stryker run) with
 # `mutate` scoped the same way in stryker.config.json — heavier to set up, so
 # start with the backend; the cheap manual variant for BOTH stacks is:
@@ -96,6 +105,10 @@ PY
   # mutmut 3 copies the sources into ./mutants and runs there; a stale copy from
   # a previous scope would silently re-report yesterday's mutants.
   rm -rf mutants
+  # macOS + Python 3.14: with a proxy variable set, the children of mutmut's
+  # `fork` die with exit -11 (segfault) and every mutant they were running is
+  # lost. `no_proxy='*'` keeps the fork from touching the proxy lookup.
+  export no_proxy='*'
   mutmut run
 }
 
@@ -110,7 +123,17 @@ fi
 
 echo
 echo "== Surviving mutants (each one is a test that lied) =="
-mutmut results
+RESULTS=$(mutmut results)
+echo "$RESULTS"
+# A mutant whose child segfaulted (exit -11 / -9) was never judged: it is neither
+# killed nor survived, so a run with many of them is not a clean bill of health.
+SEGFAULTS=$(echo "$RESULTS" | grep -c ': segfault$' || true)
+echo
+echo "Segfaulted (exit -11/-9, not judged either way): $SEGFAULTS"
+if [ "$SEGFAULTS" -gt 0 ]; then
+  echo "These mutants were NOT tested. Re-run them by name"
+  echo "(mutmut run <mutant name>) before trusting the result."
+fi
 echo
 echo "Inspect one with: mutmut show <id>   — then strengthen the assertion"
 echo "that should have killed it, and re-run this script."
