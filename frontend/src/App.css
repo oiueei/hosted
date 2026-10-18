@@ -534,6 +534,17 @@ main > .page-container {
   padding: var(--spacing-m) var(--spacing-s) var(--spacing-l);
 }
 
+.site-footer-tagline {
+  margin: 0 0 var(--spacing-2-xs);
+}
+
+.site-footer-tagline a {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  color: inherit;
+}
+
 /* The colophon's doors (what OIUEEI is, the page the privacy claims point at, and
    "Contact us"). 44px targets, because for a signed-out reader of a public
    collection these are the only links on the page. */
@@ -579,6 +590,11 @@ main > .page-container {
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: center;
+  }
+
+  /* The tagline is a line of its own above the doors. */
+  .site-footer-tagline {
+    flex: 0 0 100%;
   }
 
   .site-footer-links {
