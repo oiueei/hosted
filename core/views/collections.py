@@ -72,6 +72,7 @@ from core.utils import get_client_ip, redact_email
 from core.validators import SafeHeadlineField
 from core.views._helpers import (
     body_dict,
+    refusal_body,
     require_collection_curator,
     viewer_code,
 )
@@ -304,7 +305,7 @@ class CollectionInviteView(APIView):
         # Checked before get_or_create so a quota-blocked request creates no User row.
         if _invite_quota_left(request.user.code) == 0:
             return Response(
-                {"error": _INVITE_QUOTA_MESSAGE},
+                refusal_body(_INVITE_QUOTA_MESSAGE),
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
@@ -330,7 +331,7 @@ class CollectionInviteView(APIView):
         ):
             full = collection.capacity_violation("invites", adding=1)
             if full:
-                return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(refusal_body(full), status=status.HTTP_400_BAD_REQUEST)
 
         # One delivery path, shared with an owner approving a member's proposal
         # (invitation_service.deliver_invitation): the get_or_create, the RSVP
@@ -345,7 +346,11 @@ class CollectionInviteView(APIView):
         )
         if already_invited:
             return Response(
-                {"detail": "This user is already invited to this collection."},
+                refusal_body(
+                    "This user is already invited to this collection.",
+                    code="already_invited",
+                    key="detail",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -432,7 +437,7 @@ class CollectionInviteView(APIView):
             )
 
         return Response(
-            {"error": "User is not invited to this collection"},
+            refusal_body("User is not invited to this collection", code="not_invited"),
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -475,7 +480,10 @@ class CollectionCoOwnerView(APIView):
             member = collection.invites.get(code=user_code)
         except User.DoesNotExist:
             return None, Response(
-                {"error": "Only an existing member can be promoted or demoted"},
+                refusal_body(
+                    "Only an existing member can be promoted or demoted",
+                    code="not_a_member_target",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return member, None
@@ -597,17 +605,29 @@ class CollectionLeaveView(APIView):
 
         if collection.is_owner(request.user.code):
             return Response(
-                {"detail": "The owner can't leave their own collection."},
+                refusal_body(
+                    "The owner can't leave their own collection.",
+                    code="owner_cannot_leave",
+                    key="detail",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if collection.is_curator(request.user.code):
             return Response(
-                {"detail": "A co-owner can't leave — ask the owner to demote you first."},
+                refusal_body(
+                    "A co-owner can't leave — ask the owner to demote you first.",
+                    code="co_owner_cannot_leave",
+                    key="detail",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not collection.invites.filter(code=request.user.code).exists():
             return Response(
-                {"detail": "You are not a member of this collection."},
+                refusal_body(
+                    "You are not a member of this collection.",
+                    code="not_a_member_of_collection",
+                    key="detail",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -685,7 +705,9 @@ class CollectionJoinView(APIView):
 
         if collection.is_owner(request.user.code):
             return Response(
-                {"detail": "You already own this collection."},
+                refusal_body(
+                    "You already own this collection.", code="already_owner", key="detail"
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -709,7 +731,9 @@ class CollectionJoinView(APIView):
         # joinable by anyone who can see it.
         if not collection.is_public():
             return Response(
-                {"detail": "This collection is not open to join."},
+                refusal_body(
+                    "This collection is not open to join.", code="not_open_to_join", key="detail"
+                ),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -717,7 +741,11 @@ class CollectionJoinView(APIView):
         if join_quota_exhausted(collection.code):
             _log_join_refused(request.user, collection, ip)
             return Response(
-                {"detail": "This collection has taken today's joins. Try again tomorrow."},
+                refusal_body(
+                    "This collection has taken today's joins. Try again tomorrow.",
+                    code="joins_spent",
+                    key="detail",
+                ),
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
@@ -759,19 +787,29 @@ class CollectionProposeInviteView(APIView):
         if collection.is_curator(request.user.code):
             # A curator (owner or co-owner) has the real thing one endpoint over.
             return Response(
-                {"detail": "You own this collection — invite them directly."},
+                refusal_body(
+                    "You own this collection — invite them directly.",
+                    code="owner_invites_directly",
+                    key="detail",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not collection.invites.filter(code=request.user.code).exists():
             return Response(
-                {"detail": "Only members can propose someone."},
+                refusal_body(
+                    "Only members can propose someone.", code="only_members_propose", key="detail"
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not collection.allow_member_proposals:
             # The owner has said they don't want to be asked. The frontend hides
             # the form, so reaching this means a stale page or a direct POST.
             return Response(
-                {"detail": "This group doesn't take suggestions from members."},
+                refusal_body(
+                    "This group doesn't take suggestions from members.",
+                    code="proposals_off",
+                    key="detail",
+                ),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -797,12 +835,12 @@ class CollectionProposeInviteView(APIView):
         ).exists()
         if already_member or already_proposed:
             return Response(
-                {
-                    "detail": (
-                        "Nothing to do — either they are already in this group, "
-                        "or someone has already suggested them and it's with the owner."
-                    )
-                },
+                refusal_body(
+                    "Nothing to do — either they are already in this group, "
+                    "or someone has already suggested them and it's with the owner.",
+                    code="proposal_nothing_to_do",
+                    key="detail",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -837,7 +875,11 @@ class CollectionProposalActionView(APIView):
 
         if not proposal.is_valid():
             return Response(
-                {"detail": "This suggestion is no longer pending."},
+                refusal_body(
+                    "This suggestion is no longer pending.",
+                    code="proposal_not_pending",
+                    key="detail",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -852,7 +894,7 @@ class CollectionProposalActionView(APIView):
                 # Same refusal, same shape as the emailed link's (see
                 # ``VerifyLinkView._handle_proposal_action``): the suggestion
                 # stays pending and the owner may answer later.
-                return Response({"error": reason, "retryable": True}, status=code)
+                return Response({**refusal_body(reason), "retryable": True}, status=code)
             approve_proposal(proposal)
             return Response({"message": "Invitation sent"}, status=status.HTTP_200_OK)
 
@@ -888,7 +930,11 @@ class CollectionDigestPrefView(APIView):
             or collection.invites.filter(code=request.user.code).exists()
         ):
             return Response(
-                {"detail": "You are not a member of this collection."},
+                refusal_body(
+                    "You are not a member of this collection.",
+                    code="not_a_member_of_collection",
+                    key="detail",
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -998,16 +1044,23 @@ class CollectionBulkInviteView(APIView):
         quota_left = _invite_quota_left(request.user.code)
         if quota_left == 0:
             return Response(
-                {"error": _INVITE_QUOTA_MESSAGE},
+                refusal_body(_INVITE_QUOTA_MESSAGE),
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
         rows = body_dict(request).get("invites")
         if not isinstance(rows, list) or not rows:
-            return Response({"error": "No emails to invite."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                refusal_body("No emails to invite.", code="no_emails_to_invite"),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if len(rows) > self.MAX_ROWS:
             return Response(
-                {"error": f"At most {self.MAX_ROWS} invitations can be sent at once."},
+                refusal_body(
+                    f"At most {self.MAX_ROWS} invitations can be sent at once.",
+                    code="too_many_invites",
+                    max=self.MAX_ROWS,
+                ),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -1057,7 +1110,7 @@ class CollectionBulkInviteView(APIView):
                 "invites", adding=sum(1 for email in emails if email not in already)
             )
             if full:
-                return Response({"error": full}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(refusal_body(full), status=status.HTTP_400_BAD_REQUEST)
 
         inviter_name = request.user.name  # bare name — invitees are third parties
         invited = []
@@ -1393,7 +1446,11 @@ class ShareJoinView(APIView):
         if join_quota_exhausted(collection.code):
             _log_join_refused(request.user, collection, ip)
             return Response(
-                {"detail": "This collection has taken today's joins. Try again tomorrow."},
+                refusal_body(
+                    "This collection has taken today's joins. Try again tomorrow.",
+                    code="joins_spent",
+                    key="detail",
+                ),
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
@@ -1462,7 +1519,7 @@ class CollectionBroadcastView(APIView):
 
         if not invitee_emails:
             return Response(
-                {"error": "No invitees to broadcast to"},
+                refusal_body("No invitees to broadcast to", code="no_invitees_to_broadcast"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -596,7 +596,7 @@ class TestSignedInJoin:
         )
         assert (from_the_owner.status_code, from_the_owner.data) == (
             400,
-            {"detail": "You already own this collection."},
+            {"detail": "You already own this collection.", "code": "already_owner"},
         )
         assert (
             Event.objects.filter(

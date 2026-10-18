@@ -31,7 +31,8 @@ const COLLECTION_WITH_PHOTO = {
   allowed_thing_types: [],
 };
 
-vi.mock('../services/api', () => ({
+vi.mock('../services/api', async (importOriginal) => ({
+  ...(await importOriginal()),
   apiFetch: vi.fn(() =>
     Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(COLLECTION_WITH_PHOTO) })
   ),

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification, TextArea } from 'hds-react';
-import { apiFetch } from '../../services/api';
+import { apiFetch, apiErrorMessage } from '../../services/api';
 import StatusRegion from '../StatusRegion';
 import useTheeeme from '../../hooks/useTheeeme';
 
@@ -43,7 +43,7 @@ export default function BroadcastBox({ code }) {
         // wondering whether the group got the message.
         setBroadcastResult({
           type: 'error',
-          message: data.detail || data.error || t('common.error'),
+          message: apiErrorMessage(data) || t('common.error'),
         });
       }
     } catch {

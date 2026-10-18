@@ -758,12 +758,14 @@ class Collection(models.Model):
             "block_setting": "COLLECTION_THINGS_BLOCK",
             "flag": "things_alarm_sent",
             "noun": "things",
+            "code": "things_limit",
         },
         "invites": {
             "alarm_setting": "COLLECTION_INVITES_ALARM",
             "block_setting": "COLLECTION_INVITES_BLOCK",
             "flag": "invites_alarm_sent",
             "noun": "members",
+            "code": "members_limit",
         },
     }
 
@@ -812,10 +814,12 @@ class Collection(models.Model):
         if adding <= 0:
             return None
         if self._capacity_count(counter) + adding > ceiling:
-            return (
+            return Refusal(
                 f"This collection has reached its limit of {ceiling} "
                 f"{spec['noun']}. Contact the site administrator if you need "
-                "more room."
+                "more room.",
+                spec["code"],
+                max=ceiling,
             )
         return None
 

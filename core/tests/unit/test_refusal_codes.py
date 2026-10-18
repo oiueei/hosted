@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SOURCES = [
     ROOT / "core" / "models" / "collection.py",
     ROOT / "core" / "services" / "booking_service.py",
+    ROOT / "core" / "services" / "invitation_service.py",
     ROOT / "core" / "views" / "collections.py",
     ROOT / "core" / "views" / "booking.py",
     ROOT / "core" / "views" / "_helpers.py",

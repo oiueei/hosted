@@ -3,7 +3,7 @@ import { FileInput, Button, Notification } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
 import { CSV_PARSE_OPTIONS } from '../utils/csv';
-import { apiFetch } from '../services/api';
+import { apiFetch, apiErrorMessage } from '../services/api';
 import { uploadImage, UploadRateLimitedError, UPLOADS_PER_HOUR } from '../utils/uploadImage';
 import { MAX_GALLERY, MAX_ROWS, mapRow, photoNames, validateRows } from '../utils/bulkCsv';
 import { hasAmount } from '../constants/things';
@@ -228,7 +228,7 @@ export default function BulkAddCsv({ collectionCode, onImported }) {
         const badRows = data.errors.map((e) => e.row + 1).join(', ');
         setError(errorKey('bulkAdd.rowErrors', { rows: badRows }));
       } else {
-        setError(data.error || errorKey('bulkAdd.error'));
+        setError(apiErrorMessage(data) || errorKey('bulkAdd.error'));
       }
     } catch {
       setError(errorKey('common.connectionError'));

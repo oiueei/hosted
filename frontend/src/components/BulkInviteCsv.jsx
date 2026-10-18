@@ -2,7 +2,7 @@ import { useId, useRef, useState } from 'react';
 import { FileInput, Button, Notification } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import Papa from 'papaparse';
-import { apiFetch } from '../services/api';
+import { apiFetch, apiErrorMessage } from '../services/api';
 import { stripSepLine, CSV_DELIMITERS } from '../utils/csv';
 import useTheeeme from '../hooks/useTheeeme';
 import hdsLang from '../utils/hdsLang';
@@ -115,7 +115,7 @@ export default function BulkInviteCsv({ collectionCode, onInvited }) {
       } catch {
         data = {};
       }
-      setError(data.error || errorKey('bulkInvite.error'));
+      setError(apiErrorMessage(data) || errorKey('bulkInvite.error'));
     } catch {
       setError(errorKey('common.connectionError'));
     } finally {
