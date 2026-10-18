@@ -10,11 +10,21 @@ the stocks, the stages of the cycle and their order, generations through a delet
 collection, requests apart from reservations, the medians and the shape of the catalogue.
 """
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, timedelta
 
 import pytest
 
 from core.models import Collection, DailyActivity, Event, Thing, User
+from core.tests.unit.hosted_story import (
+    LALA,
+    adds,
+    asks,
+    creates,
+    joins,
+    log,
+    madrid,
+    person,
+)
 from hosted.metrics import (
     LIVE_ONLY_KEYS,
     METRIC_KEYS,
@@ -36,57 +46,6 @@ W39 = date(2026, 9, 21)
 W40 = date(2026, 9, 28)
 
 A, B, C, D = "AAAAAA", "BBBBBB", "CCCCCC", "DDDDDD"
-
-
-def madrid(day, hour=12, minute=0):
-    return datetime(day.year, day.month, day.day, hour, minute, tzinfo=WEEK_TZ)
-
-
-def log(kind, who="", on=None, collection="", thing="", type="", source=""):
-    return Event.objects.create(
-        kind=kind,
-        actor_code=who,
-        collection_code=collection,
-        thing_code=thing,
-        thing_type=type,
-        source=source,
-        created=on,
-    )
-
-
-def person(code):
-    """The account behind a code the story mentions (a person who left has none)."""
-    return User.objects.get_or_create(
-        code=code, defaults={"email": f"{code.lower()}@your-domain.test", "name": code}
-    )[0]
-
-
-def creates(who, collection, on, row=True):
-    """A collection created; ``row=False`` leaves nothing of it in the database."""
-    if row:
-        Collection.objects.get_or_create(
-            code=collection, defaults={"owner": person(who), "headline": collection}
-        )
-    return log(K.COLLECTION_CREATED, who, on, collection=collection)
-
-
-def joins(who, collection, on, source=Event.Source.INVITE, row=True):
-    if row:
-        person(who)
-    return log(K.MEMBER_JOINED, who, on, collection=collection, source=source)
-
-
-def adds(who, thing, collection, on, type="GIFT_THING", row=True):
-    """A thing added; ``row=False`` leaves nothing of it in the database."""
-    if row:
-        Thing.objects.get_or_create(
-            code=thing, defaults={"owner": person(who), "headline": thing, "type": type}
-        )
-    return log(K.THING_ADDED, who, on, collection=collection, thing=thing, type=type)
-
-
-def asks(who, thing, on, type="GIFT_THING"):
-    return log(K.HOLD_REQUESTED, who, on, thing=thing, type=type)
 
 
 def week(start, **kw):
@@ -226,8 +185,8 @@ class TestGenerations:
 
     def test_the_two_factors_of_k_are_brought_per_owner_and_the_share_who_became_owners(self):
         creates(A, "COL001", madrid(date(2026, 9, 8)))
-        for person in (B, C, D):
-            joins(person, "COL001", madrid(date(2026, 9, 9)))
+        for guest in (B, C, D):
+            joins(guest, "COL001", madrid(date(2026, 9, 9)))
         creates(B, "COL002", madrid(date(2026, 9, 10)))
 
         row = generation_k(week_bounds(W37)[1])[0]
@@ -543,9 +502,6 @@ class TestTheCatalogue:
         assert got["collections_community"] == 1
         assert got["collections_public"] == 1
         assert got["things_available"] == 0
-
-
-LALA = "La1aN1"  # a seed character: the operator signs in as them to try things
 
 
 @pytest.mark.django_db

@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from core.management.commands.seed_data import common as seed_common
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
-from core.tests.unit.test_hosted_metrics import LALA, adds, creates, joins, log, person
+from core.tests.unit.hosted_story import LALA, adds, creates, joins, log, person
 from hosted.management.commands.stats_summary import _fraction, build_report
 from hosted.metrics import METRIC_KEYS, cycle_as_of
 from hosted.models import Milestone, WeeklySnapshot
