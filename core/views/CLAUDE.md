@@ -552,10 +552,10 @@ The owner's or a co-owner's in-app answer; the email links reach the same two de
 | | |
 |---|---|
 | **Endpoint** | `POST /api/v1/collections/{collection_code}/digest/` |
-| **Permission** | `IsAuthenticated` + must be an invited member |
+| **Permission** | `IsAuthenticated` + must be an invited member or the founder |
 | **Rate limit** | 30 requests/hour per user |
 
-A member silences (or un-silences) this one group's digest: `{"muted": true|false}` → `Collection.digest_muted`. Members only — the owner never receives their own collection's digest (it goes to `invites`), so they change `digest_frequency` instead; a non-member gets **400**. Idempotent (`add`/`remove`), so a double POST is harmless.
+A member — or the founder — silences (or un-silences) this one group's digest: `{"muted": true|false}` → `Collection.digest_muted`. The digest goes to the whole team (`invites`, which holds the co-curators, and the founder), so each of them has the switch; anyone else gets **400**. Idempotent (`add`/`remove`), so a double POST is harmless.
 
 This is the control that lets `User.notify_news` default to `True` without it being a pre-ticked opt-in (DESIGN §6): leaving one group's summaries costs the member none of their Cat. 2 activity email. Read back as `is_digest_muted` on `CollectionSerializer`. **No page calls this endpoint any more** (2026-09-21): the switch left `CollectionPage`'s hero, so a member's way to silence one group is the one-click link in every digest's footer (`DigestMuteByTokenView`, below). The endpoint and `is_digest_muted` are kept dormant on purpose — the frontend just no longer reads either.
 

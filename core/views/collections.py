@@ -869,9 +869,9 @@ class CollectionDigestPrefView(APIView):
     chatty group's summaries costs nothing else, so nobody has to choose between
     a weekly digest they didn't ask for and the booking emails they need.
 
-    Members only. The owner never receives their own collection's digest (it goes
-    to ``invites``), so there is nothing here for them to mute — they change the
-    frequency on the collection instead.
+    Whoever receives the digest may mute it: a member (co-curators are members
+    too) and the founder, who gets it with the rest of the team. Anyone else is a
+    400.
 
     Idempotent: ``add``/``remove`` on the M2M, so a double POST is harmless and
     the email footer's one-click link can be followed twice without an error.
@@ -883,7 +883,10 @@ class CollectionDigestPrefView(APIView):
     def post(self, request, collection_code):
         collection = get_object_or_404(Collection, code=collection_code)
 
-        if not collection.invites.filter(code=request.user.code).exists():
+        if not (
+            collection.is_owner(request.user.code)
+            or collection.invites.filter(code=request.user.code).exists()
+        ):
             return Response(
                 {"detail": "You are not a member of this collection."},
                 status=status.HTTP_400_BAD_REQUEST,

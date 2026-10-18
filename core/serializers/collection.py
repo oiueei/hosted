@@ -318,11 +318,11 @@ class CollectionSerializer(serializers.ModelSerializer):
         return obj.email_note if self._requester_is_curator(obj) else ""
 
     def get_is_digest_muted(self, obj):
-        # Whether *this* viewer has silenced this collection's digest. Only
-        # meaningful for a member — the owner never receives their own digest —
-        # so everyone else gets False and no toggle is rendered for them.
+        # Whether *this* viewer has silenced this collection's digest. It goes to the
+        # members and the founder, so the answer is theirs to read; a reader who is
+        # not signed in gets False and no toggle is rendered for them.
         request = self.context.get("request")
-        if not (request and request.user.is_authenticated) or self._requester_is_owner(obj):
+        if not (request and request.user.is_authenticated):
             return False
         return any(u.code == request.user.code for u in obj.digest_muted.all())
 
