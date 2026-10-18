@@ -202,10 +202,10 @@ export const weekdayAllowed = (date, rentalWeekdays) =>
   rentalWeekdays.includes(jsToPyWeekday(parseLocalDate(date).getDay()));
 
 // The collection's holiday / closure days (ISO strings) as a Set for O(1) lookup.
-export const closedSet = (closedDates) => new Set(closedDates || []);
+const closedSet = (closedDates) => new Set(closedDates || []);
 
 // Is `date` one of the collection's closure days (festivos)?
-export const isClosedDate = (date, closed) => closed.has(toISODate(parseLocalDate(date)));
+const isClosedDate = (date, closed) => closed.has(toISODate(parseLocalDate(date)));
 
 // Is `date` blocked for a PICKUP? A booking [s, e] blocks pickup on [s, e) — but
 // NOT on its return day e, which is free for the next pickup (back-to-back
@@ -225,7 +225,7 @@ export const isPickupBlocked = (date, blockedPeriods) => {
 // iff they share an interior day (pickup < e AND s < return). Touching at a
 // boundary — the derived return landing exactly on another booking's start, or a
 // pickup on another booking's return day — is allowed.
-export const rangeBlocked = (pickup, len, blockedPeriods) => {
+const rangeBlocked = (pickup, len, blockedPeriods) => {
   const p = parseLocalDate(pickup);
   const r = addDays(pickup, len);
   return blockedPeriods.some((period) => {
