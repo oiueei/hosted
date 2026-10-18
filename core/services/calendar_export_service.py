@@ -40,16 +40,16 @@ so it never reached a calendar in the first place. How an importing app treats
 a cancellation it receives by file differs from app to app; the file says what
 the standard lets it say.
 
-**Why this file needs no "people outside the group" filter, unlike the group
-copy** (``export_service.build_collection_export``, which has one). It carries
-accepted reservations only (and cancelled RESERVE_THINGs). An accepted LEND or
-RENT is already in the thing's journey: ``accept_booking`` writes the
-``ThingTransfer``, and ``ThingTransferView`` shows it, name included, to anyone
-signed in who can see the thing — so the calendar tells a COMMUNITY organiser
-nothing the thing's own page does not. RESERVE_THING lives only in PROPRIETARY
-collections, where the curators run every thing anyway. A security review took
-this for a leak on 2026-09-29 and proved it was not one; the pending, refused
-and cancelled requests that *do* stay private never reach an ``.ics``.
+**Whose reservations the file holds follows the app's rule.** In a PROPRIETARY
+collection its curators run every thing, so they get every reservation. In a
+COMMUNITY collection the people who ask for a member's thing are for that
+member's eyes (the app shows them in ``/owner-bookings`` and on the thing's
+calendar only to whoever manages the thing, which in COMMUNITY is its owner), so
+the file holds only the reservations of things the downloader owns; with no
+downloader given it holds none. The file carries accepted reservations only (and
+cancelled RESERVE_THINGs): the pending, refused and cancelled requests that stay
+private never reach an ``.ics``. RESERVE_THING lives only in PROPRIETARY
+collections.
 
 Everything user-written that reaches a TEXT property — a thing headline, a
 member name, a project note — is escaped per RFC 5545 §3.3.11 (backslash,
@@ -65,7 +65,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
-from core.models import BookingPeriod
+from core.models import BookingPeriod, Collection
 from core.models.booking import DATE_BASED_TYPES
 from core.models.thing import Thing
 from core.services.email_service import resolve_email_language
@@ -179,15 +179,20 @@ def _fmt_utc(moment):
     return moment.strftime("%Y%m%dT%H%M%SZ")
 
 
-def _upcoming_bookings(collection):
+def _upcoming_bookings(collection, user=None):
     """The collection's date-based, not-yet-finished reservations that belong
     in a calendar, oldest start first: every confirmed one, and every
     reservation cancelled after it was confirmed (RESERVE_THING, the only verb
     that goes from ACCEPTED to CANCELLED — see the module docstring). Every one
     of them — the stable UID is what keeps a re-import from duplicating, so
-    there is no watermark to respect."""
+    there is no watermark to respect.
+
+    **Limited to what ``user`` manages outside PROPRIETARY.** In a COMMUNITY
+    collection that is the things they own (``Thing.can_manage`` is only the
+    owner there), asked in the query rather than per row; with no ``user``, none.
+    A PROPRIETARY collection's curators get all of it."""
     today = timezone.localdate()
-    return (
+    bookings = (
         BookingPeriod.objects.filter(
             Q(status=BookingPeriod.Status.ACCEPTED)
             | Q(
@@ -202,6 +207,11 @@ def _upcoming_bookings(collection):
         .distinct()
         .order_by("start_date", "code")
     )
+    if collection.mode == Collection.Mode.PROPRIETARY:
+        return bookings
+    if user is None:
+        return bookings.none()
+    return bookings.filter(thing_code__owner=user)
 
 
 def _is_cancelled(booking):
@@ -300,6 +310,10 @@ def build_calendar_export(collection, user=None):
     ``CalendarExportMark`` is neither read nor written any more; the model stays
     in the schema, dormant, and is dropped in the release after this one.
 
+    **``user`` also decides which reservations are in it** in a COMMUNITY
+    collection: only those of things they own, none without a ``user`` (see
+    ``_upcoming_bookings``); a PROPRIETARY collection's file holds them all.
+
     The event copy speaks the downloading curator's language, then the group's,
     then the deployment default — the same hierarchy every email follows
     (``resolve_email_language``).
@@ -307,7 +321,7 @@ def build_calendar_export(collection, user=None):
     lang = resolve_email_language(user=user, collection=collection)
     texts = CALENDAR_TEXTS.get(lang, CALENDAR_TEXTS["en"])
 
-    bookings = list(_upcoming_bookings(collection))
+    bookings = list(_upcoming_bookings(collection, user))
     cancelled = sum(1 for booking in bookings if _is_cancelled(booking))
     return (
         _ics_bytes(bookings, texts, lang, collection),
