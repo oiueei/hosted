@@ -8,6 +8,7 @@ COMMUNITY is unchanged.
 """
 
 from datetime import date, timedelta
+from unittest.mock import patch
 
 import pytest
 from django.core import mail
@@ -16,6 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import FAQ, RSVP, BookingPeriod, Collection, Thing, ThingTransfer, User
 from core.models.notification import InAppNotification
+from core.services import email_service
 
 pytestmark = pytest.mark.django_db
 
@@ -709,3 +711,76 @@ class TestACuratorDecidingTheirOwnRequest:
 
         assert RSVP.objects.filter(user_code=co_curator, target_code=booking.code).count() == 0
         assert RSVP.objects.filter(user_code=owner, target_code=booking.code).count() == 2
+
+
+@pytest.mark.parametrize("action", ["answer", "hide"])
+class TestTheTeamIsToldWhateverBecameOfTheAskerOrAnAddress:
+    """Settling a question reaches the rest of the team even when the person who
+    asked has since deleted their account (the question survives with no asker),
+    and a manager with no email on file neither blocks the others' emails nor keeps
+    a question in their inbox that is no longer open."""
+
+    def _ask(self, space, member):
+        res = client_for(member).post(
+            f"/api/v1/things/{space['thing'].code}/faq/",
+            {"question": "Is there wifi?"},
+            format="json",
+        )
+        assert res.status_code == 201
+        return FAQ.objects.get(code=res.data["code"])
+
+    def _settle(self, who, faq, action):
+        if action == "answer":
+            return client_for(who).post(
+                f"/api/v1/faq/{faq.code}/answer/", {"answer": "Yes."}, format="json"
+            )
+        return client_for(who).post(f"/api/v1/faq/{faq.code}/hide/")
+
+    def _team_subjects(self, action):
+        wanted = TEAM_ANSWER_SUBJECT if action == "answer" else TEAM_HIDE_SUBJECT
+        return [m for m in mail.outbox if m.subject == wanted]
+
+    def test_the_asker_deleted_their_account(self, space, member, owner, co_curator, action):
+        faq = self._ask(space, member)
+        member.delete()
+        faq.refresh_from_db()
+        assert faq.questioner_id is None
+        mail.outbox.clear()
+
+        res = self._settle(owner, faq, action)
+
+        assert res.status_code == 200
+        assert [m.to[0] for m in self._team_subjects(action)] == [co_curator.email]
+        # Nobody else was written to: there is no asker left to tell.
+        assert [m.to[0] for m in mail.outbox] == [co_curator.email]
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.FAQ_QUESTION
+        ).exists()
+
+    def test_a_manager_without_email(self, space, member, owner, co_curator, action):
+        second = User.objects.create(code="COCU02", email="lolo@your-domain.test", name="Lolo")
+        space["collection"].invites.add(second)
+        space["collection"].co_owners.add(second)
+        faq = self._ask(space, member)
+        User.objects.filter(code=co_curator.code).update(email="")
+        mail.outbox.clear()
+
+        # Django drops a blank recipient silently, so the outbox alone cannot tell
+        # "skipped" from "tried and discarded": watch what the view asks the sender.
+        sender = (
+            "send_faq_answered_to_team_email"
+            if action == "answer"
+            else "send_faq_hidden_to_team_email"
+        )
+        with patch(f"core.views.faq.{sender}", wraps=getattr(email_service, sender)) as spy:
+            res = self._settle(owner, faq, action)
+
+        assert res.status_code == 200
+        assert [call.args[-1] for call in spy.call_args_list] == [second.email]
+        # The one with an address is told; the one without is not mailed at all.
+        assert [m.to[0] for m in self._team_subjects(action)] == [second.email]
+        assert all(m.to[0] for m in mail.outbox)
+        # ...and the open question left both inboxes anyway.
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.FAQ_QUESTION
+        ).exists()
