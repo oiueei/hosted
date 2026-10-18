@@ -177,6 +177,11 @@ export const externalForms = {
   requestAccess: { es: 'https://forms.example/r-es', ca: 'https://forms.example/r-ca', en: 'https://forms.example/r-en' },
 };
 
+// Where "Request access" goes *inside the app*, by the value a policy withholds (the
+// values of the three capability lists: `LIBRARY`, `COMMUNITY`, `RENT_THING`…). Leave a
+// value out for none.
+export const requestAccessPaths = { LIBRARY: '/access/library' };
+
 export const deploymentI18n = {
   en: { join: { title: 'Come and see' } },
   es: { join: { title: 'Pásate a vernos' } },
@@ -184,7 +189,7 @@ export const deploymentI18n = {
 ```
 
 Upstream exports the empty values: no extra routes, no open door, no about page,
-no FAQ link, no forms of its own, no extra copy. `App.jsx`, `LoginPage.jsx`,
+no FAQ link, no forms of its own, no pages to ask on, no extra copy. `App.jsx`, `LoginPage.jsx`,
 `SiteFooter.jsx`, `CollectionPage.jsx` and `VerifyPage.jsx` read them and are
 **byte-identical in both**.
 
@@ -198,6 +203,14 @@ for every language — or nothing); "Request access" opens `requestAccess` (othe
 `capabilities.request_url` from section 3). The address of the reader's language is
 used; a language without one uses `es`; no address at all, and the place behaves as
 it does upstream. Core knows nothing about who hosts the forms.
+
+`requestAccessPaths` is `{ <withheld value>: '<route of the app>' }`. Where the notice
+"some of these need approval" (section 3) offers its "Request access" button, the first
+withheld value, in the order the form lists them, that has a route here decides: the
+button becomes a link to that page of the app, **in the same tab** and through the
+router (no new-tab announcement), instead of the form hosted elsewhere. A withheld value
+with no route keeps `externalForms.requestAccess`, then `capabilities.request_url`, in a
+new tab as above. Upstream it is `{}`.
 
 `deploymentI18n` is deep-merged into the `translation` namespace every time a
 language file lands, so a deployment's strings stay out of
