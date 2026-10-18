@@ -268,7 +268,8 @@ def destination(need, capabilities):
     The form of the kind when this deployment lets them open it, ``/new`` for a line
     about no kind in particular, and otherwise ``/access/<kind>``, the page that explains
     how to ask. Here one permission covers a whole library (lending and renting out) and
-    a stall is open to everyone, in either mode, so the kind is all there is to ask.
+    a stall is open to everyone in PROPRIETARY mode (COMMUNITY still asks for permission, but
+    that is a different question from the kind), so the kind is all there is to ask.
     """
     kind = need["kind"]
     if kind is None:
