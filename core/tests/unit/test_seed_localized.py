@@ -201,3 +201,64 @@ class TestSeedEmailDomain:
         assert self._emails() == {
             f"{name}@otra.test" for name in ("lala", "lele", "lili", "lolo", "lulu")
         }
+
+
+@pytest.mark.django_db
+class TestRelaunchingTheSeedLeavesEveryoneElseWhereTheyAre:
+    """The seed places its own five characters in a demo group, and nobody else."""
+
+    GROUP = "1u1uC1"  # the characters are members; La1aN1 co-curates it
+
+    @staticmethod
+    def _people(group, relation):
+        return set(getattr(group, relation).values_list("code", flat=True))
+
+    def _join_real_people(self):
+        group = Collection.objects.get(code=self.GROUP)
+        member = User.objects.create(code="REAL01", email="lila@your-domain.test", name="Real")
+        curator = User.objects.create(code="REAL02", email="lola@your-domain.test", name="Curator")
+        group.invites.add(member, curator)
+        group.co_owners.add(curator)
+        thing = Thing.objects.create(code="RTHNG1", owner=member, headline="Una taladradora")
+        group.things.add(thing)
+        return group, member, curator, thing
+
+    def test_a_real_member_a_real_curator_and_their_thing_survive_the_relaunch(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+        group, member, curator, thing = self._join_real_people()
+
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        group.refresh_from_db()
+        assert {member.code, curator.code} <= self._people(group, "invites")
+        assert curator.code in self._people(group, "co_owners")
+        assert group.things.filter(code=thing.code).exists()
+        assert Thing.objects.filter(code=thing.code).exists()
+
+    def test_a_character_the_seed_no_longer_places_there_leaves(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+        group = Collection.objects.get(code="La1aC1")
+        stray = User.objects.get(code="l0l0oh")
+        group.invites.add(stray)
+        group.co_owners.add(stray)
+
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        assert stray.code not in self._people(group, "invites")
+        assert stray.code not in self._people(group, "co_owners")
+
+    def test_two_runs_in_a_row_give_the_same_groups(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+        self._join_real_people()
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        def snapshot():
+            return {
+                c.code: (self._people(c, "invites"), self._people(c, "co_owners"))
+                for c in Collection.objects.all()
+            }
+
+        first = snapshot()
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        assert snapshot() == first
