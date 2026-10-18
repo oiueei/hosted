@@ -170,6 +170,52 @@ class TestAnonymousCeiling:
 
 
 @pytest.mark.django_db
+class TestTheLastSecondOfTheWindow:
+    """The window is a clock minute (``MID_MINUTE`` is 30 s into one). The edges are
+    where a miscounted window shows."""
+
+    def test_the_allowance_holds_to_the_last_second_and_is_new_at_the_change(
+        self, api_client, collection_url, clock
+    ):
+        clock.advance(28)  # :58
+        first = statuses(api_client, collection_url, 2)
+        clock.advance(1.9)  # :59.9, still the same window
+        rest = statuses(api_client, collection_url, 2)
+        clock.advance(0.2)  # :00.1 of the next minute
+        fresh = statuses(api_client, collection_url, 1)
+
+        assert first + rest == [200, 200, 200, 429]
+        assert fresh == [200]
+
+    def test_retry_after_is_one_second_in_the_last_second(self, api_client, collection_url, clock):
+        clock.advance(29.5)  # :59.5 — half a second left, never "0"
+        responses = [api_client.get(collection_url) for _ in range(4)]
+
+        assert responses[-1].status_code == 429
+        assert responses[-1]["Retry-After"] == "1"
+
+
+def _request_without_a_session(path="/api/v1/health/"):
+    from django.contrib.auth.models import AnonymousUser
+    from rest_framework.request import Request
+    from rest_framework.test import APIRequestFactory
+
+    request = Request(APIRequestFactory().get(path))
+    request.user = AnonymousUser()
+    return request
+
+
+def test_wait_is_empty_when_nobody_was_refused():
+    """DRF asks ``wait()`` only after a refusal, but a throttle that allowed the
+    request has nothing to wait for and must say so rather than fail."""
+    throttle = throttles.AnonymousApiThrottle()
+    assert throttle.wait() is None  # before any request
+
+    assert throttle.allow_request(_request_without_a_session(), view=None) is True
+    assert throttle.wait() is None  # after an allowed one
+
+
+@pytest.mark.django_db
 class TestTheCountCostsTheDatabaseNothing:
     """The first version counted in the shared DatabaseCache: a read went from 4
     statements to 16, and a refused one still wrote its counter (2026-09-29)."""
