@@ -291,8 +291,12 @@ class BookingPeriod(models.Model):
         For single-use types (GIFT/SELL), also restores the Thing to ACTIVE —
         the thing was set to TAKEN when the booking was created, and would
         otherwise remain stuck in TAKEN indefinitely after expiry.
+
+        The ``BOOKING_REQUESTED`` notice every manager holds for a request that
+        expires is deleted with it.
         """
         # Lazy import to avoid circular dependency (Thing imports BookingPeriod)
+        from core.models.notification import InAppNotification  # noqa: PLC0415
         from core.models.thing import Thing  # noqa: PLC0415
 
         expiry_hours = getattr(settings, "BOOKING_EXPIRY_HOURS", 72)
@@ -315,9 +319,18 @@ class BookingPeriod(models.Model):
                     is_endless=False,
                 ).update(status=Thing.Status.ACTIVE)
 
-            expired_count = cls.objects.filter(
-                status=cls.Status.PENDING,
-                created__lt=cutoff_time,
-            ).update(status=cls.Status.EXPIRED)
+            # A request that lapses is settled, so the "someone asked for this" notice
+            # every manager holds has nothing left to ask. Collected first because the
+            # `update()` below changes the status the filter reads.
+            expiring = cls.objects.filter(status=cls.Status.PENDING, created__lt=cutoff_time)
+            expiring_codes = list(expiring.values_list("code", flat=True))
+
+            expired_count = expiring.update(status=cls.Status.EXPIRED)
+
+            if expiring_codes:
+                InAppNotification.objects.filter(
+                    type=InAppNotification.Type.BOOKING_REQUESTED,
+                    payload__booking_code__in=expiring_codes,
+                ).delete()
 
         return expired_count

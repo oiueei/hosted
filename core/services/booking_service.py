@@ -402,10 +402,11 @@ def _clear_request_notifications(booking):
 
     A BOOKING_REQUESTED notification is a question put to the whole team that
     manages the thing (see ``send_booking_request_notifications``): accept or
-    reject? Accept, reject, auto-decline and requester-cancel all answer it, so
-    leaving any copy in an inbox asks for a decision that no longer exists — the
-    reader takes it as still pending and can't tell the stale ones from the live
-    ones. Deliberately **not** scoped to ``booking.owner_code``: the co-curators'
+    reject? Accept, reject and requester-cancel all answer it (a request that
+    lapses is cleared by ``BookingPeriod.expire_old_pending``), so leaving any
+    copy in an inbox asks for a decision that no longer exists — the reader takes
+    it as still pending and can't tell the stale ones from the live ones.
+    Deliberately **not** scoped to ``booking.owner_code``: the co-curators'
     copies go too, whoever settled it.
 
     Matched by ``payload__booking_code``, so notifications created before that key
