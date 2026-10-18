@@ -56,7 +56,7 @@ export default function LoginPage() {
     }
   };
 
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { tc, koro, btnStyle, btnSecondaryStyle } = useTheeeme();
 
   return (
     <div
@@ -80,7 +80,7 @@ export default function LoginPage() {
         </div>
         <Koros
           className="form-hero-koros"
-          type={localStorage.getItem('koro') || 'basic'}
+          type={koro}
           style={tc.color_02 ? { fill: `var(--color-${tc.color_02})` } : undefined}
         />
       </div>

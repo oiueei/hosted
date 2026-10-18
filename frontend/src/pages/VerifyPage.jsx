@@ -2,49 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import i18n, { SUPPORTED_LANGUAGES } from '../i18n';
-import { Button, Notification, Koros } from 'hds-react';
+import { Button, Notification } from 'hds-react';
 import useTheeeme from '../hooks/useTheeeme';
-import AccountMenu from '../components/AccountMenu';
+import PageLayout from '../components/PageLayout';
 import { safeNextPath } from '../utils/nextPath';
 import ButtonLink from '../components/ButtonLink';
 import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 import useDocumentTitle from '../hooks/useDocumentTitle';
-
-/**
- * The verifying / success / error states share the same form-hero + Koros
- * scaffold; only the title, an optional hero action button and the page body
- * differ. One layout keeps the three in lockstep.
- */
-function VerifyScreen({ tc, koro, title, action, children }) {
-  return (
-    <div
-      className="form-page"
-      style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
-    >
-      <div
-        className="form-hero"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
-      >
-        <div
-          className="form-hero-content"
-          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
-        >
-          <span className="hero-corners">
-            <AccountMenu />
-          </span>
-          <h1 className="form-hero-title">{title}</h1>
-          {action}
-        </div>
-        <Koros
-          className="form-hero-koros"
-          type={koro}
-          style={tc.color_02 ? { fill: `var(--color-${tc.color_02})` } : undefined}
-        />
-      </div>
-      <div className="page-container">{children}</div>
-    </div>
-  );
-}
 
 export default function VerifyPage() {
   const { code } = useParams();
@@ -72,7 +36,7 @@ export default function VerifyPage() {
   const committedRef = useRef(false);
   const isLoggedIn = !!localStorage.getItem('userCode');
 
-  const { tc, btnStyle } = useTheeeme();
+  const { btnStyle } = useTheeeme();
 
   useEffect(() => {
     let settled = false;
@@ -209,14 +173,11 @@ export default function VerifyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, navigate]);
 
-  const koro = localStorage.getItem('koro') || 'basic';
   // Both the success and error heroes offer the same way out.
   const exitAction = (
-    <div className="button-row-wide">
-      <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>
-        {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
-      </ButtonLink>
-    </div>
+    <ButtonLink to={isLoggedIn ? '/' : '/login'} style={btnStyle}>
+      {isLoggedIn ? t('verify.goToHomepage') : t('verify.goToLogin')}
+    </ButtonLink>
   );
 
   const handleAccountDelete = async () => {
@@ -248,7 +209,7 @@ export default function VerifyPage() {
 
   if (deletePreview && !success && !error) {
     return (
-      <VerifyScreen tc={tc} koro={koro} title={t('verify.accountDeleteTitle')}>
+      <PageLayout title={t('verify.accountDeleteTitle')}>
         <p>
           {t('verify.accountDeleteSummary', {
             email: deletePreview.email,
@@ -266,32 +227,32 @@ export default function VerifyPage() {
           </Button>
           <ButtonLink to={isLoggedIn ? '/' : '/login'}>{t('common.cancel')}</ButtonLink>
         </div>
-      </VerifyScreen>
+      </PageLayout>
     );
   }
 
   if (success) {
     return (
-      <VerifyScreen tc={tc} koro={koro} title={title} action={exitAction}>
+      <PageLayout title={title} heroActions={exitAction}>
         <Notification label={t('common.done')} type="success">
           {success}
         </Notification>
-      </VerifyScreen>
+      </PageLayout>
     );
   }
 
   if (error) {
     return (
-      <VerifyScreen tc={tc} koro={koro} title={t('verify.oops')} action={exitAction}>
+      <PageLayout title={t('verify.oops')} heroActions={exitAction}>
         <Notification label={t('common.error')} type="error">
           {error}
         </Notification>
         {!noLongerManages && (
           <p className="section-mt">{t(linkAlive ? 'verify.refusalHelp' : 'verify.expiredHelp')}</p>
         )}
-      </VerifyScreen>
+      </PageLayout>
     );
   }
 
-  return <VerifyScreen tc={tc} koro={koro} title={t('verify.verifying')} />;
+  return <PageLayout title={t('verify.verifying')} />;
 }

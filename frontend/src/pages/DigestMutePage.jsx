@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Notification, Koros } from 'hds-react';
-import useTheeeme from '../hooks/useTheeeme';
-import AccountMenu from '../components/AccountMenu';
+import { Notification } from 'hds-react';
+import PageLayout from '../components/PageLayout';
 import { useLocalized } from '../utils/localized';
 import StatusRegion from '../components/StatusRegion';
 import useDocumentTitle from '../hooks/useDocumentTitle';
@@ -25,7 +24,6 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 export default function DigestMutePage() {
   const { token } = useParams();
   const { t } = useTranslation();
-  const { tc, koro } = useTheeeme();
   const L = useLocalized();
   const [status, setStatus] = useState('working'); // 'working' | 'done' | 'error'
   const [headline, setHeadline] = useState('');
@@ -53,52 +51,28 @@ export default function DigestMutePage() {
   }, [token]);
 
   return (
-    <div
-      className="form-page"
-      style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
-    >
-      <div
-        className="form-hero"
-        style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
-      >
-        <div
-          className="form-hero-content"
-          style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
-        >
-          <span className="hero-corners">
-            <AccountMenu />
-          </span>
-          <h1 className="form-hero-title">{t('digestMute.title')}</h1>
-        </div>
-        <Koros
-          className="form-hero-koros"
-          type={koro}
-          style={tc.color_02 ? { fill: `var(--color-${tc.color_02})` } : undefined}
-        />
-      </div>
-      <div className="page-container">
-        <StatusRegion>
-          {status === 'working' && <p className="section-mt">{t('digestMute.working')}</p>}
-          {status === 'done' && (
-            <>
-              <Notification label={t('digestMute.doneLabel')} type="success">
-                {headline
-                  ? t('digestMute.doneNamed', { collection: L(headline) })
-                  : t('digestMute.done')}
-              </Notification>
-              <p className="section-mt measure">{t('digestMute.stillGet')}</p>
-            </>
-          )}
-          {status === 'error' && (
-            <Notification label={t('common.error')} type="error">
-              {t('digestMute.error')}
+    <PageLayout title={t('digestMute.title')}>
+      <StatusRegion>
+        {status === 'working' && <p className="section-mt">{t('digestMute.working')}</p>}
+        {status === 'done' && (
+          <>
+            <Notification label={t('digestMute.doneLabel')} type="success">
+              {headline
+                ? t('digestMute.doneNamed', { collection: L(headline) })
+                : t('digestMute.done')}
             </Notification>
-          )}
-        </StatusRegion>
-        <p className="section-mt">
-          <Link to="/">{t('common.home')}</Link>
-        </p>
-      </div>
-    </div>
+            <p className="section-mt measure">{t('digestMute.stillGet')}</p>
+          </>
+        )}
+        {status === 'error' && (
+          <Notification label={t('common.error')} type="error">
+            {t('digestMute.error')}
+          </Notification>
+        )}
+      </StatusRegion>
+      <p className="section-mt">
+        <Link to="/">{t('common.home')}</Link>
+      </p>
+    </PageLayout>
   );
 }
