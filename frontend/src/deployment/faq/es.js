@@ -86,6 +86,11 @@ export default [
     a: 'Depende de la colección donde estén. Una colección **privada** solo la ven quien la gestiona y las personas invitadas: cualquier otro se lleva un portazo. Una colección **pública** puede abrirla cualquiera que tenga el enlace, sin cuenta y sin invitación. Quien gestiona elige cuál es cada una, puede cambiarlo cuando quiera, y una colección archivada vuelve a verla solo esa persona.',
   },
   {
+    id: 'dinamizar',
+    q: 'Si dinamizas un grupo',
+    a: 'Puedes invitar y quitar miembros, escribir a todo el grupo, editar la colección y pasar a otros a dinamizarla contigo. En un grupo que lleva el equipo (no en una comunidad), también ves y respondes las solicitudes de todas sus cosas. Con eso tienes datos de otras personas: el correo de cada miembro, quién pide qué y cuándo. La copia de la colección (el JSON del menú) los lleva todos: guárdala en un sitio seguro y no la reenvíes. Usa esos correos solo para el grupo. Si dejas de dinamizar, borra las copias que tengas.',
+  },
+  {
     id: 'mis-datos',
     q: '¿Puedo llevarme mis datos o borrar la cuenta?',
     a: 'Las dos cosas, cuando quieras y sin dar explicaciones. Desde tu perfil descargas un archivo con todo lo tuyo, y quien gestiona una colección puede descargar además la colección entera. Borrar la cuenta se confirma por correo y es **inmediato e irreversible**: se van también tus cosas y tus fotos, así que descarga antes lo que quieras conservar.',

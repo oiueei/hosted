@@ -68,6 +68,11 @@ export default [
     a: "Depèn de la col·lecció on siguin. Una col·lecció **privada** només la veuen qui la gestiona i les persones convidades: qualsevol altre es troba la porta tancada. Una col·lecció **pública** la pot obrir qualsevol que tingui l'enllaç, sense compte i sense invitació. Qui la gestiona tria què és cadascuna, ho pot canviar quan vulgui, i una col·lecció arxivada torna a veure-la només aquesta persona.",
   },
   {
+    id: 'dinamizar',
+    q: 'Si dinamitzes un grup',
+    a: "Pots convidar i treure membres, escriure a tot el grup, editar la col·lecció i fer que altres la dinamitzin amb tu. En un grup que porta l'equip (no en una comunitat), també veus i respons les sol·licituds de totes les seves coses. Amb això tens dades d'altres persones: el correu de cada membre, qui demana què i quan. La còpia de la col·lecció (el JSON del menú) les porta totes: guarda-la en un lloc segur i no la reenviïs. Fes servir aquests correus només per al grup. Si deixes de dinamitzar, esborra les còpies que tinguis.",
+  },
+  {
     id: 'mis-datos',
     q: 'Puc endur-me les meves dades o esborrar el compte?',
     a: "Totes dues coses, quan vulguis i sense donar explicacions. Des del teu perfil et descarregues un arxiu amb tot el que és teu, i qui gestiona una col·lecció pot descarregar-se a més la col·lecció sencera. Esborrar el compte es confirma per correu i és **immediat i irreversible**: també se'n van les teves coses i les teves fotos, així que descarrega't abans el que vulguis conservar.",

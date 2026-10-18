@@ -68,6 +68,11 @@ export default [
     a: 'It depends on the collection they are in. A **private** collection is seen only by whoever runs it and the people invited: anyone else meets a closed door. A **public** collection can be opened by anyone holding the link, with no account and no invitation. Whoever runs it chooses which is which, can change it whenever they like, and an archived collection goes back to being visible only to them.',
   },
   {
+    id: 'dinamizar',
+    q: 'If you run a group',
+    a: "You can invite and remove members, write to the whole group, edit the collection and bring others in to run it with you. In a group the team runs (not a community), you also see and answer the requests for all of its things. That gives you other people's data: each member's email, who asks for what and when. The collection copy (the JSON in the menu) carries all of it: keep it somewhere safe and don't forward it. Use those emails only for the group. If you stop running it, delete the copies you have.",
+  },
+  {
     id: 'mis-datos',
     q: 'Can I take my data with me, or delete my account?',
     a: 'Both, whenever you like and without explaining yourself. From your profile you download a file with everything of yours, and whoever runs a collection can also download that whole collection. Deleting the account is confirmed by email and is **immediate and irreversible**: your things and your photos go with it, so download whatever you want to keep first.',

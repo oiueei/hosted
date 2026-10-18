@@ -64,8 +64,8 @@ export const aboutPath = '/welcome';
 export const faqPath = '/faq';
 
 // The guide for whoever runs a group (the collection menu and the co-curator notice
-// link to it). Empty until the FAQ has its section on running a group.
-export const curatorGuidePath = null;
+// link to it): the FAQ's question on running a group, by its anchor.
+export const curatorGuidePath = '/faq#dinamizar';
 
 // The three ways of writing to the team go to forms on Tally, not to pages of the
 // app: the footer's "Contact us", "Ideas and bugs" and "Request

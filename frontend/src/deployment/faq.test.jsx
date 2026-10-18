@@ -263,3 +263,60 @@ describe('the ways in', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/faq'));
   });
 });
+
+// The question for whoever runs a group, copied letter by letter: it tells people what data
+// they hold and what to do with it, so a rephrasing is a change to that, not a copy edit.
+const DINAMIZAR = {
+  es: {
+    q: 'Si dinamizas un grupo',
+    a: 'Puedes invitar y quitar miembros, escribir a todo el grupo, editar la colección y pasar a otros a dinamizarla contigo. En un grupo que lleva el equipo (no en una comunidad), también ves y respondes las solicitudes de todas sus cosas. Con eso tienes datos de otras personas: el correo de cada miembro, quién pide qué y cuándo. La copia de la colección (el JSON del menú) los lleva todos: guárdala en un sitio seguro y no la reenvíes. Usa esos correos solo para el grupo. Si dejas de dinamizar, borra las copias que tengas.',
+  },
+  ca: {
+    q: 'Si dinamitzes un grup',
+    a: "Pots convidar i treure membres, escriure a tot el grup, editar la col·lecció i fer que altres la dinamitzin amb tu. En un grup que porta l'equip (no en una comunitat), també veus i respons les sol·licituds de totes les seves coses. Amb això tens dades d'altres persones: el correu de cada membre, qui demana què i quan. La còpia de la col·lecció (el JSON del menú) les porta totes: guarda-la en un lloc segur i no la reenviïs. Fes servir aquests correus només per al grup. Si deixes de dinamitzar, esborra les còpies que tinguis.",
+  },
+  en: {
+    q: 'If you run a group',
+    a: "You can invite and remove members, write to the whole group, edit the collection and bring others in to run it with you. In a group the team runs (not a community), you also see and answer the requests for all of its things. That gives you other people's data: each member's email, who asks for what and when. The collection copy (the JSON in the menu) carries all of it: keep it somewhere safe and don't forward it. Use those emails only for the group. If you stop running it, delete the copies you have.",
+  },
+};
+
+describe('the guide for whoever runs a group', () => {
+  test.each(LANGUAGES)(
+    '%s: the question is there with its stable anchor, word for word',
+    (lang, entries) => {
+      const entry = entries.find((e) => e.id === 'dinamizar');
+
+      expect(entry).toBeDefined();
+      expect({ q: entry.q, a: entry.a }).toEqual(DINAMIZAR[lang]);
+    }
+  );
+
+  test('the path the app links to leads to that question, in every language', async () => {
+    const { curatorGuidePath } = await import('./index');
+    const [path, anchor] = curatorGuidePath.split('#');
+
+    expect(path).toBe('/faq');
+    for (const [, entries] of LANGUAGES) {
+      expect(
+        entries.some((e) => e.id === anchor),
+        `no question for #${anchor}`
+      ).toBe(true);
+    }
+  });
+
+  test('opening the guide path lands on the question', async () => {
+    const { curatorGuidePath } = await import('./index');
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    window.history.pushState({}, '', curatorGuidePath);
+    render(<App />);
+
+    const heading = await screen.findByRole('heading', { name: DINAMIZAR.en.q, level: 2 });
+    await settle(globalThis.fetch);
+
+    await waitFor(() => expect(scrolled).toHaveBeenCalled());
+    expect(heading.id).toBe('dinamizar');
+    expect(scrolled.mock.contexts.at(-1)).toBe(heading);
+  });
+});
