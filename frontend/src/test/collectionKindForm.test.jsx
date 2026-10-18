@@ -20,6 +20,9 @@ vi.mock('../services/api', () => ({
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
+// The pages a deployment may send "Request access" to (`requestAccessPaths`) are switched
+// off the same way: this file pins what the standalone shows, whatever `deployment/` holds.
+vi.mock('../deployment', async (orig) => ({ ...(await orig()), requestAccessPaths: {} }));
 
 import { apiFetch, extractApiError } from '../services/api';
 import CreateCollectionPage from '../pages/CreateCollectionPage';
