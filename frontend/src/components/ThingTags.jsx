@@ -5,7 +5,7 @@ import { useLocalized } from '../utils/localized';
 
 // "New" signal window: a stateless, privacy-clean
 // "what's new" tag — no per-user tracking, matches the weekly digest cadence.
-export const NEW_THING_WINDOW_DAYS = 7;
+const NEW_THING_WINDOW_DAYS = 7;
 
 export default function ThingTags({ thing, isOwner, showType = true }) {
   const { t } = useTranslation();

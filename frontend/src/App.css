@@ -45,7 +45,7 @@ body {
   /* How much of the content column's right edge the icon corner (.hero-corners)
      can take: the widest it gets is a curator's hero on CollectionPage — account
      menu, collection menu, share menu — which is 3 controls of 44px
-     (.account-menu-trigger, .collection-menu-trigger and .share-corner all
+     (.account-menu-trigger, .collection-menu-trigger and .share-menu-trigger all
      declare that) and the 2 gaps between them (.hero-corners' `gap`). It was 4
      and 3 until the contact icon went to the footer (2026-10-04). A hero with
      fewer icons reserves the same width: the back link cannot know which ones its
@@ -130,8 +130,8 @@ body {
    / "Log out", one click away from every hero a signed-in visitor sees —
    including a collection whose owner set a `home_page`, where the hero's own
    "Home" link leaves OIUEEI entirely and this was otherwise the only way
-   back. A plain disclosure (button + `<nav>`), not ShareCollectionMenu's
-   HDS-Select trick — every option here is a route, not an action.
+   back. A plain disclosure (button + `<nav>`), the same gesture as the share
+   menu's (button + panel of buttons).
 
    `.account-menu` — and `.collection-menu` beside it (2026-10-03) —
    deliberately position nothing. `.account-menu` used to be `position:
@@ -144,7 +144,8 @@ body {
    whatever the row holds and the `max-width` below always fits. */
 
 .account-menu-trigger,
-.collection-menu-trigger {
+.collection-menu-trigger,
+.share-menu-trigger {
   width: 44px;
   height: 44px;
   display: flex;
@@ -164,7 +165,8 @@ a.account-menu-trigger {
 }
 
 .account-menu-panel,
-.collection-menu-panel {
+.collection-menu-panel,
+.share-menu-panel {
   position: absolute;
   top: calc(100% + var(--spacing-2-xs));
   right: 0;
@@ -197,9 +199,10 @@ a.account-menu-trigger {
   text-decoration: none;
 }
 
-/* The collection menu's downloads are buttons next to the links; they take
-   the links' own look, which the `a` rules above do not reach. */
-.collection-menu-panel button {
+/* The collection menu's downloads, and every entry of the share menu, are buttons;
+   they take the links' own look, which the `a` rules above do not reach. */
+.collection-menu-panel button,
+.share-menu-panel button {
   display: flex;
   align-items: center;
   min-height: 44px;
@@ -212,9 +215,11 @@ a.account-menu-trigger {
   font: inherit;
   color: inherit;
   cursor: pointer;
+  gap: var(--spacing-xs);
 }
 
-.collection-menu-panel button:hover {
+.collection-menu-panel button:hover,
+.share-menu-panel button:hover {
   background-color: var(--color-black-5);
 }
 
@@ -236,76 +241,11 @@ a.account-menu-trigger {
 }
 
 .account-menu-divider,
-.collection-menu-divider {
+.collection-menu-divider,
+.share-menu-divider {
   border: none;
   border-top: 1px solid var(--color-black-20);
   margin: var(--spacing-2-xs) 0;
-}
-
-/* Share menu (curator only): the ShareCollectionMenu Select restyled to a
-   single 44px icon trigger. HDS renders the trigger as one
-   <button role="combobox"> holding an icon <span>, a text <div> and an arrow
-   <div>; hiding the last two (both already aria-hidden) and clamping the box
-   to 44px leaves an icon-only control with HDS's open/close/keyboard logic
-   and the button's composed aria-label intact. HDS's own rules for these
-   parts are three classes deep, so the size/visibility overrides need
-   `!important` to win; substring matches dodge the hashed CSS-module
-   suffixes. NOT testable in jsdom — verify by eye on an hds-react bump (see
-   frontend/CLAUDE.md § HDS Select quirks). Sizing only — `.hero-corners`
-   above owns the positioning. */
-.share-corner {
-  width: 44px;
-  height: 44px;
-}
-
-/* The Select's own root/container carry a border, a white fill and a 64px
-   min-height meant for a text-input-sized control — none of which belong on an
-   icon. Height clamped so the box is exactly the 44px target, no dead space. */
-.share-corner [class*='Select-module_root'],
-.share-corner [class*='selectAndListContainer'] {
-  min-width: 0 !important;
-  min-height: 0 !important;
-  max-width: none !important;
-  height: 44px !important;
-  border: none !important;
-  background: transparent !important;
-}
-
-.share-corner button[role='combobox'] {
-  width: 44px !important;
-  height: 44px !important;
-  padding: 0 !important;
-  justify-content: center !important;
-  color: var(--hero-text-color, var(--color-black-90));
-}
-
-/* Only the icon <span> stays; the placeholder-text <div> and the arrow <div>
-   (both aria-hidden, so the accessible name is unaffected) go. */
-.share-corner button[role='combobox'] > *:not([class*='buttonIcon']) {
-  display: none !important;
-}
-
-.share-corner button[role='combobox'] > [class*='buttonIcon'] {
-  display: flex;
-  color: var(--hero-text-color, var(--color-black-90));
-}
-
-/* Drop the visible <label> entirely. It is safe: HDS gives the trigger button
-   its own composed `aria-label` (from `texts.label`) — an explicit aria-label,
-   not `aria-labelledby` to this element — so the accessible name survives. */
-.share-corner [class*='FieldLabel-module_label'] {
-  display: none !important;
-}
-
-/* The options list inherits width:100% from the now-44px container — give it a
-   readable width again and anchor it to the icon's right edge so it opens on
-   screen rather than as a 44px sliver off the viewport. */
-.share-corner [class*='listAndInputContainer'] {
-  width: max-content;
-  min-width: 14rem;
-  max-width: calc(100vw - 2 * var(--spacing-s));
-  left: auto;
-  right: 0;
 }
 
 /* Title replacement: the one hero <h1> whose text is the literal string
@@ -534,6 +474,17 @@ main > .page-container {
   padding: var(--spacing-m) var(--spacing-s) var(--spacing-l);
 }
 
+.site-footer-tagline {
+  margin: 0 0 var(--spacing-2-xs);
+}
+
+.site-footer-tagline a {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  color: inherit;
+}
+
 /* The colophon's doors (what OIUEEI is, the page the privacy claims point at, and
    "Contact us"). 44px targets, because for a signed-out reader of a public
    collection these are the only links on the page. */
@@ -579,6 +530,11 @@ main > .page-container {
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: center;
+  }
+
+  /* The tagline is a line of its own above the doors. */
+  .site-footer-tagline {
+    flex: 0 0 100%;
   }
 
   .site-footer-links {

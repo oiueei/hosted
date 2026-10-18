@@ -97,6 +97,19 @@ describe('UserPage on /me without a stored userCode', () => {
     expect(apiFetch.mock.calls[0][0]).toBe('/api/v1/auth/me/');
   });
 
+  test('does not ask for the profile again once /auth/me/ has given it', async () => {
+    apiFetch.mockImplementation((url) => (url === '/api/v1/auth/me/' ? ok(ME) : ok([])));
+
+    renderAt('/me');
+    await screen.findByRole('heading', { name: 'Lala' });
+    // The groups lists are the page's own business; the profile is one request.
+    await waitFor(() =>
+      expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/', expect.anything())
+    );
+
+    expect(apiFetch.mock.calls.map(([url]) => url)).not.toContain('/api/v1/users/ME0001/');
+  });
+
   test('a refusal there says the profile could not be loaded, and stores nothing', async () => {
     apiFetch.mockImplementation((url) => (url === '/api/v1/auth/me/' ? refused(401) : ok([])));
 

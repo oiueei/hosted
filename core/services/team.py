@@ -67,23 +67,34 @@ def drop_team_notices_of(user, collection):
       collections is still theirs to decide if they curate the other one. The
       notice about it still asks for something they can do, so it stays.
 
-    ``FAQ_QUESTION`` is deliberately not here: its payload carries no collection
-    (only the thing's headline, the asker and the FAQ's code), so there is no
-    way to say which of a person's questions belong to this group. Call it after
-    the role has been removed, so ``can_manage`` sees the new state. Returns how
-    many notices went.
+    ``FAQ_QUESTION`` is handled the same way: it is a question put to the team, and
+    its payload carries the collection since it was written with one. Its thing
+    comes from the FAQ (``faq_code``). A question written before the payload
+    carried a collection has no ``collection_code`` and stays. Call it after the
+    role has been removed, so ``can_manage`` sees the new state. Returns how many
+    notices went.
     """
-    from core.models import Thing
+    from core.models import FAQ, Thing
     from core.models.notification import InAppNotification
 
-    notices = list(
-        InAppNotification.team_booking_notices(
-            InAppNotification.objects.filter(user=user, payload__collection_code=collection.code)
+    mine = InAppNotification.objects.filter(user=user, payload__collection_code=collection.code)
+    notices = list(InAppNotification.team_booking_notices(mine))
+    questions = list(mine.filter(type=InAppNotification.Type.FAQ_QUESTION))
+    if not notices and not questions:
+        return 0
+    thing_of_faq = dict(
+        FAQ.objects.filter(code__in=[q.payload.get("faq_code") for q in questions]).values_list(
+            "code", "thing_id"
         )
     )
-    if not notices:
-        return 0
-    codes = {n.payload.get("thing_code") for n in notices} - {None, ""}
+
+    def thing_code(n):
+        if n.type == InAppNotification.Type.FAQ_QUESTION:
+            return thing_of_faq.get(n.payload.get("faq_code"))
+        return n.payload.get("thing_code")
+
+    notices += questions
+    codes = {thing_code(n) for n in notices} - {None, ""}
     still_run = {
         thing.code
         for thing in Thing.objects.filter(code__in=codes).prefetch_related(
@@ -91,6 +102,6 @@ def drop_team_notices_of(user, collection):
         )
         if thing.can_manage(user.code)
     }
-    doomed = [n.pk for n in notices if n.payload.get("thing_code") not in still_run]
+    doomed = [n.pk for n in notices if thing_code(n) not in still_run]
     InAppNotification.objects.filter(pk__in=doomed).delete()
     return len(doomed)

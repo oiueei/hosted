@@ -235,8 +235,8 @@ describe('the share menu hands over the kind’s address', () => {
         isPublic
       />
     );
-    fireEvent.click(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByRole('option', { name: 'Copy invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Share collection' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invite link' }));
 
     await waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(

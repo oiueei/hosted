@@ -1405,6 +1405,55 @@ class TestExpireOldPending:
         gift_thing.refresh_from_db()
         assert gift_thing.status == "ACTIVE"
 
+    def test_expiring_a_request_clears_its_notice_from_every_managers_inbox(
+        self, user, user2, lend_thing
+    ):
+        """A request that lapses no longer asks anyone to decide it: the
+        BOOKING_REQUESTED copy of each manager goes, and nothing else does."""
+        from core.models import InAppNotification
+
+        def booking(code, hours):
+            b = BookingPeriod.objects.create(
+                code=code,
+                thing_code=lend_thing,
+                requester_code=user2,
+                requester_email=user2.email,
+                owner_code=user,
+                start_date=date.today() + timedelta(days=10),
+                end_date=date.today() + timedelta(days=15),
+                status="PENDING",
+            )
+            BookingPeriod.objects.filter(pk=b.pk).update(
+                created=timezone.now() - timedelta(hours=hours)
+            )
+            return b
+
+        stale = booking("BKSTAL", 100)
+        fresh = booking("BKFRSH", 1)
+        requested = InAppNotification.Type.BOOKING_REQUESTED
+        for manager in (user, user2):  # two managers, one copy each
+            InAppNotification.objects.create(
+                user=manager, type=requested, payload={"booking_code": stale.code}
+            )
+        kept_fresh = InAppNotification.objects.create(
+            user=user, type=requested, payload={"booking_code": fresh.code}
+        )
+        kept_decided = InAppNotification.objects.create(
+            user=user2,
+            type=InAppNotification.Type.BOOKING_DECIDED,
+            payload={"booking_code": stale.code},
+        )
+
+        assert BookingPeriod.expire_old_pending() == 1
+
+        assert not InAppNotification.objects.filter(
+            type=requested, payload__booking_code=stale.code
+        ).exists()
+        assert set(InAppNotification.objects.values_list("pk", flat=True)) == {
+            kept_fresh.pk,
+            kept_decided.pk,
+        }
+
 
 @pytest.mark.django_db
 class TestBookingActionView:

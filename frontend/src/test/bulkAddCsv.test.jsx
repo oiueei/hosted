@@ -118,6 +118,24 @@ describe('BulkAddCsv — plain CSV', () => {
     expect(example.textContent.split('\n')[0]).toMatch(/^headline,fee,/);
   });
 
+  test('a deposit of zero is not previewed, a positive one is', async () => {
+    const { container } = renderBulkAdd();
+
+    pick(container, csvFile('headline,deposit\nCazo,0\nOlla,12'));
+
+    expect(await screen.findByText('Cazo')).toBeInTheDocument();
+    expect(screen.getByText('Olla · 🔒12')).toBeInTheDocument();
+  });
+
+  test('a price of zero is not previewed, a positive one is', async () => {
+    const { container } = renderBulkAdd();
+
+    pick(container, csvFile('headline,fee\nCazo,0\nOlla,5'));
+
+    expect(await screen.findByText('Cazo')).toBeInTheDocument();
+    expect(screen.getByText('Olla · 5')).toBeInTheDocument();
+  });
+
   test('a tags cell is split on the pipe and previewed', async () => {
     const { container } = renderBulkAdd();
 

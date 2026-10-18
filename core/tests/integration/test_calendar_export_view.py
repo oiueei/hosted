@@ -85,6 +85,23 @@ class TestWhoMayDownloadIt:
         assert int(res["X-Calendar-Events"]) == 1
 
 
+class TestACommunityCuratorGetsOnlyTheirOwnThings:
+    def test_the_file_holds_their_things_and_not_a_members(
+        self, authenticated_client, user, user2, collection
+    ):
+        collection.mode = Collection.Mode.COMMUNITY
+        collection.save()
+        collection.invites.add(user2)
+        _loan(collection, user, user2, code="BKGOWN")
+        _loan(collection, user2, user, code="BKGMEM")
+
+        res = authenticated_client.post(URL.format(code=collection.code))
+
+        assert res.status_code == 200
+        assert _uids(res.content) == ["BKGOWN@oiueei"]
+        assert int(res["X-Calendar-Events"]) == 1
+
+
 class TestPostOnly:
     def test_a_get_is_405(self, authenticated_client, user, user2, collection):
         _loan(collection, user, user2)

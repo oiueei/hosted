@@ -16,18 +16,21 @@ describe('tap targets', () => {
     '.account-menu-panel a',
     '.collection-menu-panel a',
     '.collection-menu-panel button',
+    '.share-menu-panel button',
     '.digest-pref-button',
   ])('%s is at least 44px tall', (selector) => {
     expect(declarations(selector, 'min-height')).toContain('44px');
   });
 
   // The menu entries' padding sits inside the 44px, not on top of it.
-  test.each(['.account-menu-panel a', '.collection-menu-panel a', '.collection-menu-panel button'])(
-    '%s counts its padding inside its height',
-    (selector) => {
-      expect(declarations(selector, 'box-sizing')).toContain('border-box');
-    }
-  );
+  test.each([
+    '.account-menu-panel a',
+    '.collection-menu-panel a',
+    '.collection-menu-panel button',
+    '.share-menu-panel button',
+  ])('%s counts its padding inside its height', (selector) => {
+    expect(declarations(selector, 'box-sizing')).toContain('border-box');
+  });
 });
 
 describe('icons are black', () => {

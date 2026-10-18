@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link, NavLink, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { IconUser } from 'hds-react';
 import useDismissable from '../hooks/useDismissable';
@@ -32,8 +32,12 @@ const PANEL_ID = 'account-menu-panel';
  * so it does for a reader who has no collection menu on such a page, so the link is
  * never in neither.
  *
+ * **The link to the page on screen says so**: each is a `NavLink` with `end`, which
+ * sets `aria-current="page"` on an exact match (`/me` is current on `/me`, not on
+ * `/me/edit`).
+ *
  * A plain navigation disclosure — a button that shows/hides a `<nav>` of
- * `Link`s — not `ShareCollectionMenu`'s HDS-`Select`-as-menu trick: every
+ * `Link`s — not an HDS `Select` dressed as a menu: every
  * option here is a **route**, not an action, and a `Select` announces itself
  * as a combobox to a screen reader (an accessibility risk). No `role="menu"` either — that role expects arrow-key
  * navigation between actions; this is `Tab`-navigable links, so the native
@@ -102,7 +106,19 @@ export default function AccountMenu({ requestsInCollectionMenu = false, offerSig
   const close = () => setOpen(false);
 
   return (
-    <span className="account-menu" ref={wrapperRef}>
+    // Focus leaving the whole menu (Tab past the last link, or back past the
+    // trigger) closes the panel, as `InfoPopover` does. A `null` `relatedTarget`
+    // is not "left": Safari does not focus a button or link on click, so the
+    // trigger would blur into nothing just before a click on a link lands.
+    // Clicks elsewhere close it through `useDismissable`.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <span
+      className="account-menu"
+      ref={wrapperRef}
+      onBlur={(e) => {
+        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) close();
+      }}
+    >
       <button
         type="button"
         ref={buttonRef}
@@ -116,19 +132,19 @@ export default function AccountMenu({ requestsInCollectionMenu = false, offerSig
       </button>
       {open && (
         <nav id={PANEL_ID} className="account-menu-panel" aria-label={label}>
-          <Link to="/" onClick={close}>
+          <NavLink to="/" end onClick={close}>
             {t('common.home')}
-          </Link>
-          <Link to="/me" onClick={close}>
+          </NavLink>
+          <NavLink to="/me" end onClick={close}>
             {t('home.myProfile')}
-          </Link>
-          <Link to="/my-bookings" onClick={close}>
+          </NavLink>
+          <NavLink to="/my-bookings" end onClick={close}>
             {t('home.myRequests')}
-          </Link>
+          </NavLink>
           {receivesRequests && !requestsInCollectionMenu && (
-            <Link to="/owner-bookings" onClick={close}>
+            <NavLink to="/owner-bookings" end onClick={close}>
               {t('home.requestsToMe')}
-            </Link>
+            </NavLink>
           )}
           <hr className="account-menu-divider" />
           <Link to="/logout" onClick={close}>

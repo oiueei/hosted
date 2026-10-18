@@ -251,9 +251,8 @@ describe('OwnerBookingsPage listing', () => {
       await screen.findByText('Nobody has requested anything from you yet.')
     ).toBeInTheDocument();
     // The owner's own way forward, not the requester page's "Browse
-    // collections" — nobody has asked for anything, so the useful next move is
-    // to put the collection in front of someone.
-    expect(screen.getByRole('link', { name: 'Share a collection' })).toBeInTheDocument();
+    // collections": it goes to Home, where their collections are.
+    expect(screen.getByRole('link', { name: 'See my collections' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Waiting on you' })).toBeNull();
   });
 
@@ -261,7 +260,7 @@ describe('OwnerBookingsPage listing', () => {
     mockApi([{ results: [], next: null }]);
     renderPage();
 
-    const link = await screen.findByRole('link', { name: 'Share a collection' });
+    const link = await screen.findByRole('link', { name: 'See my collections' });
     expect(link.parentElement).toHaveClass('button-row-wide');
   });
 

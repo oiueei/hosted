@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
  */
 
 // The languages OIUEEI speaks — mirrors core/models/language.py and src/i18n.
-export const LOCALIZED_LANGS = ['es', 'ca', 'en'];
+const LOCALIZED_LANGS = ['es', 'ca', 'en'];
 
 /** The `{lang: text}` map inside a value, or null when the value is just text. */
 export function parseLocalized(value) {

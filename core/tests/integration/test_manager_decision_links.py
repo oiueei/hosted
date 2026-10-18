@@ -469,3 +469,16 @@ class TestAuthorityIsCheckedAtTheClick:
         booking.refresh_from_db()
         assert booking.status == BookingPeriod.Status.PENDING
         assert RSVP.objects.filter(pk=accept.pk).exists()
+
+
+class TestALinkWhoseBookingIsGone:
+    def test_it_answers_a_404_that_says_so_and_is_burnt(self, catalogue, member, owner):
+        booking = _ask(member, catalogue["gift"])
+        link = _link(booking, owner)
+        BookingPeriod.objects.filter(code=booking.code).delete()
+
+        res = _press(link)
+
+        assert res.status_code == 404
+        assert res.json() == {"error": "Booking not found"}
+        assert not RSVP.objects.filter(pk=link.pk).exists()

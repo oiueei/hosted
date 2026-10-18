@@ -85,6 +85,24 @@ describe('HomePage — no way to a page that no longer exists', () => {
  * empty state and "Create your first collection" above the one thing a member
  * has, which on a phone sat below the fold under the hero's buttons.
  */
+describe('HomePage — the greeting', () => {
+  test('greets by name when there is one', async () => {
+    mockDashboard({ mine: [MINE] });
+    renderHome();
+
+    expect(await screen.findByRole('heading', { name: 'Hello, Lulu' })).toBeInTheDocument();
+  });
+
+  test('without a name it just says hello, and the address appears nowhere in it', async () => {
+    mockDashboard({ mine: [MINE], user: { ...USER, name: '' } });
+    renderHome();
+
+    const heading = await screen.findByRole('heading', { name: 'Hello!' });
+    expect(heading).toBeInTheDocument();
+    expect(screen.queryByText(/lulu1@your-domain\.test/)).toBeNull();
+  });
+});
+
 describe('HomePage — which section leads', () => {
   test('a member who owns nothing sees their groups first, the invitation to create after', async () => {
     mockDashboard({ mine: [], invited: [GROUP] });
@@ -94,6 +112,17 @@ describe('HomePage — which section leads', () => {
     expect(sectionOrder()).toEqual(['Shared with me', 'My collections']);
     // Still offered — just not first.
     expect(screen.getByRole('link', { name: 'Create your first collection' })).toBeInTheDocument();
+  });
+
+  test('a new account is told what a collection is, including that it can be public', async () => {
+    mockDashboard({ mine: [], invited: [] });
+    renderHome();
+
+    expect(
+      await screen.findByText(
+        'A collection is a shareable list — gifts, loans, rentals, sales, or something to book. You decide whether only the people you invite can see it, or anyone with the link.'
+      )
+    ).toBeInTheDocument();
   });
 
   test('someone who runs a collection keeps it first', async () => {
@@ -382,6 +411,24 @@ describe('HomePage — invitations waiting for an answer', () => {
     owner_name: 'Lili',
     collection_headline: 'Books',
   };
+
+  test('the card says it is an invitation to join, then names the collection', async () => {
+    mockDashboard({ mine: [MINE], invitations: [TOOLS] });
+    renderHome();
+
+    // "Lele has invited you to join" + the headline on the next line: one sentence.
+    const label = await screen.findByText('Lele has invited you to join');
+    expect(label).toBeInTheDocument();
+    expect(screen.getByText('Tools')).toBeInTheDocument();
+    expect(screen.queryByText(/invited you to view/)).toBeNull();
+  });
+
+  test('an owner with no name is “A member”, not an empty subject', async () => {
+    mockDashboard({ mine: [MINE], invitations: [{ ...TOOLS, owner_name: '' }] });
+    renderHome();
+
+    expect(await screen.findByText('A member has invited you to join')).toBeInTheDocument();
+  });
 
   test('dismissing one removes that one and leaves the other waiting', async () => {
     mockDashboard({ mine: [MINE], invitations: [TOOLS, BOOKS] });

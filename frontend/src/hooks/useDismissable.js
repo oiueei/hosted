@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 /**
  * The shared dismissal behaviour of the hero's disclosure menus: Escape closes
  * and returns focus to the trigger (WCAG 1.4.13's "dismissible", the same
- * shape InfoPopover uses); a `mousedown` outside the wrapper closes without
+ * shape InfoPopover uses); a `pointerdown` outside the wrapper closes without
  * moving focus at all. Both listeners live on `document` and only while the
  * panel is open, and neither stops propagation, so an ancestor dialog still
  * gets its own Escape.
@@ -26,10 +26,10 @@ export default function useDismissable({ open, setOpen, wrapperRef, buttonRef })
       }
     };
     document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('pointerdown', onPointerDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('pointerdown', onPointerDown);
     };
   }, [open, setOpen, wrapperRef, buttonRef]);
 }

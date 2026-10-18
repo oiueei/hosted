@@ -104,6 +104,19 @@ describe('RequestThingPage (what the pickers produce is what the POST carries)',
     });
   });
 
+  test.each([
+    ['5.00', true],
+    ['0.00', false],
+    [null, false],
+  ])('the price line for a fee of %j is shown: %s', async (fee, shown) => {
+    mockRoutes({ thing: { ...RENTAL_THING, fee } });
+    renderPage('RCOL01', 'RTHG01');
+    await screen.findByText('Rental length');
+
+    if (shown) expect(screen.getByText('Price:')).toBeInTheDocument();
+    else expect(screen.queryByText('Price:')).toBeNull();
+  });
+
   test('a 409 overlap shows the date-overlap message and no success screen', async () => {
     mockRoutes({ thing: RENTAL_THING, request: { status: 409, body: { error: 'overlap' } } });
     renderPage('RCOL01', 'RTHG01');

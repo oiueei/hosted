@@ -745,13 +745,9 @@ class VerifyLinkView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # `thing_code` is NOT NULL with CASCADE: a booking whose thing is gone is gone
+        # too, so the "Booking not found" above is the only way a missing thing shows.
         thing = booking.thing_code
-        if not thing:
-            rsvp.delete()
-            return Response(
-                {"error": "Thing not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
 
         # Authority is checked again here, at the click. The link outlives the
         # role that earned it (72h): the owner always may, anyone else only

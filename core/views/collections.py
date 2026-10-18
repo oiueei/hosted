@@ -68,7 +68,7 @@ from core.services.invitation_service import (
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
 from core.services.membership_service import end_membership, things_leaving_with
 from core.services.team import drop_team_notices_of
-from core.utils import redact_email
+from core.utils import get_client_ip, redact_email
 from core.validators import SafeHeadlineField
 from core.views._helpers import (
     body_dict,
@@ -82,6 +82,7 @@ from core.views._helpers import (
 from core.views.auth import _join_collection
 
 logger = logging.getLogger(__name__)
+security_logger = logging.getLogger("security")
 
 
 def _optimise_collection_queryset(queryset, viewer=None):
@@ -631,6 +632,22 @@ class CollectionLeaveView(APIView):
         )
 
 
+def _log_joined(user, collection, door, ip):
+    """The security-log line for a signed-in join, as ``JoinView`` writes for the
+    anonymous one: who, into what, through which door."""
+    security_logger.info(
+        f"User {user.code} joined collection {collection.code} via {door} from IP {ip}"
+    )
+
+
+def _log_join_refused(user, collection, ip):
+    """The operator's side of a refusal the visitor is told only as "tomorrow"."""
+    security_logger.warning(
+        f"Join refused for user {user.code} from IP {ip}: "
+        f"collection {collection.code} is over COLLECTION_JOINS_PER_DAY"
+    )
+
+
 class CollectionJoinView(APIView):
     """
     POST /api/v1/collections/{collection_code}/join/
@@ -696,7 +713,9 @@ class CollectionJoinView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        ip = get_client_ip(request)
         if join_quota_exhausted(collection.code):
+            _log_join_refused(request.user, collection, ip)
             return Response(
                 {"detail": "This collection has taken today's joins. Try again tomorrow."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -704,6 +723,7 @@ class CollectionJoinView(APIView):
 
         _join_collection(collection, request.user, source=Event.Source.PUBLIC)
         consume_join_quota(collection.code)
+        _log_joined(request.user, collection, "public", ip)
 
         return Response({"message": "You have joined the collection"})
 
@@ -1366,7 +1386,9 @@ class ShareJoinView(APIView):
                 {"collection": collection.code, "collection_kind": collection.kind, "joined": False}
             )
 
+        ip = get_client_ip(request)
         if join_quota_exhausted(collection.code):
+            _log_join_refused(request.user, collection, ip)
             return Response(
                 {"detail": "This collection has taken today's joins. Try again tomorrow."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -1374,6 +1396,7 @@ class ShareJoinView(APIView):
 
         _join_collection(collection, request.user, source=Event.Source.SHARE)
         consume_join_quota(collection.code)
+        _log_joined(request.user, collection, "share", ip)
 
         return Response(
             {"collection": collection.code, "collection_kind": collection.kind, "joined": True}

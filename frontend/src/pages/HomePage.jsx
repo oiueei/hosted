@@ -315,8 +315,10 @@ export default function HomePage() {
           <span className="hero-corners">
             <AccountMenu />
           </span>
+          {/* The address is never the greeting: someone who arrived by invitation and
+              never set a name is just greeted. */}
           <h1 className="form-hero-title" style={{ paddingTop: 'var(--spacing-xl)' }}>
-            {t('home.greeting', { name: user.name || user.email })}
+            {user.name ? t('home.greeting', { name: user.name }) : t('home.greetingNoName')}
           </h1>
           {user.headline && <p className="form-hero-text">{user.headline}</p>}
           {/* One button, the one thing only Home offers. "My profile", "My

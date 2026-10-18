@@ -1555,6 +1555,70 @@ def test_a_day_reservation_confirmation_names_the_days_booked_and_no_other(user,
         assert "07/10/2026" not in part
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("lang", "one_day", "two_days"),
+    [
+        ("en", "on 05/10/2026", "from 05/10/2026 to 06/10/2026"),
+        ("es", "el 05/10/2026", "del 05/10/2026 al 06/10/2026"),
+        ("ca", "el 05/10/2026", "del 05/10/2026 al 06/10/2026"),
+    ],
+)
+def test_the_plain_text_of_every_reservation_email_says_a_single_day_once(
+    user, user2, thing, lang, one_day, two_days
+):
+    """A one-day reservation read "from 05/10/2026 to 05/10/2026" in the plain text of
+    the reservation sentences, while the app and the HTML already said one date.
+    A two-day one keeps its range."""
+    from datetime import date
+
+    from core.models import BookingPeriod
+
+    thing.type = "RESERVE_THING"
+    thing.save(update_fields=["type"])
+
+    def booking(end):
+        return BookingPeriod.objects.create(
+            thing_code=thing,
+            thing_type=thing.type,
+            requester_code=user2,
+            requester_email=user2.email,
+            owner_code=user,
+            start_date=date(2026, 10, 5),
+            end_date=end,
+            status=BookingPeriod.Status.ACCEPTED,
+        )
+
+    senders = [
+        lambda b: email_service.send_reservation_confirmed_email(user2, thing, b),
+        lambda b: email_service.send_reservation_notice_email(user.email, user2, thing, b),
+        lambda b: email_service.send_reservation_cancelled_email(
+            user2.email, "Lala", thing, b, cancelled_by_owner=True
+        ),
+        lambda b: email_service.send_reservation_cancelled_email(
+            user.email, "Lele", thing, b, cancelled_by_owner=False
+        ),
+        lambda b: email_service.send_reservation_cancel_confirmation_email(
+            user2.email, thing, b, is_own_reservation=True
+        ),
+        lambda b: email_service.send_reservation_cancel_confirmation_email(
+            user.email, thing, b, is_own_reservation=False, member_name="Lele"
+        ),
+        lambda b: email_service.send_reservation_reminder_email(user2.email, thing, b),
+    ]
+    one, two = booking(date(2026, 10, 6)), booking(date(2026, 10, 7))
+    with override_settings(EMAIL_LANGUAGE=lang):
+        for send in senders:
+            mail.outbox.clear()
+            send(one)
+            plain = mail.outbox[0].body
+            assert one_day in plain, plain
+            assert plain.count("05/10/2026") == 1, plain
+            mail.outbox.clear()
+            send(two)
+            assert two_days in mail.outbox[0].body
+
+
 # --- The owner's email note (Collection.email_note) ------------------------------
 
 
@@ -2073,3 +2137,24 @@ def test_every_email_that_links_a_thing_names_only_a_group_its_reader_may_open(
         assert "/stall/COLL01/things/THNG01" in half
     for half in (plain, html):
         assert "AAAAAA" not in half
+
+
+@pytest.mark.django_db
+def test_the_capacity_alarm_says_its_header_once_in_the_plain_text():
+    """The alert's explanation is its parent line; `_send` already puts it on the first
+    line of the plain text, so the body must not repeat it."""
+    from core.models import Collection, User
+
+    owner = User.objects.create(code="ALRMO3", email="lala3@your-domain.test", name="Lala")
+    collection = Collection.objects.create(
+        code="ALRMC3", owner=owner, headline="Busy", status="ACTIVE"
+    )
+    User.objects.create(code="ALRMS3", email="lala4@your-domain.test", is_superuser=True)
+    mail.outbox.clear()
+
+    email_service.send_collection_capacity_alarm(collection, "things", 501, 500)
+
+    plain = mail.outbox[0].body
+    assert plain.count("A collection has crossed the mass-upload alarm threshold.") == 1
+    assert plain.startswith("A collection has crossed")
+    assert "  Collection: Busy (ALRMC3)" in plain

@@ -559,7 +559,7 @@ class Collection(models.Model):
             return Refusal("A reservation is at least one day.", "reservation_too_short_days")
         if duration_days > self.reservation_max_days:
             return Refusal(
-                f"This space can be reserved for at most "
+                f"This collection can be reserved for at most "
                 f"{self.reservation_max_days} day(s) at a time.",
                 "reservation_too_long_days",
                 max=self.reservation_max_days,
@@ -567,7 +567,8 @@ class Collection(models.Model):
         today = today or timezone.localdate()
         if start_date > today + timedelta(days=self.reservation_horizon_days):
             return Refusal(
-                f"This space can only be booked up to {self.reservation_horizon_days} days ahead.",
+                f"This collection can only be booked up to "
+                f"{self.reservation_horizon_days} days ahead.",
                 "reservation_beyond_horizon",
                 days=self.reservation_horizon_days,
             )
@@ -577,12 +578,13 @@ class Collection(models.Model):
             day = start_date + timedelta(days=offset)
             if weekdays and day.weekday() not in weekdays:
                 return Refusal(
-                    "Those dates include a day this space isn't open for reservations.",
+                    "Those dates include a day this collection isn't open for reservations.",
                     "reservation_weekday_closed",
                 )
             if day in closed:
                 return Refusal(
-                    "Those dates include a day this space is closed.", "reservation_closed_date"
+                    "Those dates include a day this collection is closed.",
+                    "reservation_closed_date",
                 )
         return None
 
@@ -673,7 +675,7 @@ class Collection(models.Model):
             )
         if duration_minutes > self.reservation_max_minutes:
             return Refusal(
-                f"This space can be reserved for at most "
+                f"This collection can be reserved for at most "
                 f"{self.reservation_max_minutes} minutes at a time.",
                 "reservation_too_long_minutes",
                 max=self.reservation_max_minutes,
@@ -682,17 +684,18 @@ class Collection(models.Model):
         today = today or now.date()
         if start_date > today + timedelta(days=self.reservation_horizon_days):
             return Refusal(
-                f"This space can only be booked up to {self.reservation_horizon_days} days ahead.",
+                f"This collection can only be booked up to "
+                f"{self.reservation_horizon_days} days ahead.",
                 "reservation_beyond_horizon",
                 days=self.reservation_horizon_days,
             )
         if start_date == today == now.date() and start_minutes < now.hour * 60 + now.minute:
             return Refusal("That time has already begun.", "reservation_already_begun")
         if start_date in self.closed_date_set():
-            return Refusal("This space is closed that day.", "reservation_closed_that_day")
+            return Refusal("This collection is closed that day.", "reservation_closed_that_day")
         blocks = self.day_opening_blocks(start_date)
         if not blocks:
-            return Refusal("This space isn't open that day.", "reservation_not_open_that_day")
+            return Refusal("This collection isn't open that day.", "reservation_not_open_that_day")
         if (start_time, end_time) == (blocks[0][0], blocks[-1][1]):
             return None
         step = self.reservation_min_minutes
@@ -712,7 +715,7 @@ class Collection(models.Model):
                     )
                 return None
         return Refusal(
-            "That time falls outside this space's opening hours.", "reservation_outside_hours"
+            "That time falls outside this collection's opening hours.", "reservation_outside_hours"
         )
 
     def active_reservation_count(self, requester_code, today=None):

@@ -14,9 +14,10 @@
  * (`nextPath.test.js` and `core/tests/unit/test_safe_next_path.py` share their
  * tables by hand). A value is accepted only when it is a string of at most 256
  * characters that matches the whitelist (no `\`, `#`, `:` or whitespace, so no
- * scheme and no backslash-as-slash), does not start with `//`, has no `..` (raw
- * or percent-decoded), is not `/` alone, and does not start at one of the SPA's
- * own doors — compared decoded and case-folded, because the router does both.
+ * scheme and no backslash-as-slash), does not start with `//` (raw, or once
+ * percent-decoded: `%2F%2F`) or hold a `\` once decoded (`%5C`), has no `..` (raw or
+ * percent-decoded), is not `/` alone, and does not start at one of the SPA's own
+ * doors — compared decoded and case-folded, because the router does both.
  */
 const NEXT_PATH_RE = /^\/[A-Za-z0-9/_\-.~?=&%]*$/;
 const NEXT_PATH_MAX_LENGTH = 256;
@@ -32,7 +33,8 @@ export function safeNextPath(value) {
   if (typeof value !== 'string' || value.length > NEXT_PATH_MAX_LENGTH) return '';
   if (!NEXT_PATH_RE.test(value) || value.startsWith('//')) return '';
   const decoded = percentDecode(value);
-  if (decoded.includes('..')) return '';
+  // `%2F%2Fevil.com` and `%5Cevil.com` decode to another origin, as the server rules.
+  if (decoded.startsWith('//') || decoded.includes('\\') || decoded.includes('..')) return '';
   const path = decoded.split('?')[0];
   if (path === '/' || BLOCKED_ROOTS.has(path.split('/')[1].toLowerCase())) return '';
   return value;

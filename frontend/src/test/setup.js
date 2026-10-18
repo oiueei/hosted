@@ -29,6 +29,11 @@ Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
 if (!globalThis.CSS) {
   globalThis.CSS = { supports: () => false };
 }
+// jsdom has no CSS.escape; every browser does. Backslash-escaping each character
+// outside [A-Za-z0-9_-] is enough for the selectors the app builds.
+if (!globalThis.CSS.escape) {
+  globalThis.CSS.escape = (value) => String(value).replace(/[^A-Za-z0-9_-]/g, (c) => `\\${c}`);
+}
 
 // HDS components (Select, TextArea) require ResizeObserver
 if (!globalThis.ResizeObserver) {

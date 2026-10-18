@@ -1,4 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
+import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 // The QR image is a picture a test cannot read, and what this component owns is
@@ -16,8 +18,11 @@ vi.mock('../services/api', () => ({
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
+expect.extend(toHaveNoViolations);
+
 import { apiFetch } from '../services/api';
 import ShareCollectionMenu from './ShareCollectionMenu';
+import AccountMenu from './AccountMenu';
 import en from '../i18n/locales/en.json';
 
 const props = {
@@ -26,13 +31,7 @@ const props = {
 };
 
 function openMenu() {
-  // HDS Select renders a button that toggles the options listbox.
-  const trigger =
-    screen.queryByRole('combobox') ||
-    document.querySelector('[aria-haspopup="listbox"]') ||
-    document.querySelector('#share-menu-COL001-main-button') ||
-    document.querySelector('button');
-  fireEvent.click(trigger);
+  fireEvent.click(screen.getByRole('button', { name: /share collection/i }));
 }
 
 beforeEach(() => {
@@ -45,24 +44,136 @@ beforeEach(() => {
 });
 
 describe('ShareCollectionMenu icon trigger', () => {
-  test('is one combobox with an accessible name, not a nameless icon or a doubled control', () => {
-    // The whole point of restyling HDS's own trigger (rather than driving a
-    // separate icon button) is that there stays exactly ONE focusable element
-    // for the control, and it keeps the name HDS composes from texts.label —
-    // an icon with no accessible name would be a dead end for a screen reader.
+  test('is one button with an accessible name, and not a combobox', () => {
+    // The control is a plain disclosure, like the account and collection menus: a
+    // screen reader must hear a button that expands, not a "combo box".
     render(<ShareCollectionMenu {...props} isPublic />);
-    const triggers = screen.getAllByRole('combobox');
-    expect(triggers).toHaveLength(1);
-    expect(triggers[0].tagName).toBe('BUTTON');
-    expect(triggers[0]).toHaveAccessibleName(/share collection/i);
+
+    expect(screen.queryByRole('combobox')).toBeNull();
+    const trigger = screen.getByRole('button', { name: /share collection/i });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).not.toHaveAttribute('aria-controls');
+  });
+
+  test('opens a list of buttons, and says so with aria-expanded and aria-controls', () => {
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+    openMenu();
+
+    const trigger = screen.getByRole('button', { name: /share collection/i });
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const panel = document.getElementById(trigger.getAttribute('aria-controls'));
+    expect(panel).not.toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.queryByRole('listbox')).toBeNull();
+    const names = within(panel)
+      .getAllByRole('button')
+      .map((b) => b.textContent);
+    // The order the entries always had.
+    expect(names).toEqual([
+      'Email',
+      'Copy invite link',
+      'WhatsApp',
+      'QR code',
+      'Rotate link',
+      'Stop sharing',
+    ]);
   });
 
   test('still opens the full menu from that single trigger', () => {
     render(<ShareCollectionMenu {...props} isPublic={false} />);
     openMenu();
     for (const name of [/^email$/i, /copy invite link/i, /whatsapp/i, /qr code/i]) {
-      expect(screen.getByRole('option', { name })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
     }
+  });
+
+  test('Escape closes it and returns the focus to the trigger', () => {
+    render(<ShareCollectionMenu {...props} isPublic />);
+    openMenu();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    const trigger = screen.getByRole('button', { name: /share collection/i });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /whatsapp/i })).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  test('a press outside closes it, without taking the focus anywhere', () => {
+    render(
+      <>
+        <button type="button">Outside</button>
+        <ShareCollectionMenu {...props} isPublic />
+      </>
+    );
+    openMenu();
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Outside' }));
+
+    expect(screen.queryByRole('button', { name: /whatsapp/i })).toBeNull();
+  });
+
+  test('focus moving out of the menu closes it; a blur into nothing does not', () => {
+    render(
+      <>
+        <ShareCollectionMenu {...props} isPublic />
+        <button type="button">Outside</button>
+      </>
+    );
+    openMenu();
+    const last = screen.getByRole('button', { name: /qr code/i });
+
+    fireEvent.blur(last, { relatedTarget: screen.getByRole('button', { name: /whatsapp/i }) });
+    expect(screen.getByRole('button', { name: /whatsapp/i })).toBeInTheDocument();
+    fireEvent.blur(last, { relatedTarget: null });
+    expect(screen.getByRole('button', { name: /whatsapp/i })).toBeInTheDocument();
+
+    fireEvent.blur(last, { relatedTarget: screen.getByRole('button', { name: 'Outside' }) });
+    expect(screen.queryByRole('button', { name: /whatsapp/i })).toBeNull();
+  });
+
+  test('choosing an entry closes the panel and the focus is back on the trigger', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+    });
+    render(<ShareCollectionMenu {...props} isPublic />);
+    openMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /copy invite link/i }));
+
+    const trigger = screen.getByRole('button', { name: /share collection/i });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
+    expect(await screen.findByText(/copied to clipboard/i)).toBeInTheDocument();
+  });
+
+  test('opening it closes the account menu beside it', () => {
+    localStorage.setItem('userCode', 'ABC123');
+    render(
+      <MemoryRouter>
+        <AccountMenu />
+        <ShareCollectionMenu {...props} isPublic />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+    expect(screen.getByRole('navigation', { name: /your account/i })).toBeInTheDocument();
+
+    // A real press is pointerdown first (what the dismissal listens to), then click.
+    const share = screen.getByRole('button', { name: /share collection/i });
+    fireEvent.pointerDown(share);
+    fireEvent.click(share);
+
+    expect(screen.queryByRole('navigation', { name: /your account/i })).toBeNull();
+    expect(share).toHaveAttribute('aria-expanded', 'true');
+    localStorage.clear();
+  });
+
+  test('has no accessibility violations with the panel open', async () => {
+    const { container } = render(<ShareCollectionMenu {...props} isPublic={false} />);
+    openMenu();
+
+    expect(await axe(container)).toHaveNoViolations();
   });
 });
 
@@ -70,14 +181,14 @@ describe('ShareCollectionMenu revoke / rotate', () => {
   test('a PUBLIC collection offers no revoke/rotate (no token to pull back)', () => {
     render(<ShareCollectionMenu {...props} isPublic />);
     openMenu();
-    expect(screen.queryByRole('option', { name: /stop sharing/i })).toBeNull();
-    expect(screen.queryByRole('option', { name: /rotate link/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /stop sharing/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /rotate link/i })).toBeNull();
   });
 
   test('revoking a PRIVATE share link confirms, then DELETEs the token', async () => {
     render(<ShareCollectionMenu {...props} isPublic={false} />);
     openMenu();
-    fireEvent.click(screen.getByRole('option', { name: /stop sharing/i }));
+    fireEvent.click(screen.getByRole('button', { name: /stop sharing/i }));
 
     // Consequence confirm appears before any request fires.
     expect(screen.getByText(/the invite link stops working for everyone/i)).toBeInTheDocument();
@@ -95,7 +206,7 @@ describe('ShareCollectionMenu revoke / rotate', () => {
   test('rotating a PRIVATE share link POSTs rotate:true', async () => {
     render(<ShareCollectionMenu {...props} isPublic={false} />);
     openMenu();
-    fireEvent.click(screen.getByRole('option', { name: /rotate link/i }));
+    fireEvent.click(screen.getByRole('button', { name: /rotate link/i }));
     fireEvent.click(screen.getByRole('button', { name: /^rotate link$/i }));
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
@@ -111,7 +222,7 @@ describe('ShareCollectionMenu revoke / rotate', () => {
     // through, the dialog would be theatre.
     render(<ShareCollectionMenu {...props} isPublic={false} />);
     openMenu();
-    fireEvent.click(screen.getByRole('option', { name: /stop sharing/i }));
+    fireEvent.click(screen.getByRole('button', { name: /stop sharing/i }));
 
     // The dialog offers Cancel twice — its own close button and the action row —
     // and either one must mean the same thing.
@@ -140,7 +251,7 @@ describe('a failed revoke or rotate must not claim it worked', () => {
     apiFetch.mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) });
     render(<ShareCollectionMenu {...props} isPublic={false} />);
     openMenu();
-    fireEvent.click(screen.getByRole('option', { name: /rotate link/i }));
+    fireEvent.click(screen.getByRole('button', { name: /rotate link/i }));
     fireEvent.click(screen.getByRole('button', { name: /^rotate link$/i }));
 
     expect(await screen.findByText(/couldn't generate the invite link/i)).toBeInTheDocument();
@@ -151,7 +262,7 @@ describe('a failed revoke or rotate must not claim it worked', () => {
     apiFetch.mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) });
     render(<ShareCollectionMenu {...props} isPublic={false} />);
     openMenu();
-    fireEvent.click(screen.getByRole('option', { name: /stop sharing/i }));
+    fireEvent.click(screen.getByRole('button', { name: /stop sharing/i }));
     fireEvent.click(screen.getByRole('button', { name: /^stop sharing$/i }));
 
     expect(await screen.findByText(/couldn't generate the invite link/i)).toBeInTheDocument();
@@ -159,18 +270,27 @@ describe('a failed revoke or rotate must not claim it worked', () => {
   });
 });
 
-/* NOT tested here, and deliberately left so rather than left flaky: that
-   `ensureShareUrl` caches its answer in a ref, so a second share action reuses
-   the link instead of POSTing again (which, for a PRIVATE collection, mints a
-   token). Exercising it needs the HDS Select menu **opened twice in one test**,
-   and that cannot be driven in this harness — the second open never populates
-   the listbox once several renders have happened in the same file, whether the
-   query is scoped to the container, awaited via findByRole, given its own
-   collection code, or run after wiping document.body between tests. A test that
-   only passes when run alone would certify nothing and cost the next person the
-   same hour. The behaviour is visible in the browser and cheap to check by hand:
-   open the menu, copy the link, reopen it, copy again — one request in the
-   network panel, and the same token both times. */
+describe('the link is minted once', () => {
+  test('a second share action reuses it instead of POSTing again', async () => {
+    // For a PRIVATE collection every POST mints a token: asking twice would leave
+    // a second credential in the wild.
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+    });
+    render(<ShareCollectionMenu {...props} isPublic={false} />);
+
+    openMenu();
+    fireEvent.click(screen.getByRole('button', { name: /copy invite link/i }));
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1));
+    openMenu();
+    fireEvent.click(screen.getByRole('button', { name: /copy invite link/i }));
+    await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(2));
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(navigator.clipboard.writeText).toHaveBeenLastCalledWith('http://x/share/NEWTOKEN');
+  });
+});
 
 /**
  * The other half of this menu — the one that actually hands the link over — had
@@ -206,7 +326,7 @@ describe('handing the link over', () => {
 
   function pick(name) {
     openMenu();
-    fireEvent.click(screen.getByRole('option', { name }));
+    fireEvent.click(screen.getByRole('button', { name }));
   }
 
   test('a PUBLIC group is shared by its own address, and mints no token', async () => {

@@ -1199,7 +1199,7 @@ The collection's upcoming **date-based** reservations (LEND / RENT / RESERVE, st
 
 **POST, kept for contract stability** — the call used to mutate (it marked reservations delivered), which is why it was never a GET; it does not mutate anything any more, but changing the method now would only move a working contract for no benefit, so it stays POST.
 
-Response: `text/calendar; charset=utf-8` attachment named `{code}-calendar.ics`, `Cache-Control: private, no-store` (it carries member names), and a `security` log line with the event count and byte size. Curator-only; a plain member gets the standard `{"error": ...}` 403.
+Response: `text/calendar; charset=utf-8` attachment named `{code}-calendar.ics`, `Cache-Control: private, no-store` (it carries member names), and a `security` log line with the event count and byte size. Curator-only; a plain member gets the standard `{"error": ...}` 403. The file holds every upcoming reservation of a PROPRIETARY collection, but in a COMMUNITY one only those of things the downloader owns (the app's rule for who sees whoever asks; see `calendar_export_service`).
 
 ---
 

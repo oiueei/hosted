@@ -196,7 +196,7 @@ describe('the back link keeps out from under the corner icons', () => {
         </Routes>
       </MemoryRouter>
     );
-    await screen.findByRole('combobox'); // the share menu: a curator's hero is loaded
+    await screen.findByRole('button', { name: /share collection/i }); // a curator's hero is loaded
     // A curator gets every control a hero can hold: account, collection, share.
     // The contact icon that was a fourth left for the footer on 2026-10-04.
     const controls = container.querySelector('.hero-corners').children.length;
@@ -208,7 +208,11 @@ describe('the back link keeps out from under the corner icons', () => {
     // Three controls, each as wide as the CSS says an icon control is, and the gaps
     // between them (one fewer) at the row's own `gap`.
     expect(Number(count)).toBe(controls);
-    for (const selector of ['.account-menu-trigger', '.collection-menu-trigger', '.share-corner']) {
+    for (const selector of [
+      '.account-menu-trigger',
+      '.collection-menu-trigger',
+      '.share-menu-trigger',
+    ]) {
       expect(declarations(selector, 'width'), selector).toEqual([`${size}px`]);
     }
     expect(Number(gaps)).toBe(controls - 1);
@@ -228,11 +232,11 @@ describe('the collection menu panel anchors to the corner row like the account m
         </Routes>
       </MemoryRouter>
     );
-    await screen.findByRole('combobox'); // a curator's hero has loaded
+    await screen.findByRole('button', { name: /share collection/i }); // a curator's hero has loaded
 
     // DOM order is visual order in a flex row: each control is the child that is,
     // or holds, its own marker.
-    const markers = ['.account-menu', '.collection-menu', '.share-corner'];
+    const markers = ['.account-menu', '.collection-menu', '.share-menu'];
     const order = [...container.querySelector('.hero-corners').children].map((child) =>
       markers.find((marker) => child.matches(marker) || child.querySelector(marker))
     );
@@ -280,6 +284,53 @@ describe('the collection menu panel anchors to the corner row like the account m
     expect(declarations('.collection-menu-panel', 'max-width')).toEqual([
       'calc(100vw - 2 * var(--spacing-s))',
     ]);
+  });
+});
+
+describe('the share menu panel anchors to the corner row, and fits a 320px screen', () => {
+  test('.share-menu establishes no containing block of its own', () => {
+    // As .account-menu and .collection-menu: with one of its own, the panel would
+    // anchor to its trigger (the last of the row) and could run off a narrow screen.
+    for (const property of [
+      'position',
+      'transform',
+      'filter',
+      'perspective',
+      'contain',
+      'will-change',
+    ]) {
+      expect(declarations('.share-menu', property), property).toEqual([]);
+    }
+  });
+
+  test("the panel is pinned to the row's right edge, never wider than the screen", () => {
+    // At 320px the screen minus the page's two side paddings is 288px: the panel
+    // (min-width 12rem, the widest label "Copy invite link" + icon) fits inside it.
+    expect(declarations('.share-menu-panel', 'position')).toEqual(['absolute']);
+    expect(declarations('.share-menu-panel', 'right')).toEqual(['0']);
+    expect(declarations('.share-menu-panel', 'min-width')).toEqual(['12rem']);
+    expect(declarations('.share-menu-panel', 'max-width')).toEqual([
+      'calc(100vw - 2 * var(--spacing-s))',
+    ]);
+  });
+
+  test('the panel is a child of .share-menu, which sits directly in .hero-corners', async () => {
+    apiFetch.mockImplementation(() =>
+      Promise.resolve({ ok: true, status: 200, json: async () => CURATED })
+    );
+    const { container } = render(
+      <MemoryRouter initialEntries={['/collections/COL001']}>
+        <Routes>
+          <Route path="/collections/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await press(await screen.findByRole('button', { name: /share collection/i }));
+
+    const panel = container.querySelector('.share-menu-panel');
+    expect(panel).not.toBeNull();
+    expect(panel.parentElement).toHaveClass('share-menu');
+    expect(panel.parentElement.parentElement).toHaveClass('hero-corners');
   });
 });
 
@@ -352,7 +403,7 @@ describe('no hero carries the contact icon', () => {
         </Routes>
       </MemoryRouter>
     );
-    await screen.findByRole('combobox');
+    await screen.findByRole('button', { name: /share collection/i });
 
     expect(container.querySelector('.hero-corners').children).toHaveLength(3);
     expect(contactLinks(container.querySelector('.form-hero'))).toHaveLength(0);

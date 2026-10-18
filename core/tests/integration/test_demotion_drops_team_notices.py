@@ -271,3 +271,63 @@ class TestRemovingACoCuratorFromTheGroupDoesTheSame:
 
         # Told she was removed (that is its own notice), and the request is still there.
         assert (Type.BOOKING_REQUESTED, "HIS001") in _inbox(lili)
+
+
+def _question(who, thing):
+    res = client_for(who).post(
+        f"/api/v1/things/{thing.code}/faq/", {"question": "Does it work?"}, format="json"
+    )
+    assert res.status_code == 201, res.data
+    return res.data["code"]
+
+
+def _faq_inbox(user):
+    return sorted(
+        n.payload["faq_code"]
+        for n in InAppNotification.objects.filter(user=user, type=Type.FAQ_QUESTION)
+    )
+
+
+class TestTheQuestionsOfThatGroupGoToo:
+    def test_demoting_removes_the_questions_of_that_group_and_not_another(
+        self, world, lala, lele, lili
+    ):
+        drill_q = _question(lili, world["drill"])  # TOOLS1
+        novel_q = _question(lili, world["novel"])  # BOOKS1
+        assert _faq_inbox(lele) == sorted([drill_q, novel_q])
+
+        _demote(lala, world["tools"], lele)
+
+        assert _faq_inbox(lele) == [novel_q]
+        # The founder is still asked to answer both.
+        assert _faq_inbox(lala) == sorted([drill_q, novel_q])
+
+    def test_removing_the_co_curator_from_the_group_removes_them_too(self, world, lala, lele, lili):
+        drill_q = _question(lili, world["drill"])
+        novel_q = _question(lili, world["novel"])
+
+        _remove_from_group(lala, world["tools"], lele)
+
+        assert _faq_inbox(lele) == [novel_q]
+        assert drill_q not in _faq_inbox(lele)
+
+    def test_a_question_about_a_thing_they_still_run_stays(self, world, lala, lele, lili):
+        his_q = _question(lili, world["his"])  # his own thing, in the COMMUNITY group
+        both_q = _question(lili, world["both"])  # in TOOLS1 and BOOKS1; he curates both
+
+        _demote(lala, world["street"], lele)
+        assert _faq_inbox(lele) == sorted([his_q, both_q])
+
+        _demote(lala, world["tools"], lele)
+        assert _faq_inbox(lele) == sorted([his_q, both_q])  # BOOKS1 still his
+
+    def test_a_question_without_the_collection_stays(self, world, lala, lele):
+        InAppNotification.objects.create(
+            user=lele,
+            type=Type.FAQ_QUESTION,
+            payload={"thing_headline": "x", "questioner_name": "y", "faq_code": "OLDFAQ"},
+        )
+
+        _demote(lala, world["tools"], lele)
+
+        assert _faq_inbox(lele) == ["OLDFAQ"]

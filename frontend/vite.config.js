@@ -69,6 +69,11 @@ export default defineConfig(({ mode }) => ({
         // suppressing its own language chunk) was invisible to both the suite
         // and the ratchet.
         'src/i18n/locales/**',
+        // `src/legal/*.js` is the legal text in three languages, Markdown in a
+        // template string: data like the locales. A deployment replaces these files
+        // with its own, so counting them would move the ratchet with whoever edits
+        // a paragraph. What reads them is `LegalPage`, which is measured.
+        'src/legal/*.js',
       ],
       // Ratchet floor: set ~2-3 points below the suite's current coverage so it
       // guards against regression without blocking. Raise it as coverage grows,

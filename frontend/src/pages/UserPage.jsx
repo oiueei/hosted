@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Koros, Notification } from 'hds-react';
@@ -62,13 +62,22 @@ export default function UserPage() {
   const { tc, koro: koroType, btnStyle, btnSecondaryStyle } = useTheeeme(user?.theeeme_colors);
   useDocumentTitle(t('titles.user', { name: user?.name || t('common.profile') }));
 
+  // The code `/auth/me/` answered with, when this page had none stored: that answer
+  // is the profile (`UserSerializer`, the same one `/users/{code}/` serves for the
+  // own profile), so storing the code must not send a second request for it.
+  const loadedFromMe = useRef(null);
+
   useEffect(() => {
+    if (loadedFromMe.current && loadedFromMe.current === userCode) return;
     if (!userCode) {
       // If no userCode yet, fetch /me to get it
       apiFetch('/api/v1/auth/me/')
         .then((res) => (res.ok ? res.json() : Promise.reject()))
         .then((data) => {
-          if (data.code) localStorage.setItem('userCode', data.code);
+          if (data.code) {
+            loadedFromMe.current = data.code;
+            localStorage.setItem('userCode', data.code);
+          }
           setUser(data);
         })
         .catch(() => setError(t('userPage.errorLoading')));

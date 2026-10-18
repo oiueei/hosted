@@ -38,7 +38,7 @@ export default function ThingPage() {
   const { t } = useTranslation();
   const userCode = localStorage.getItem('userCode');
   const isAuthenticated = !!userCode;
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { btnStyle, btnSecondaryStyle } = useTheeeme();
 
   const [thing, setThing] = useState(null);
   const [error, setError] = useState('');
@@ -447,9 +447,6 @@ export default function ThingPage() {
           thingCode={thing.code}
           isOwner={canManage}
           isAuthenticated={isAuthenticated}
-          btnStyle={btnStyle}
-          btnSecondaryStyle={btnSecondaryStyle}
-          tc={tc}
           onToast={setToast}
         />
 

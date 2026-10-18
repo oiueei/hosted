@@ -111,6 +111,11 @@ is to raise the number — that is how smells #7 and #8 are born.
   `scripts/stress_test_locust.py`. Mind the plan limits documented there
   (essential-0 Postgres = 20 connections; Basic dyno).
 - Mutation testing (scoped): `scripts/mutation_test.sh [<base-ref>]`.
+  Two traps, both silent: **mutmut 3 skips every function that has a decorator**
+  (a view under `@method_decorator(ratelimit(...))` is never mutated, so it can't be
+  a survivor — mutate those by hand), and on macOS + Python 3.14 its forked children
+  die with exit -11 unless `no_proxy='*'` is exported (the script does it and counts
+  the segfaulted mutants; those were not judged).
 
 ## Session-end report (mandatory)
 

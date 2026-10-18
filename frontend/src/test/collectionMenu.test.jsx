@@ -411,7 +411,16 @@ describe('the collection menu in the CollectionPage hero corner', () => {
       });
       expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-cal.ics');
     });
-    expect(await screen.findByText('3 event(s) — check your downloads.')).toBeInTheDocument();
+    expect(await screen.findByText('3 events — check your downloads.')).toBeInTheDocument();
+  });
+
+  test('one event is “1 event”, not “1 events”', async () => {
+    renderCollection(COLLECTION, { calendar: calendarResponse({ count: '1', cancelled: '0' }) });
+    await openMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: CALENDAR }));
+
+    expect(await screen.findByText('1 event — check your downloads.')).toBeInTheDocument();
   });
 
   test('a zero calendar count downloads nothing and says why', async () => {
@@ -432,7 +441,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
     expect(
       await screen.findByText(
-        'Nothing coming up, but 2 cancelled reservation(s) — import the file so your calendar can drop them.'
+        'Nothing coming up, but 2 cancelled reservations — import the file so your calendar can drop them.'
       )
     ).toBeInTheDocument();
     expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-cal.ics');
@@ -446,7 +455,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 
     expect(
       await screen.findByText(
-        '3 event(s) — check your downloads. It includes 1 cancelled reservation(s), marked so your calendar can drop them.'
+        '3 events — check your downloads. It includes 1 cancelled reservation, marked so your calendar can drop it.'
       )
     ).toBeInTheDocument();
     expect(downloadBlob).toHaveBeenCalledTimes(1);
@@ -559,7 +568,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
   });
 
   test('starting a download drops the message of the previous one, and it does not come back', async () => {
-    // One message at a time: a finished "3 event(s)" beside a half-done stats
+    // One message at a time: a finished "3 events" beside a half-done stats
     // file would read as both having completed. The stats response is held in
     // flight so the test sees both moments — the old message gone while the new
     // download runs, and still gone once it lands (a status zone that merely
@@ -573,20 +582,20 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     });
     await openMenu();
     fireEvent.click(screen.getByRole('button', { name: CALENDAR }));
-    expect(await screen.findByText('3 event(s) — check your downloads.')).toBeInTheDocument();
+    expect(await screen.findByText('3 events — check your downloads.')).toBeInTheDocument();
 
     await press(screen.getByRole('button', { name: TRIGGER }));
     fireEvent.click(screen.getByRole('button', { name: 'Download the stats (CSV)' }));
 
     expect(await screen.findByText('Preparing the file…')).toBeInTheDocument();
-    expect(screen.queryByText('3 event(s) — check your downloads.')).toBeNull();
+    expect(screen.queryByText('3 events — check your downloads.')).toBeNull();
 
     release();
     await waitFor(() =>
       expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'COL001-stats.csv')
     );
     await waitFor(() => expect(screen.queryByText('Preparing the file…')).toBeNull());
-    expect(screen.queryByText('3 event(s) — check your downloads.')).toBeNull();
+    expect(screen.queryByText('3 events — check your downloads.')).toBeNull();
   });
 
   test('a stats error is gone once the next stats download succeeds', async () => {
@@ -714,7 +723,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     await openMenu();
 
     const accountTrigger = screen.getByRole('button', { name: 'Your account' });
-    fireEvent.mouseDown(accountTrigger);
+    fireEvent.pointerDown(accountTrigger);
     fireEvent.click(accountTrigger);
 
     expect(panel()).toBeNull();
@@ -959,7 +968,7 @@ describe('the collection menu for a member', () => {
 
     const account = screen.getByRole('button', { name: 'Your account' });
     const menu = screen.getByRole('button', { name: TRIGGER });
-    const share = container.querySelector('.hero-corners .share-corner');
+    const share = container.querySelector('.hero-corners .share-menu');
     expect(share).not.toBeNull();
     expect(account.compareDocumentPosition(menu)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(menu.compareDocumentPosition(share)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
@@ -1093,7 +1102,7 @@ describe('the collection menu — "Requests to me"', () => {
     await waitFor(() => expect(entries()[0]).toBe(REQUESTS));
     // Close this one, open the account menu (a click outside closes it).
     const accountTrigger = screen.getByRole('button', { name: 'Your account' });
-    fireEvent.mouseDown(accountTrigger);
+    fireEvent.pointerDown(accountTrigger);
     fireEvent.click(accountTrigger);
 
     expect(screen.getByRole('link', { name: 'My requests' })).toBeInTheDocument();

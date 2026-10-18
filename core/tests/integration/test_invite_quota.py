@@ -251,3 +251,21 @@ def test_an_unset_cap_records_no_bookkeeping_at_all():
         # The other half: a real send does land, so this isn't a dead assertion.
         _consume_invite_quota(QUOTA_USER, 2)
         assert caches["default"].get(_invite_quota_key(QUOTA_USER)) == 2
+
+
+def test_a_deployment_that_never_defines_the_layer_switch_keeps_the_quota_on(settings):
+    """`getattr(settings, "RATELIMIT_ENABLE", True)`: a settings module that does
+    not name the switch at all has the limits ON, not silently off."""
+    from django.core.cache import caches
+
+    from core.services import invitation_service as svc
+
+    settings.CACHES = QUOTA_SETTINGS["CACHES"]
+    settings.INVITE_EMAILS_PER_DAY = 1
+    del settings.RATELIMIT_ENABLE
+    caches["default"].clear()
+
+    assert svc._invite_quota_left("NOSWIT") == 1
+    svc._consume_invite_quota("NOSWIT", 1)
+
+    assert svc._invite_quota_left("NOSWIT") == 0
