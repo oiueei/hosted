@@ -363,8 +363,11 @@ export default function EditCollectionPage() {
         <LocalizedInfo id="edit-collection-localized-info" />
         <Select
           id="edit-collection-status"
-          texts={{ label: t('editCollection.statusLabel'), language: hdsLang(i18n.language) }}
-          helper={t('editCollection.statusHelper')}
+          texts={{
+            label: t('editCollection.statusLabel'),
+            assistive: t('editCollection.statusHelper'),
+            language: hdsLang(i18n.language),
+          }}
           options={STATUS_OPTIONS}
           value={status}
           onChange={(selectedOptions) => {
@@ -503,8 +506,11 @@ export default function EditCollectionPage() {
           />
           <Select
             id="edit-collection-digest"
-            texts={{ label: t('editCollection.digestLabel'), language: hdsLang(i18n.language) }}
-            helper={t('editCollection.digestHelper')}
+            texts={{
+              label: t('editCollection.digestLabel'),
+              assistive: t('editCollection.digestHelper'),
+              language: hdsLang(i18n.language),
+            }}
             options={DIGEST_OPTIONS}
             value={digestFrequency}
             onChange={(selectedOptions) => {
@@ -515,8 +521,11 @@ export default function EditCollectionPage() {
           />
           <Select
             id="edit-collection-language"
-            texts={{ label: t('collectionLanguage.label'), language: hdsLang(i18n.language) }}
-            helper={t('collectionLanguage.helper')}
+            texts={{
+              label: t('collectionLanguage.label'),
+              assistive: t('collectionLanguage.helper'),
+              language: hdsLang(i18n.language),
+            }}
             options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
             value={language}
             onChange={(selectedOptions) => {

@@ -393,8 +393,11 @@ function CreateCollectionForm({ kind }) {
                 so the one field doesn't read differently on the two screens. */}
           <Select
             id="create-collection-digest"
-            texts={{ label: t('editCollection.digestLabel'), language: hdsLang(i18n.language) }}
-            helper={t('editCollection.digestHelper')}
+            texts={{
+              label: t('editCollection.digestLabel'),
+              assistive: t('editCollection.digestHelper'),
+              language: hdsLang(i18n.language),
+            }}
             options={[
               { label: t('editCollection.digestNone'), value: 'NONE' },
               { label: t('editCollection.digestWeekly'), value: 'WEEKLY' },
@@ -407,8 +410,11 @@ function CreateCollectionForm({ kind }) {
           />
           <Select
             id="create-collection-language"
-            texts={{ label: t('collectionLanguage.label'), language: hdsLang(i18n.language) }}
-            helper={t('collectionLanguage.helper')}
+            texts={{
+              label: t('collectionLanguage.label'),
+              assistive: t('collectionLanguage.helper'),
+              language: hdsLang(i18n.language),
+            }}
             options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
             value={language}
             onChange={(selectedOptions) => {
