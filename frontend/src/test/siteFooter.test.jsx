@@ -12,9 +12,14 @@ import { declarations, declarationsInMedia, rulesFor, declared } from './cssRule
 // `externalForms` a deployment may have are switched off here by stubbing the helper
 // that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
-// The pages a deployment may send "Request access" to (`requestAccessPaths`) are switched
-// off the same way: this file pins what the standalone shows, whatever `deployment/` holds.
-vi.mock('../deployment', async (orig) => ({ ...(await orig()), requestAccessPaths: {} }));
+// The pages a deployment may send "Request access" to (`requestAccessPaths`) and its own page
+// about OIUEEI (`aboutPath`, which decides the tagline) are switched off the same way: this
+// file pins what the standalone shows, whatever `deployment/` holds.
+vi.mock('../deployment', async (orig) => ({
+  ...(await orig()),
+  requestAccessPaths: {},
+  aboutPath: null,
+}));
 
 /**
  * The colophon carries the public doors a signed-out reader has.
