@@ -394,6 +394,24 @@ describe('HomePage — invitations waiting for an answer', () => {
     collection_headline: 'Books',
   };
 
+  test('the card says it is an invitation to join, then names the collection', async () => {
+    mockDashboard({ mine: [MINE], invitations: [TOOLS] });
+    renderHome();
+
+    // "Lele has invited you to join" + the headline on the next line: one sentence.
+    const label = await screen.findByText('Lele has invited you to join');
+    expect(label).toBeInTheDocument();
+    expect(screen.getByText('Tools')).toBeInTheDocument();
+    expect(screen.queryByText(/invited you to view/)).toBeNull();
+  });
+
+  test('an owner with no name is “A member”, not an empty subject', async () => {
+    mockDashboard({ mine: [MINE], invitations: [{ ...TOOLS, owner_name: '' }] });
+    renderHome();
+
+    expect(await screen.findByText('A member has invited you to join')).toBeInTheDocument();
+  });
+
   test('dismissing one removes that one and leaves the other waiting', async () => {
     mockDashboard({ mine: [MINE], invitations: [TOOLS, BOOKS] });
     renderHome();

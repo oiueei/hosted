@@ -230,7 +230,7 @@
     "myProfile": "El meu perfil",
     "myRequests": "Les meves sol·licituds",
     "requestsToMe": "Sol·licituds per a mi",
-    "invitedBy": "{{name}} t'ha convidat a veure",
+    "invitedBy": "{{name}} t'ha convidat a unir-te a",
     "offlineLabel": "Problema de connexió",
     "offlineBody": "Ara mateix no podem connectar amb OIUEEI. Comprova la connexió i torna-ho a provar.",
     "loadErrorLabel": "No s'ha pogut carregar aquesta secció",

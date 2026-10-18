@@ -230,7 +230,7 @@
     "myProfile": "Mi perfil",
     "myRequests": "Mis solicitudes",
     "requestsToMe": "Solicitudes para mí",
-    "invitedBy": "{{name}} te ha invitado a ver",
+    "invitedBy": "{{name}} te ha invitado a unirte a",
     "offlineLabel": "Problema de conexión",
     "offlineBody": "No podemos conectar con OIUEEI ahora mismo. Revisa tu conexión e inténtalo de nuevo.",
     "loadErrorLabel": "No se ha podido cargar esta sección",

@@ -236,7 +236,7 @@
     "myProfile": "My profile",
     "myRequests": "My requests",
     "requestsToMe": "Requests to me",
-    "invitedBy": "{{name}} has invited you to view",
+    "invitedBy": "{{name}} has invited you to join",
     "offlineLabel": "Connection problem",
     "offlineBody": "We can't reach OIUEEI right now. Check your connection and try again.",
     "loadErrorLabel": "Couldn't load this section",
