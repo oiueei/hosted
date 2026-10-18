@@ -27,6 +27,9 @@ import { settle } from './settle';
 // `externalForms` a deployment may have are switched off here by stubbing the helper
 // that reads them; `externalForms.test.jsx` pins them on, with the module mocked.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
+// The pages a deployment may send "Request access" to (`requestAccessPaths`) are switched
+// off the same way: this file pins what the standalone shows, whatever `deployment/` holds.
+vi.mock('../deployment', async (orig) => ({ ...(await orig()), requestAccessPaths: {} }));
 
 function mockResponse(data, ok = true) {
   return { ok, status: ok ? 200 : 400, json: () => Promise.resolve(data) };
