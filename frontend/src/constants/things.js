@@ -58,9 +58,12 @@ export function kindOfThingType(type) {
   return Object.keys(KIND_THING_TYPES).find((kind) => KIND_THING_TYPES[kind].includes(type));
 }
 
+// The status tags' colours. Tokens wherever HDS has the colour; the amber pair
+// (requested / pending questions) stays hex because HDS has no amber text
+// colour of this contrast on a light amber ground.
 export const TAG_THEMES = {
   taken: { '--tag-background': '#fff4e5', '--tag-color': '#b54708' },
-  inactive: { '--tag-background': '#e8e8e8', '--tag-color': '#525252' },
+  inactive: { '--tag-background': 'var(--color-black-10)', '--tag-color': 'var(--color-black-70)' },
   pending: { '--tag-background': '#fff4e5', '--tag-color': '#b54708' },
   // Owner-defined collection tags assigned to a thing — neutral bussi tint,
   // distinct from the amber status tags and grey inactive tag.
