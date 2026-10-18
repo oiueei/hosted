@@ -63,6 +63,10 @@ export const aboutPath = '/welcome';
 // welcome than one link fewer.
 export const faqPath = '/faq';
 
+// The guide for whoever runs a group (the collection menu and the co-curator notice
+// link to it). Empty until the FAQ has its section on running a group.
+export const curatorGuidePath = null;
+
 // The three ways of writing to the team go to forms on Tally, not to pages of the
 // app: the footer's "Contact us", "Ideas and bugs" and "Request
 // access". Core knows nothing about who hosts them — `utils/externalForms.js` gives
