@@ -167,6 +167,10 @@ export const deploymentRoutes = [
 export const popInPath = '/join';        // the "new here?" button on /login
 export const aboutPath = '/about';       // the footer's "what this is" link
 export const faqPath = '/faq';           // the help link under /login's form
+// A guide for whoever runs a group (`curatorGuidePath`, null upstream): when set, a curator's
+// collection menu gets an entry "If you run a group" after the downloads, and the notice
+// that tells a member they were made a co-curator ends with the same link.
+export const curatorGuidePath = '/guide';
 
 // Forms hosted elsewhere (a form service) that stand in for the app's own ways of
 // writing to you: the footer's "Contact us", "Ideas and bugs" and "Request access".
@@ -189,7 +193,7 @@ export const deploymentI18n = {
 ```
 
 Upstream exports the empty values: no extra routes, no open door, no about page,
-no FAQ link, no forms of its own, no pages to ask on, no extra copy. `App.jsx`, `LoginPage.jsx`,
+no FAQ link, no guide for whoever runs a group, no forms of its own, no pages to ask on, no extra copy. `App.jsx`, `LoginPage.jsx`,
 `SiteFooter.jsx`, `CollectionPage.jsx` and `VerifyPage.jsx` read them and are
 **byte-identical in both**.
 

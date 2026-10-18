@@ -915,6 +915,9 @@
   "feedback": {
     "button": "Ideas and bugs"
   },
+  "curatorGuide": {
+    "link": "If you run a group"
+  },
   "collectionLanguage": {
     "label": "Language of the group messages",
     "helper": "The language the group's emails are written in. Any member who has set their own language reads them in theirs."

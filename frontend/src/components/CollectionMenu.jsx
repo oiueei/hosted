@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { IconDocumentGroup, Notification } from 'hds-react';
 import useDismissable from '../hooks/useDismissable';
 import useReceivesRequests from '../hooks/useReceivesRequests';
+import { curatorGuidePath } from '../deployment';
 import StatusRegion from './StatusRegion';
 import { useCollectionBase } from '../hooks/useCollectionBase';
 import { collectionPath } from '../utils/collectionPath';
@@ -191,6 +192,12 @@ export default function CollectionMenu({
               >
                 {t('collectionExport.downloadButton')}
               </button>
+              {/* The deployment's guide for whoever runs a group, where it has one. */}
+              {curatorGuidePath && (
+                <Link to={curatorGuidePath} onClick={close}>
+                  {t('curatorGuide.link')}
+                </Link>
+              )}
               {/* The summary goes to the whole team, the founder included, so whoever
                   runs the group has the switch too. */}
               {digest && (

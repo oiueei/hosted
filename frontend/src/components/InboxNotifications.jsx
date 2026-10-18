@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
+import { curatorGuidePath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 import { formatBookingWhen, formatDateTime } from '../utils/rental';
 import {
@@ -482,6 +483,14 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
                 <>
                   {' '}
                   <Link to={link.to}>{link.label}</Link>
+                </>
+              )}
+              {/* Someone just made co-curator is shown where the deployment explains
+                  what running a group means, when it has such a page. */}
+              {n.type === 'PROMOTED_CO_OWNER' && curatorGuidePath && (
+                <>
+                  {' '}
+                  <Link to={curatorGuidePath}>{t('curatorGuide.link')}</Link>
                 </>
               )}
               {registeredAt && (

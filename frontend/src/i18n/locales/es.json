@@ -915,6 +915,9 @@
   "feedback": {
     "button": "Ideas y fallos"
   },
+  "curatorGuide": {
+    "link": "Si dinamizas un grupo"
+  },
   "collectionLanguage": {
     "label": "Idioma de los mensajes del grupo",
     "helper": "El idioma en el que se escriben los correos del grupo. Quien haya elegido su propio idioma los recibe en el suyo."

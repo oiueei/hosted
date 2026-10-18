@@ -915,6 +915,9 @@
   "feedback": {
     "button": "Idees i errors"
   },
+  "curatorGuide": {
+    "link": "Si dinamitzes un grup"
+  },
   "collectionLanguage": {
     "label": "Llengua dels missatges del grup",
     "helper": "La llengua en què s’escriuen els correus del grup. Qui hagi triat la seva pròpia llengua els rep en la seva."
