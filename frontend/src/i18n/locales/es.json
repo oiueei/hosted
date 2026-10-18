@@ -222,6 +222,13 @@
       "body": "Tienes {{items}}.",
       "nothing": "No tienes nada pendiente.",
       "link": "Ver todas"
+    },
+    "info": {
+      "summary_one": "1 novedad",
+      "summary_other": "{{count}} novedades",
+      "show": "Ver",
+      "hide": "Ocultar",
+      "dismissAll": "Descartar todas"
     }
   },
   "home": {

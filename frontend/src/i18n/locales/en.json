@@ -228,6 +228,13 @@
       "body": "You have {{items}}.",
       "nothing": "You have nothing pending.",
       "link": "See them all"
+    },
+    "info": {
+      "summary_one": "1 update",
+      "summary_other": "{{count}} updates",
+      "show": "Show",
+      "hide": "Hide",
+      "dismissAll": "Dismiss all"
     }
   },
   "home": {

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Notification } from 'hds-react';
+import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
 import { curatorGuidePath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 import { formatBookingWhen, formatDateTime } from '../utils/rental';
 import {
   GROUP_THRESHOLD,
+  isInformativeNotice,
   isTeamBookingNotice,
   localToday,
   summarizeOwnerBookings,
@@ -97,6 +98,11 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
   // be read (the card then says no number rather than an invented one).
   const [figures, setFigures] = useState(null);
   const folded = notifications.filter(isTeamBookingNotice).length > GROUP_THRESHOLD;
+  // What only informs folds into one card of its own once there are many; the card
+  // can be opened to read them one by one.
+  const infoCount = notifications.filter(isInformativeNotice).length;
+  const infoFolded = infoCount > GROUP_THRESHOLD;
+  const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -161,6 +167,16 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     try {
       const scope = collection ? `&collection=${encodeURIComponent(collection)}` : '';
       await apiFetch(`/api/v1/inbox/?group=bookings${scope}`, { method: 'DELETE' });
+    } catch (err) {
+      onNetworkError?.(err);
+    }
+  };
+
+  const dismissInfo = async () => {
+    setNotifications((prev) => prev.filter((n) => !isInformativeNotice(n)));
+    try {
+      const scope = collection ? `&collection=${encodeURIComponent(collection)}` : '';
+      await apiFetch(`/api/v1/inbox/?group=info${scope}`, { method: 'DELETE' });
     } catch (err) {
       onNetworkError?.(err);
     }
@@ -450,9 +466,30 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           <Link to="/owner-bookings">{t('inbox.summary.link')}</Link>
         </Notification>
       )}
+      {infoFolded && (
+        <Notification
+          type="info"
+          label={t('inbox.info.summary', { count: infoCount })}
+          notificationAriaLabel={t('inbox.info.summary', { count: infoCount })}
+          style={{ marginBottom: 'var(--spacing-s)' }}
+        >
+          <Button
+            variant="supplementary"
+            size="small"
+            aria-expanded={infoOpen}
+            onClick={() => setInfoOpen((open) => !open)}
+          >
+            {infoOpen ? t('inbox.info.hide') : t('inbox.info.show')}
+          </Button>{' '}
+          <Button variant="supplementary" size="small" onClick={dismissInfo}>
+            {t('inbox.info.dismissAll')}
+          </Button>
+        </Notification>
+      )}
       {notifications
         .filter((n) => !folded || !isTeamBookingNotice(n))
-        .map((n) => {
+        .filter((n) => !infoFolded || infoOpen || !isInformativeNotice(n))
+        .map((n, position) => {
           const link = notificationLink(n);
           // Every request- and reservation-notice says when, under its body:
           // when the event the notice records happened (`created` — for a
@@ -473,6 +510,8 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
               key={n.code}
               type={notificationType(n.type)}
               label={notificationLabel(n)}
+              // Each notice is a landmark; the number keeps two of one kind apart.
+              notificationAriaLabel={`${notificationLabel(n)} ${position + 1}`}
               dismissible
               closeButtonLabelText={t('home.dismiss')}
               onClose={() => dismiss(n.code)}

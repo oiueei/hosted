@@ -19,6 +19,29 @@ export const GROUP_THRESHOLD = 3;
 
 const TEAM_TYPES = new Set(['BOOKING_REQUESTED', 'BOOKING_DECIDED', 'RESERVATION_MADE']);
 
+/**
+ * The notice types that ask their reader to do something — decide a request,
+ * answer a question, approve a suggestion, look at a report. Every other notice
+ * only informs. The server's list is `InAppNotification.ACTION_NOTICE_TYPES`.
+ */
+const ACTION_TYPES = new Set([
+  'BOOKING_REQUESTED',
+  'FAQ_QUESTION',
+  'INVITE_PROPOSED',
+  'THING_REPORTED',
+]);
+
+/**
+ * Whether a notice only informs — the browser's copy of
+ * `InAppNotification.informative_notices`: not one that asks for an action and not
+ * one of the team's request and reservation group. The inbox folds these into one
+ * card past `GROUP_THRESHOLD`, and `DELETE /api/v1/inbox/?group=info` takes exactly
+ * them; `test/inboxGroupParity.json` (`informative`) holds the two rules together.
+ */
+export function isInformativeNotice(notification) {
+  return !ACTION_TYPES.has(notification.type) && !isTeamBookingNotice(notification);
+}
+
 export function isTeamBookingNotice(notification) {
   const { type } = notification;
   if (TEAM_TYPES.has(type)) return true;

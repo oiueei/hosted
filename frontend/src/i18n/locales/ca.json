@@ -222,6 +222,13 @@
       "body": "Tens {{items}}.",
       "nothing": "No tens res pendent.",
       "link": "Veure-les totes"
+    },
+    "info": {
+      "summary_one": "1 novetat",
+      "summary_other": "{{count}} novetats",
+      "show": "Veure",
+      "hide": "Amagar",
+      "dismissAll": "Descarta-les totes"
     }
   },
   "home": {
