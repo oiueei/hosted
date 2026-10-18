@@ -168,18 +168,33 @@ class TestEventAndRetentionMetrics:
         assert _row(sections, title, "Holds requested / accepted") == "0 / 0"
         assert _row(sections, title, "Users joined (7d / 30d / all)") == "1 / 1 / 1"
 
-    def test_things_added_removed_global_and_per_collection(self, user):
-        # user owns 2 real collections → n_collections = 2 for the per-collection avg.
+    def test_things_added_removed_per_collection_created_in_the_period(self, user):
+        # Two collections exist today, but the log saw three created (one since deleted):
+        # the things it counts belong to those three, not to today's two.
+        title = "History (accumulated, from Event log)"
         _real_collection(user, code="HC1")
         _real_collection(user, code="HC2")
+        for code in ("HC1", "HC2", "HC3"):
+            Event.log(Event.Kind.COLLECTION_CREATED, actor=user, collection=code)
+        Event.log(Event.Kind.COLLECTION_DELETED, actor=user, collection="HC3")
         for _ in range(3):
             Event.log(Event.Kind.THING_ADDED, actor=user)
         Event.log(Event.Kind.THING_REMOVED, actor=user)
+
         sections = build_report()
-        title = "History (accumulated, from Event log)"
+
         assert _row(sections, title, "Things added / removed") == "3 / 1"
-        # 3/2 added, 1/2 removed, one decimal (matches _avg formatting).
-        assert _row(sections, title, "Avg added / removed per collection") == "1.5 / 0.5"
+        # 3/3 added, 1/3 removed, one decimal (matches _avg formatting).
+        assert _row(sections, title, "Avg added / removed per collection created") == "1.0 / 0.3"
+
+    def test_with_no_collection_created_the_average_has_nothing_to_say(self, user):
+        _real_collection(user, code="HC1")  # exists today, but the log never saw it created
+        Event.log(Event.Kind.THING_ADDED, actor=user)
+
+        sections = build_report()
+
+        title = "History (accumulated, from Event log)"
+        assert _row(sections, title, "Avg added / removed per collection created") == "— / —"
 
     def test_guest_to_creator_conversion(self, user, user2):
         # user2 joins a real collection as guest, then later creates their own.

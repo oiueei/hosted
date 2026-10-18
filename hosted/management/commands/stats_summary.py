@@ -278,9 +278,11 @@ def _history_section(events, now):
     # series' stocks take it.
     added = n(K.THING_ADDED)
     removed = n(K.THING_REMOVED) + len(retired_orphans(events))
-    # The same real add/remove lifecycle averaged over the real (non-onboarding)
-    # collections, so it reads right below the global counts.
-    n_collections = Collection.objects.filter(is_onboarding=False).count()
+    # The same add/remove lifecycle averaged over the collections created in the same
+    # period: the counts above are the log's whole history, so dividing by today's
+    # collections (which leave out the deleted ones and any older than the log) would
+    # measure two different populations.
+    n_created = n(K.COLLECTION_CREATED)
     return {
         "title": "History (accumulated, from Event log)",
         "rows": [
@@ -291,8 +293,8 @@ def _history_section(events, now):
             ),
             ("Things added / removed", f"{added} / {removed}"),
             (
-                "Avg added / removed per collection",
-                f"{_avg(added, n_collections)} / {_avg(removed, n_collections)}",
+                "Avg added / removed per collection created",
+                f"{_avg(added, n_created)} / {_avg(removed, n_created)}",
             ),
             ("Members joined / left", f"{n(K.MEMBER_JOINED)} / {n(K.MEMBER_LEFT)}"),
             ("FAQs asked", n(K.FAQ_ASKED)),
