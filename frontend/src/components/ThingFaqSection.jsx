@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Highlight, TextArea } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';
+import useTheeeme from '../hooks/useTheeeme';
 
 /**
  * The FAQ section of ThingPage: the question list (owner sees hidden ones and
@@ -9,19 +10,12 @@ import { apiFetch, extractApiError } from '../services/api';
  * non-owner — the ask-a-question form. Self-contained: owns its FAQ list, form
  * state and the fetch (on mount, by thingCode), reporting feedback via onToast.
  *
- * Props: `thingCode`, `isOwner`, `isAuthenticated`, `btnStyle`,
- * `btnSecondaryStyle`, `tc` (theeeme colours for the Highlight accent), `onToast`.
+ * Props: `thingCode`, `isOwner`, `isAuthenticated`, `onToast`. The theeeme (button
+ * tokens, the Highlight accent) is read here with `useTheeeme()`, as the page does.
  */
-export default function ThingFaqSection({
-  thingCode,
-  isOwner,
-  isAuthenticated,
-  btnStyle,
-  btnSecondaryStyle,
-  tc,
-  onToast,
-}) {
+export default function ThingFaqSection({ thingCode, isOwner, isAuthenticated, onToast }) {
   const { t } = useTranslation();
+  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [faqs, setFaqs] = useState([]);
   const [faqsNext, setFaqsNext] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
