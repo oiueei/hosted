@@ -41,8 +41,11 @@ extension points described in `SELF_HOSTING.md`.
 
 - `hosted/viral.py` is what `VIRAL_LINE_PROVIDER=hosted.viral.pick_line` points at (set by the
   operator in Heroku, never in code): fifteen lines, each sent to the form the recipient may open or to
-  `/access/<need>`. The lines and the page's copy (`frontend/src/deployment/i18n.js`, `access.*`) are
-  this deployment's words; `core` keeps only the hook.
-- `/access/:need` (`frontend/src/deployment/pages/AccessPage.jsx`) and its two counters
-  (`hosted.models.AccessInterest`) hold numbers per day and need — keep it that way (DESIGN §9): no user,
-  address or User-Agent in a row. `/legal` says so (`frontend/src/legal/`).
+  `/access/library` / `/access/shed`. The lines and the page's copy (`frontend/src/deployment/i18n.js`,
+  `access.*`) are this deployment's words; `core` keeps only the hook.
+- `/access/:need` (`frontend/src/deployment/pages/AccessPage.jsx`) has **two sections**, `library` (lending
+  and renting out are one permission here) and `shed`; a community is asked for from the collection form's
+  own option (Tally). `requestAccessPaths` in `frontend/src/deployment/index.js` sends the "Request access"
+  of a withheld library or shed on `/new` to those pages. Its two counters (`hosted.models.AccessInterest`)
+  hold numbers per day and need — keep it that way (DESIGN §9): no user, address or User-Agent in a row.
+  `/legal` says so (`frontend/src/legal/`).
