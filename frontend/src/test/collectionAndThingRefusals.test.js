@@ -19,6 +19,10 @@ const CASES = [
   ['too_many_rows', { max: 100 }, 'Se pueden importar como máximo 100 filas de una vez.'],
   ['thing_not_inactive', undefined, 'Esta cosa no está oculta.'],
   ['cannot_add_things', undefined, 'No puedes añadir cosas a esta colección.'],
+  ['cannot_request_own_thing', undefined, 'No puedes pedir una cosa tuya.'],
+  ['collection_paused', undefined, es.requestErrors.collection_paused],
+  ['booking_not_pending', undefined, es.requestErrors.booking_not_pending],
+  ['profile_not_yours', undefined, 'Solo puedes editar tu propio perfil.'],
   ['manager_cannot_ask', undefined, es.requestErrors.manager_cannot_ask],
   ['only_managers_answer', undefined, es.requestErrors.only_managers_answer],
 ];

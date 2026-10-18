@@ -35,7 +35,7 @@ from core.services.booking_service import (
     resolve_rental_collection,
 )
 from core.services.team import managers_ready_collections
-from core.views._helpers import body_dict, deny_if_cannot_view
+from core.views._helpers import body_dict, deny_if_cannot_view, refusal_body
 
 
 class ThingRequestView(APIView):
@@ -71,14 +71,14 @@ class ThingRequestView(APIView):
         # Owner cannot request their own thing
         if thing.is_owner(request.user.code):
             return Response(
-                {"error": "Cannot request your own thing"},
+                refusal_body("Cannot request your own thing", code="cannot_request_own_thing"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Check if thing is available
         if thing.status != Thing.Status.ACTIVE:
             return Response(
-                {"error": "Thing is not available for reservation"},
+                refusal_body("Thing is not available for reservation", code="thing_unavailable"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -89,7 +89,7 @@ class ThingRequestView(APIView):
             and not thing_collections.filter(status=Collection.Status.ACTIVE).exists()
         ):
             return Response(
-                {"error": "This collection is currently inactive"},
+                refusal_body("This collection is currently inactive", code="collection_inactive"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -101,7 +101,7 @@ class ThingRequestView(APIView):
             ).exists()
         ):
             return Response(
-                {"error": "This collection is currently paused"},
+                refusal_body("This collection is currently paused", code="collection_paused"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -111,7 +111,7 @@ class ThingRequestView(APIView):
         owner_email = thing.owner.email
         if not owner_email:
             return Response(
-                {"error": "Thing owner not found"},
+                refusal_body("Thing owner not found", code="thing_owner_missing"),
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

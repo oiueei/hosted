@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from core.models import Collection, User
 from core.serializers import UserPublicSerializer, UserSerializer, UserUpdateSerializer
+from core.views._helpers import refusal_body
 
 
 def can_view_user(viewer_user_code, target_user_code):
@@ -55,7 +56,9 @@ class UserDetailView(APIView):
         # Check if viewer can see this user's profile
         if not can_view_user(request.user.code, user_code):
             return Response(
-                {"error": "Not authorized to view this user's profile"},
+                refusal_body(
+                    "Not authorized to view this user's profile", code="profile_not_viewable"
+                ),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -86,7 +89,7 @@ class UserDetailView(APIView):
         # Can only update own profile
         if request.user.code != user_code:
             return Response(
-                {"error": "Cannot update another user's profile"},
+                refusal_body("Cannot update another user's profile", code="profile_not_yours"),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
