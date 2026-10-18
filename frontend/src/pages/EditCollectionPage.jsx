@@ -1,19 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { TextInput, TextArea, Select, Button, Accordion } from 'hds-react';
+import { TextInput, TextArea, Select, Button } from 'hds-react';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import CollectionForm from '../components/CollectionForm';
+import CollectionAdvancedFields from '../components/CollectionAdvancedFields';
 import CollectionModeField from '../components/CollectionModeField';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
-import RentalRulesFields from '../components/RentalRulesFields';
-import ReservationRulesFields from '../components/ReservationRulesFields';
-import ClosedDatesField from '../components/ClosedDatesField';
-import ImageUpload from '../components/ImageUpload';
-import PdfUpload from '../components/PdfUpload';
-import { SUPPORTED_LANGUAGES } from '../i18n';
-import TagInput from '../components/TagInput';
 import LocalizedInfo from '../components/LocalizedInfo';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
@@ -399,158 +393,61 @@ export default function EditCollectionPage() {
           theeemeColor01={tc.color_01}
         />
       </div>
-      {/* Everything optional, with a safe default, folds away so the happy path
-          (title, status, mode, who can add) reads at a glance (DESIGN §3). */}
-      <Accordion
-        heading={t('createCollection.advancedTitle')}
-        language={hdsLang(i18n.language)}
-        headingLevel={2}
-        theme={tc.color_04 ? { '--header-color': `var(--color-${tc.color_04})` } : undefined}
-      >
-        <div className="form-grid">
-          <div>
-            <TagInput
-              tags={tags}
-              onChange={setTags}
-              label={t('createCollection.tagsLabel')}
-              placeholder={t('createCollection.tagsPlaceholder')}
-              helperText={t('createCollection.tagsHelper')}
-            />
-            <LocalizedInfo id="edit-collection-tags-info" variant="tags" />
-          </div>
-          {isReservations ? (
-            <ReservationRulesFields
-              idPrefix="edit-collection"
-              reservationUnit={reservationUnit}
-              setReservationUnit={setReservationUnit}
-              reservationMaxDays={reservationMaxDays}
-              setReservationMaxDays={setReservationMaxDays}
-              reservationHorizonDays={reservationHorizonDays}
-              setReservationHorizonDays={setReservationHorizonDays}
-              reservationMaxActivePerMember={reservationMaxActivePerMember}
-              setReservationMaxActivePerMember={setReservationMaxActivePerMember}
-              reservationMinMinutes={reservationMinMinutes}
-              setReservationMinMinutes={setReservationMinMinutes}
-              reservationMaxMinutes={reservationMaxMinutes}
-              setReservationMaxMinutes={setReservationMaxMinutes}
-              openingHours={openingHours}
-              setOpeningHours={setOpeningHours}
-              setOpeningHoursValid={setOpeningHoursValid}
-              rentalWeekdays={rentalWeekdays}
-              setRentalWeekdays={setRentalWeekdays}
-              theeemeColor01={tc.color_01}
-              theeemeColor06={tc.color_06}
-            />
-          ) : hasRequestPage ? (
-            <RentalRulesFields
-              idPrefix="edit-collection"
-              rentalDurations={rentalDurations}
-              setRentalDurations={setRentalDurations}
-              rentalWeekdays={rentalWeekdays}
-              setRentalWeekdays={setRentalWeekdays}
-              depositPolicy={depositPolicy}
-              setDepositPolicy={setDepositPolicy}
-              theeemeColor01={tc.color_01}
-              theeemeColor06={tc.color_06}
-            />
-          ) : null}
-          {hasRequestPage && (
-            <ClosedDatesField
-              id="edit-collection-closed-dates"
-              value={closedDates}
-              onChange={setClosedDates}
-            />
-          )}
-          {hasRequestPage && (
-            <div>
-              <p className="weekday-field-helper">{t('requestInfo.helper')}</p>
-              <TextArea
-                id="edit-collection-request-info"
-                label={t('requestInfo.label')}
-                value={requestInfo}
-                onChange={(e) => setRequestInfo(e.target.value)}
-                invalid={localizedCounter(requestInfo, 512).over}
-                errorText={
-                  localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
-                }
-                helperText={localizedHelper(requestInfo, 512, t)}
-              />
-              <LocalizedInfo id="edit-collection-request-info-info" variant="requestInfo" />
-            </div>
-          )}
-          <div>
-            <p className="weekday-field-helper">{t('emailNote.helper')}</p>
-            <TextArea
-              id="edit-collection-email-note"
-              label={t('emailNote.label')}
-              value={emailNote}
-              onChange={(e) => setEmailNote(e.target.value)}
-              invalid={localizedCounter(emailNote, 512).over}
-              errorText={
-                localizedCounter(emailNote, 512).over ? t('emailNote.maxLength') : undefined
-              }
-              helperText={localizedHelper(emailNote, 512, t)}
-            />
-            <LocalizedInfo id="edit-collection-email-note-info" variant="emailNote" />
-            <EmailNoteTest collectionCode={code} note={emailNote} buttonStyle={btnSecondaryStyle} />
-          </div>
-          <TextInput
-            id="edit-collection-home-page"
-            type="url"
-            label={t('homePage.label')}
-            helperText={t('homePage.helper')}
-            placeholder="https://…"
-            value={homePage}
-            onChange={(e) => setHomePage(e.target.value)}
-            maxLength={128}
-          />
-          <Select
-            id="edit-collection-digest"
-            texts={{
-              label: t('editCollection.digestLabel'),
-              assistive: t('editCollection.digestHelper'),
-              language: hdsLang(i18n.language),
-            }}
-            options={DIGEST_OPTIONS}
-            value={digestFrequency}
-            onChange={(selectedOptions) => {
-              if (selectedOptions.length > 0) {
-                setDigestFrequency(selectedOptions[0].value);
-              }
-            }}
-          />
-          <Select
-            id="edit-collection-language"
-            texts={{
-              label: t('collectionLanguage.label'),
-              assistive: t('collectionLanguage.helper'),
-              language: hdsLang(i18n.language),
-            }}
-            options={SUPPORTED_LANGUAGES.map((l) => ({ label: l.name, value: l.code }))}
-            value={language}
-            onChange={(selectedOptions) => {
-              if (selectedOptions.length > 0) {
-                setLanguage(selectedOptions[0].value);
-              }
-            }}
-          />
-          <ImageUpload
-            id="edit-collection-thumbnail"
-            label={t('upload.thumbnailLabel')}
-            value={thumbnail}
-            onChange={setThumbnail}
-            currentUrl={thumbnailUrl}
-            folder="oiueei/collections"
-          />
-          <PdfUpload
-            id="edit-collection-welcome-doc"
-            label={t('upload.welcomeDocLabel')}
-            onChange={setWelcomeDoc}
-            currentUrl={welcomeDocUrl}
-            helperText={t('upload.welcomeDocHelper')}
-          />
-        </div>
-      </Accordion>
+      <CollectionAdvancedFields
+        idPrefix="edit-collection"
+        colors={tc}
+        isReservations={isReservations}
+        hasRequestPage={hasRequestPage}
+        tags={tags}
+        setTags={setTags}
+        reservationRules={{
+          reservationUnit,
+          setReservationUnit,
+          reservationMaxDays,
+          setReservationMaxDays,
+          reservationHorizonDays,
+          setReservationHorizonDays,
+          reservationMaxActivePerMember,
+          setReservationMaxActivePerMember,
+          reservationMinMinutes,
+          setReservationMinMinutes,
+          reservationMaxMinutes,
+          setReservationMaxMinutes,
+          openingHours,
+          setOpeningHours,
+          setOpeningHoursValid,
+          rentalWeekdays,
+          setRentalWeekdays,
+        }}
+        rentalRules={{
+          rentalDurations,
+          setRentalDurations,
+          rentalWeekdays,
+          setRentalWeekdays,
+          depositPolicy,
+          setDepositPolicy,
+        }}
+        closedDates={closedDates}
+        setClosedDates={setClosedDates}
+        requestInfo={requestInfo}
+        setRequestInfo={setRequestInfo}
+        emailNote={emailNote}
+        setEmailNote={setEmailNote}
+        afterEmailNote={
+          <EmailNoteTest collectionCode={code} note={emailNote} buttonStyle={btnSecondaryStyle} />
+        }
+        homePage={homePage}
+        setHomePage={setHomePage}
+        digestFrequency={digestFrequency}
+        setDigestFrequency={setDigestFrequency}
+        language={language}
+        setLanguage={setLanguage}
+        thumbnail={thumbnail}
+        setThumbnail={setThumbnail}
+        thumbnailUrl={thumbnailUrl}
+        welcomeDocUrl={welcomeDocUrl}
+        setWelcomeDoc={setWelcomeDoc}
+      />
       <div className="form-actions">
         <Button disabled={submitting} onClick={handleSubmit} style={{ ...btnStyle, width: '100%' }}>
           {submitting ? t('common.saving') : t('common.save')}
