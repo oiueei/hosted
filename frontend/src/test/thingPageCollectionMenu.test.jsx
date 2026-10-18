@@ -270,7 +270,7 @@ describe('the thing page — "Requests to me"', () => {
     );
 
     expect(within(panel()).queryByRole('link', { name: REQUESTS })).toBeNull();
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Your account' }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Your account' }));
     fireEvent.click(screen.getByRole('button', { name: 'Your account' }));
     expect(screen.queryByRole('link', { name: REQUESTS })).not.toBeInTheDocument();
   });

@@ -56,6 +56,78 @@ beforeEach(() => {
   meSays(false);
 });
 
+describe('AccountMenu — where the reader is', () => {
+  const openAt = async (path) => {
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <AccountMenu />
+      </MemoryRouter>
+    );
+    await press(screen.getByRole('button', { name: /your account/i }));
+  };
+
+  test('the link to the page on screen is the current one, and only that one', async () => {
+    await openAt('/me');
+
+    expect(screen.getByRole('link', { name: /my profile/i })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    for (const name of [/home/i, /my requests/i, /log out/i]) {
+      expect(screen.getByRole('link', { name })).not.toHaveAttribute('aria-current');
+    }
+  });
+
+  test('a page below a link is not that link’s page', async () => {
+    await openAt('/me/edit');
+
+    expect(screen.getByRole('link', { name: /my profile/i })).not.toHaveAttribute('aria-current');
+  });
+
+  test('Home is current on the root only', async () => {
+    await openAt('/');
+
+    expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('aria-current', 'page');
+  });
+});
+
+describe('AccountMenu — when focus leaves', () => {
+  test('tabbing out of the menu closes the panel', async () => {
+    render(
+      <MemoryRouter>
+        <AccountMenu />
+        <button type="button">Outside</button>
+      </MemoryRouter>
+    );
+    await press(screen.getByRole('button', { name: /your account/i }));
+    const last = screen.getByRole('link', { name: /log out/i });
+    last.focus();
+
+    fireEvent.blur(last, { relatedTarget: screen.getByRole('button', { name: 'Outside' }) });
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  test('moving between the menu’s own controls keeps it open', async () => {
+    renderMenu();
+    await press(screen.getByRole('button', { name: /your account/i }));
+    const first = screen.getByRole('link', { name: /home/i });
+
+    fireEvent.blur(first, { relatedTarget: screen.getByRole('link', { name: /my profile/i }) });
+
+    expect(screen.getAllByRole('link').length).toBeGreaterThan(0);
+  });
+
+  test('a blur into nothing (a click that focuses nothing) does not close it', async () => {
+    renderMenu();
+    await press(screen.getByRole('button', { name: /your account/i }));
+
+    fireEvent.blur(screen.getByRole('button', { name: /your account/i }), { relatedTarget: null });
+
+    expect(screen.getAllByRole('link').length).toBeGreaterThan(0);
+  });
+});
+
 describe('AccountMenu — signed in', () => {
   test('following a link closes the panel, even to the page already on screen', () => {
     // MemoryRouter at '/': the Home link does not unmount the menu, so only
@@ -198,7 +270,7 @@ describe('AccountMenu — signed in', () => {
     fireEvent.click(screen.getByRole('button', { name: /your account/i }));
     expect(screen.getAllByRole('link').length).toBeGreaterThan(0);
 
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Outside' }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Outside' }));
 
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /your account/i })).toHaveAttribute(
@@ -211,7 +283,7 @@ describe('AccountMenu — signed in', () => {
     renderMenu();
     await press(screen.getByRole('button', { name: /your account/i }));
 
-    fireEvent.mouseDown(screen.getByRole('link', { name: /my profile/i }));
+    fireEvent.pointerDown(screen.getByRole('link', { name: /my profile/i }));
 
     // Still open: the panel itself is "inside", so this must not have closed it.
     expect(screen.getAllByRole('link').length).toBeGreaterThan(0);

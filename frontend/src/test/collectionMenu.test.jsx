@@ -714,7 +714,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
     await openMenu();
 
     const accountTrigger = screen.getByRole('button', { name: 'Your account' });
-    fireEvent.mouseDown(accountTrigger);
+    fireEvent.pointerDown(accountTrigger);
     fireEvent.click(accountTrigger);
 
     expect(panel()).toBeNull();
@@ -1093,7 +1093,7 @@ describe('the collection menu — "Requests to me"', () => {
     await waitFor(() => expect(entries()[0]).toBe(REQUESTS));
     // Close this one, open the account menu (a click outside closes it).
     const accountTrigger = screen.getByRole('button', { name: 'Your account' });
-    fireEvent.mouseDown(accountTrigger);
+    fireEvent.pointerDown(accountTrigger);
     fireEvent.click(accountTrigger);
 
     expect(screen.getByRole('link', { name: 'My requests' })).toBeInTheDocument();
