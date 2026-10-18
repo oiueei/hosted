@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import en from '../i18n/locales/en.json';
 
 expect.extend(toHaveNoViolations);
@@ -208,5 +208,72 @@ describe('when the answer is not known', () => {
 
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
     expect(cards().flatMap((card) => within(card).getAllByRole('link'))).toHaveLength(3);
+  });
+});
+
+// A deployment may give a withheld kind a page of its own to ask on
+// (`deployment/requestAccessPaths`); the module is mocked, upstream's map is empty.
+describe('a deployment with a page to ask on for what it withholds', () => {
+  afterEach(() => vi.doUnmock('../deployment'));
+
+  async function renderWith(paths, request_url = 'https://example.test/ask/') {
+    vi.resetModules();
+    vi.doMock('../deployment', () => ({
+      deploymentRoutes: [],
+      popInPath: null,
+      aboutPath: null,
+      faqPath: null,
+      externalForms: null,
+      deploymentI18n: {},
+      requestAccessPaths: paths,
+    }));
+    capabilities = {
+      collection_modes: ['PROPRIETARY'],
+      collection_kinds: ['STALL'],
+      thing_types: ['GIFT_THING', 'SELL_THING'],
+      request_url,
+    };
+    const { default: Page } = await import('./NewCollectionPage');
+    render(
+      <MemoryRouter initialEntries={['/new']}>
+        <Routes>
+          <Route path="/new" element={<Page />} />
+          <Route path="/access/:need" element={<p data-testid="access" />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findAllByRole('listitem');
+  }
+
+  const requestLink = async (cardIndex) =>
+    within((await screen.findAllByRole('listitem'))[cardIndex]).findByRole('link', {
+      name: /Request access/,
+    });
+
+  test('the library’s button goes to its page and the shed’s to its own, in the same tab', async () => {
+    await renderWith({ LIBRARY: '/access/library', SHED: '/access/shed' });
+
+    const library = await requestLink(1);
+    expect(library).toHaveAttribute('href', '/access/library');
+    expect(library).not.toHaveAttribute('target');
+    const shed = await requestLink(2);
+    expect(shed).toHaveAttribute('href', '/access/shed');
+    expect(shed).not.toHaveAttribute('target');
+  });
+
+  test('a normal click on the library’s button navigates inside the app', async () => {
+    await renderWith({ LIBRARY: '/access/library', SHED: '/access/shed' });
+
+    fireEvent.click(await requestLink(1));
+
+    expect(await screen.findByTestId('access')).toBeInTheDocument();
+  });
+
+  test('a kind with no page of its own keeps the address it always had, in a new tab', async () => {
+    await renderWith({ LIBRARY: '/access/library' });
+
+    const shed = await requestLink(2);
+    expect(shed).toHaveAttribute('href', 'https://example.test/ask/');
+    expect(shed).toHaveAttribute('target', '_blank');
   });
 });

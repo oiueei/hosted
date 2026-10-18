@@ -26,7 +26,7 @@ const FORMS = {
 
 async function helperWith(externalForms) {
   vi.resetModules();
-  vi.doMock('../deployment', () => ({ externalForms }));
+  vi.doMock('../deployment', () => ({ externalForms, requestAccessPaths: {} }));
   return (await import('./externalForms')).externalFormUrl;
 }
 
@@ -124,7 +124,7 @@ describe('externalFormUrl', () => {
 
   test('a deployment module that lacks the export altogether is the same as null', async () => {
     vi.resetModules();
-    vi.doMock('../deployment', () => ({ externalForms: undefined }));
+    vi.doMock('../deployment', () => ({ externalForms: undefined, requestAccessPaths: {} }));
     const { externalFormUrl } = await import('./externalForms');
 
     expect(externalFormUrl('contact', 'es')).toBeNull();

@@ -48,6 +48,13 @@
  *   - `requestAccess`: "Request access", before `capabilities.request_url`.
  *   Core knows nothing about who hosts the forms; this is the same extension point
  *   as `popInPath`, `aboutPath` and `faqPath`.
+ * @property {Object<string, string>} requestAccessPaths
+ *   Where a request for access goes **inside the app**, by the value that is
+ *   withheld (`LIBRARY`, `SHED`, `COMMUNITY`, `RENT_THING`…): a route of the
+ *   deployment (`{ LIBRARY: '/access/library' }`). `ApprovalNotice` sends the
+ *   "Request access" button there, in the same tab, for the first withheld value that
+ *   has one; a withheld value with none keeps the form hosted elsewhere or the
+ *   server's address. Upstream, `{}`.
  * @property {Object<string, Object>} deploymentI18n
  *   Extra translations, keyed by language code, merged into the `translation`
  *   namespace at startup. A deployment's copy stays out of
@@ -69,5 +76,9 @@ export const faqPath = null;
 // No forms of its own hosted elsewhere: the app's own pages and the server's answers
 // stand (see the docstring). A deployment that has them writes the object here.
 export const externalForms = null;
+
+// Nowhere of the app's own to ask on: a request for what a deployment withholds goes
+// to `externalForms.requestAccess`, then to the server's address.
+export const requestAccessPaths = {};
 
 export const deploymentI18n = {};
