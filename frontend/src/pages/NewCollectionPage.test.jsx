@@ -10,6 +10,9 @@ expect.extend(toHaveNoViolations);
 // A core test cannot assume what `deployment/` hosts elsewhere, so the forms a
 // deployment may host are switched off, as the other pages that carry the notice do.
 vi.mock('../utils/externalForms', () => ({ externalFormUrl: () => null }));
+// The pages a deployment may send "Request access" to (`requestAccessPaths`) are switched
+// off the same way: this file pins what the standalone shows, whatever `deployment/` holds.
+vi.mock('../deployment', async (orig) => ({ ...(await orig()), requestAccessPaths: {} }));
 
 let capabilities;
 globalThis.fetch = vi.fn(() =>
