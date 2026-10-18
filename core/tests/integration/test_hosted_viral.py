@@ -21,10 +21,27 @@ from hosted.models import CreatorValidation
 
 PICK = "hosted.viral.pick_line"
 
-# What each line (1-15, in the order the lines are written) needs, and where an account
-# that has not been validated is sent: the stall's form for 1-5, the generic chooser
-# for 15, and the page for what is missing for the rest.
+# Where an account that has not been validated is sent from each line (1-15, in the
+# order the lines are written): a stall is open to everyone, community stalls included;
+# a library, whether it lends or rents, and a shed have a page to ask on.
 UNVALIDATED = {
+    1: "/stall/new",
+    2: "/stall/new",
+    3: "/stall/new",
+    4: "/stall/new",
+    5: "/stall/new",
+    6: "/stall/new",
+    7: "/access/library",
+    8: "/access/library",
+    9: "/access/library",
+    10: "/access/shed",
+    11: "/access/shed",
+    12: "/access/shed",
+    13: "/stall/new",
+    14: "/access/library",
+    15: "/new",
+}
+VALIDATED = {
     1: "/stall/new",
     2: "/stall/new",
     3: "/stall/new",
@@ -96,33 +113,16 @@ class TestTheLines:
         assert len(viral.LINES) == 15
         for line in viral.LINES:
             assert set(line) == {"need", "es", "ca", "en"}
-            assert set(line["need"]) == {"kind", "paid", "community"}
+            assert set(line["need"]) == {"kind"}
             for lang in viral.LANGS:
                 assert line[lang]["text"].strip()
                 assert line[lang]["cta"].strip()
 
-    def test_the_needs_are_what_the_lines_talk_about(self):
-        needs = [
-            (line["need"]["kind"], line["need"]["paid"], line["need"]["community"])
-            for line in viral.LINES
-        ]
-        assert needs == [
-            ("STALL", False, False),
-            ("STALL", False, False),
-            ("STALL", False, False),
-            ("STALL", False, False),
-            ("STALL", False, False),
-            ("STALL", False, True),
-            ("LIBRARY", False, False),
-            ("LIBRARY", True, False),
-            ("LIBRARY", True, False),
-            ("SHED", False, False),
-            ("SHED", False, False),
-            ("SHED", False, False),
-            ("STALL", False, True),
-            ("LIBRARY", False, True),
-            (None, False, False),
-        ]
+    def test_the_needs_are_the_kind_each_line_talks_about(self):
+        kinds = [line["need"]["kind"] for line in viral.LINES]
+        assert kinds == (
+            ["STALL"] * 6 + ["LIBRARY"] * 3 + ["SHED"] * 3 + ["STALL", "LIBRARY"] + [None]
+        )
 
 
 @pytest.mark.django_db
@@ -143,17 +143,20 @@ class TestWhereEachRecipientIsSent:
     def test_an_address_with_no_account_is_treated_as_one_that_has_not_asked(self, every_line):
         assert dict(enumerate(every_line(None), start=1)) == UNVALIDATED
 
-    def test_renting_is_named_before_the_library_it_belongs_to(self, user, monkeypatch):
-        """Someone who lacks the whole library also lacks renting; the page that
-        counts "I want to rent" has to be the one they are sent to."""
-        monkeypatch.setattr(viral.random, "choice", lambda seq: seq[7])  # rent from a library
+    @pytest.mark.parametrize("index", [6, 7, 8, 13])
+    def test_lending_and_renting_are_one_page_to_ask_on(self, user, monkeypatch, index):
+        """On this deployment one permission covers the whole library, so a line that
+        lends, one that rents out and a community library all lead to the same page."""
+        monkeypatch.setattr(viral.random, "choice", lambda seq: seq[index])
 
-        assert viral.pick_line(user, "es")["path"] == "/access/rent"
+        assert viral.pick_line(user, "es")["path"] == "/access/library"
 
-    def test_a_community_is_named_before_everything_else(self, user, monkeypatch):
-        monkeypatch.setattr(viral.random, "choice", lambda seq: seq[13])  # a community library
+    @pytest.mark.parametrize("index", [5, 12])
+    def test_a_community_stall_is_just_a_stall(self, user, monkeypatch, index):
+        """A stall is open to everyone, in either mode: there is nothing to ask for."""
+        monkeypatch.setattr(viral.random, "choice", lambda seq: seq[index])
 
-        assert viral.pick_line(user, "es")["path"] == "/access/community"
+        assert viral.pick_line(user, "es")["path"] == "/stall/new"
 
     def test_the_policy_is_asked_once_per_line(self, user, monkeypatch):
         monkeypatch.setattr(viral.random, "choice", lambda seq: seq[7])
@@ -209,15 +212,15 @@ class TestInARealEmail:
         return mail.outbox[0].body, mail.outbox[0].alternatives[0][0]
 
     def test_the_magic_link_carries_the_line_and_where_this_recipient_acts(self, user, monkeypatch):
-        monkeypatch.setattr(viral.random, "choice", lambda seq: seq[7])  # rent from a library
+        monkeypatch.setattr(viral.random, "choice", lambda seq: seq[7])  # rent out from a library
 
         with override_settings(VIRAL_LINE_PROVIDER=PICK):
             plain, html = self._send(user.email)
 
         base = email_service._frontend_base_url()
         assert viral.LINES[7]["en"]["text"] in plain
-        assert f"{viral.LINES[7]['en']['cta']}: {base}/access/rent" in plain
-        assert f'href="{base}/access/rent"' in html
+        assert f"{viral.LINES[7]['en']['cta']}: {base}/access/library" in plain
+        assert f'href="{base}/access/library"' in html
 
     def test_a_validated_recipient_is_sent_to_the_form(self, user, monkeypatch):
         approve(user)

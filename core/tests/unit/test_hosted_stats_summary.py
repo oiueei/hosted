@@ -689,15 +689,15 @@ class TestTheInterestSection:
             return build_report()
 
     def test_each_need_shows_its_seen_and_asked_and_the_share_who_asked(self):
-        _interest(date(2026, 10, 13), "rent", "SEEN", 40)
-        _interest(date(2026, 10, 15), "rent", "SEEN", 10)
-        _interest(date(2026, 10, 14), "rent", "ASKED", 5)
+        _interest(date(2026, 10, 13), "library", "SEEN", 40)
+        _interest(date(2026, 10, 15), "library", "SEEN", 10)
+        _interest(date(2026, 10, 14), "library", "ASKED", 5)
         _interest(date(2026, 10, 14), "shed", "SEEN", 8)
         _interest(date(2026, 10, 14), "shed", "ASKED", 2)
 
         sections = self._report()
 
-        assert _row(sections, INTEREST, "Renting out") == "50 seen · 5 asked (10%)"
+        assert _row(sections, INTEREST, "Library of things") == "50 seen · 5 asked (10%)"
         assert _row(sections, INTEREST, "Shed") == "8 seen · 2 asked (25%)"
 
     def test_every_need_is_listed_with_zeros_and_a_dash_when_nobody_arrived(self):
@@ -706,10 +706,17 @@ class TestTheInterestSection:
         rows = dict(_section(sections, INTEREST)["rows"])
         assert rows == {
             "Library of things": "0 seen · 0 asked (—)",
-            "Renting out": "0 seen · 0 asked (—)",
             "Shed": "0 seen · 0 asked (—)",
-            "Community": "0 seen · 0 asked (—)",
         }
+
+    def test_rows_of_the_two_sections_the_page_dropped_are_kept_but_not_listed(self):
+        _interest(date(2026, 10, 14), "rent", "SEEN", 30)
+        _interest(date(2026, 10, 14), "community", "ASKED", 3)
+
+        rows = dict(_section(self._report(), INTEREST)["rows"])
+
+        assert list(rows) == ["Library of things", "Shed"]
+        assert set(rows.values()) == {"0 seen · 0 asked (—)"}
 
     def test_a_row_from_another_week_does_not_come_in(self):
         _interest(date(2026, 10, 7), "library", "SEEN", 99)  # week 41
@@ -721,10 +728,10 @@ class TestTheInterestSection:
         assert _row(sections, INTEREST, "Library of things") == "0 seen · 0 asked (—)"
 
     def test_the_last_day_of_the_week_still_counts(self):
-        _interest(date(2026, 10, 18), "community", "SEEN", 4)  # Sunday of week 42
-        _interest(date(2026, 10, 12), "community", "SEEN", 6)  # Monday of week 42
+        _interest(date(2026, 10, 18), "shed", "SEEN", 4)  # Sunday of week 42
+        _interest(date(2026, 10, 12), "shed", "SEEN", 6)  # Monday of week 42
 
-        assert _row(self._report(), INTEREST, "Community") == "10 seen · 0 asked (0%)"
+        assert _row(self._report(), INTEREST, "Shed") == "10 seen · 0 asked (0%)"
 
     def test_it_sits_before_the_demo_funnel(self):
         titles = _titles(self._report())
@@ -733,8 +740,8 @@ class TestTheInterestSection:
 
     def test_the_monday_email_carries_it_in_text_and_html(self, monkeypatch):
         monkeypatch.setenv("STATS_EMAIL", "ops@your-domain.test")
-        _interest(date(2026, 10, 14), "rent", "SEEN", 20)
-        _interest(date(2026, 10, 14), "rent", "ASKED", 4)
+        _interest(date(2026, 10, 14), "library", "SEEN", 20)
+        _interest(date(2026, 10, 14), "library", "ASKED", 4)
         with time_machine.travel(self.NOW, tick=False):
             call_command("stats_summary", "--email", stdout=StringIO())
 

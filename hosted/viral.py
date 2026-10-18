@@ -8,7 +8,7 @@ that says "open a library" would send an account that may not yet to a form that
 refuses it. This module is what ``VIRAL_LINE_PROVIDER`` points at: it picks one of
 the fifteen lines below at random and sends the recipient to **the place where they
 can act on it** — the form when this deployment lets them, otherwise the page that
-explains how to ask for exactly what is missing (``/access/<need>``).
+explains how to ask for the kind they lack (``/access/library`` or ``/access/shed``).
 
 The destination is decided on the server, per recipient, from the same
 ``capabilities`` the product reads everywhere, so what the email offers is what the
@@ -17,17 +17,16 @@ API would accept. Links are plain paths: no redirect, no tracker (DESIGN §9).
 
 import random
 
-from core.models.collection import KIND_THING_TYPES
 from core.services.creator_policy import capabilities_for
 
 DEFAULT_LANG = "es"
 LANGS = ("es", "ca", "en")
 
 
-def _line(kind, paid, community, es, ca, en):
-    """One line: what it needs of the recipient, and its text in each language."""
+def _line(kind, es, ca, en):
+    """One line: the kind of collection it talks about, and its text in each language."""
     return {
-        "need": {"kind": kind, "paid": paid, "community": community},
+        "need": {"kind": kind},
         "es": {"text": es[0], "cta": es[1]},
         "ca": {"text": ca[0], "cta": ca[1]},
         "en": {"text": en[0], "cta": en[1]},
@@ -37,8 +36,6 @@ def _line(kind, paid, community, es, ca, en):
 LINES = [
     _line(
         "STALL",
-        False,
-        False,
         (
             "¿Renuevas el armario? Abre un rastrillo con la ropa que ya no usas y ofrécela a tus amigos.",
             "Empieza aquí",
@@ -54,8 +51,6 @@ LINES = [
     ),
     _line(
         "STALL",
-        False,
-        False,
         (
             "¿Estanterías llenas de libros ya leídos? Ponlos en un rastrillo y dales una segunda vida.",
             "Así de fácil",
@@ -71,8 +66,6 @@ LINES = [
     ),
     _line(
         "STALL",
-        False,
-        False,
         (
             "¿Juguetes que se han quedado pequeños? Abre un rastrillo y pásalos a otras familias.",
             "Crea el tuyo",
@@ -88,8 +81,6 @@ LINES = [
     ),
     _line(
         "STALL",
-        False,
-        False,
         (
             "¿Mudanza a la vista? Abre un rastrillo con lo que no te llevas y encuéntrale una nueva casa.",
             "Empieza por aquí",
@@ -105,8 +96,6 @@ LINES = [
     ),
     _line(
         "STALL",
-        False,
-        False,
         (
             "¿Se acumulan cosas en la oficina? Abre un rastrillo solo de regalos y que se las quede quien las necesite.",
             "Empieza a regalar",
@@ -122,8 +111,6 @@ LINES = [
     ),
     _line(
         "STALL",
-        False,
-        True,
         (
             "¿En tu edificio hay cosas que ya nadie usa? Monta un rastrillo de vecinos donde cada uno ponga lo suyo.",
             "Monta el rastrillo",
@@ -139,8 +126,6 @@ LINES = [
     ),
     _line(
         "LIBRARY",
-        False,
-        False,
         (
             "¿Un taladro que usas dos veces al año? Abre una biblioteca de las cosas con tus herramientas y préstalas a tus vecinos.",
             "Abre tu biblioteca",
@@ -156,8 +141,6 @@ LINES = [
     ),
     _line(
         "LIBRARY",
-        True,
-        False,
         (
             "¿Cámaras, objetivos o equipo que pasan más tiempo guardados que trabajando? Alquílalos en una biblioteca de las cosas y que te los pidan por días.",
             "Quiero alquilarlos",
@@ -173,8 +156,6 @@ LINES = [
     ),
     _line(
         "LIBRARY",
-        True,
-        False,
         (
             "¿Un local o un estudio lleno de máquinas y herramientas que no usas cada día? Alquila el equipo y que te lo pidan por días.",
             "Alquila tu equipo",
@@ -190,8 +171,6 @@ LINES = [
     ),
     _line(
         "SHED",
-        False,
-        False,
         (
             "¿Un espacio maker con impresoras 3D, Arduinos y otros equipos? Abre un taller y que cada maker reserve su turno sin líos por WhatsApp.",
             "Organiza los turnos",
@@ -207,8 +186,6 @@ LINES = [
     ),
     _line(
         "SHED",
-        False,
-        False,
         (
             "¿Una sala, una impresora o un banco de trabajo que usáis entre varios? Abre un taller y reservad por turnos.",
             "Abre un taller",
@@ -224,8 +201,6 @@ LINES = [
     ),
     _line(
         "SHED",
-        False,
-        False,
         (
             "¿Una cooperativa con máquinas o espacios para sus socios? Abre un taller donde cada socio reserve lo que necesita.",
             "Abre el taller",
@@ -241,8 +216,6 @@ LINES = [
     ),
     _line(
         "STALL",
-        False,
-        True,
         (
             "¿Tienes una tienda y tus clientes coleccionan? Ábreles un rastrillo donde cada uno venda sus piezas.",
             "Abre un rastrillo para tus clientes",
@@ -258,8 +231,6 @@ LINES = [
     ),
     _line(
         "LIBRARY",
-        False,
-        True,
         (
             "¿Un grupo de amigos que comparte libros, juegos o lo que sea? Abrid una biblioteca de las cosas donde cada uno ponga lo suyo, con vuestras propias normas.",
             "Abrid vuestra biblioteca",
@@ -275,8 +246,6 @@ LINES = [
     ),
     _line(
         None,
-        False,
-        False,
         (
             "¿Un grupo de amigos, un edificio, un equipo? Elige rastrillo, biblioteca de las cosas o taller y compartid lo vuestro.",
             "Crea tu colección",
@@ -296,21 +265,14 @@ LINES = [
 def destination(need, capabilities):
     """Where a recipient with these ``capabilities`` acts on a line with this ``need``.
 
-    The form of the kind when everything the line asks for is open to them; if not,
-    ``/access/<what is missing>``, the most specific first — a community, then
-    renting, then the kind itself. Renting goes before the kind on purpose: someone
-    who lacks the whole library also lacks renting, and "I want to rent" has to
-    measure interest in renting, not in lending.
+    The form of the kind when this deployment lets them open it, ``/new`` for a line
+    about no kind in particular, and otherwise ``/access/<kind>``, the page that explains
+    how to ask. Here one permission covers a whole library (lending and renting out) and
+    a stall is open to everyone, in either mode, so the kind is all there is to ask.
     """
     kind = need["kind"]
-    if need["community"] and "COMMUNITY" not in capabilities.collection_modes:
-        return "/access/community"
     if kind is None:
         return "/new"
-    if need["paid"]:
-        paid_verb = KIND_THING_TYPES[kind][-1]
-        if paid_verb not in capabilities.thing_types:
-            return "/access/rent"
     if kind not in capabilities.collection_kinds:
         return f"/access/{kind.lower()}"
     return f"/{kind.lower()}/new"

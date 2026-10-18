@@ -54,7 +54,7 @@ describe('/legal and the request-access page', () => {
     expect(all[at - 1].startsWith(device)).toBe(true);
   });
 
-  test('the sections named are the four the page has', () => {
+  test('the paragraph names no one: no address, no IP', () => {
     for (const { text, lead } of Object.values(TEXTS)) {
       const paragraph = paragraphs(text).find((p) => p.startsWith(lead));
       expect(paragraph).not.toMatch(/\bemail\b|\bIP\b/i);

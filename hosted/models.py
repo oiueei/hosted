@@ -169,14 +169,13 @@ class AccessInterest(models.Model):
     """
 
     LIBRARY = "library"
-    RENT = "rent"
     SHED = "shed"
-    COMMUNITY = "community"
+    # Two sections now: here one permission covers a whole library (lending and renting
+    # out), and a community is asked for from the collection form. Rows of the two
+    # sections the page used to have (`rent`, `community`) stay in the table, uncounted.
     NEED_CHOICES = [
         (LIBRARY, "Library of things"),
-        (RENT, "Renting out"),
         (SHED, "Shed"),
-        (COMMUNITY, "Community"),
     ]
 
     SEEN = "SEEN"

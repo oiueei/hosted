@@ -71,6 +71,12 @@ export const faqPath = '/faq';
 // there), and the place opens it in a new tab. A language without an address uses
 // `es`. Tally is named in the privacy section of /legal (src/legal/{es,ca,en}.js),
 // which has to say as much as these three forms receive.
+// Where a request for access goes inside the app, by the value this deployment's policy
+// withholds: "Request access" on `/new` opens the page that explains how to ask for a
+// library or a shed, in the same tab. A community is asked for from the form's option,
+// which opens `externalForms.requestAccess`.
+export const requestAccessPaths = { LIBRARY: '/access/library', SHED: '/access/shed' };
+
 export const externalForms = {
   contact: {
     es: 'https://tally.so/r/PdaOy1',

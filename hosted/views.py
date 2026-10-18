@@ -193,7 +193,9 @@ class AccessSeenView(APIView):
     # No authentication at all, like core's `VerifyLinkView` and `LogoutView`: the count
     # reads nothing of whoever arrives, and a cookie of theirs must not be able to refuse
     # it. With the cookie authenticator a valid session without the CSRF header is a 403,
-    # and the page's `apiFetch` answers a refusal by sending the reader to /login.
+    # and the visit is not counted (`apiFetch` only sends the reader to /login on a 401,
+    # which a cookie that is simply invalid or expired never gives here: it reads as no
+    # session).
     authentication_classes = []
     permission_classes = [AllowAny]
 

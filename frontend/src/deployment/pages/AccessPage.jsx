@@ -7,17 +7,18 @@ import useDocumentTitle from '../../hooks/useDocumentTitle';
 import useTheeeme from '../../hooks/useTheeeme';
 import { apiFetch } from '../../services/api';
 
-// What needs asking for, in the order the page tells it. The same four words the
-// server counts by (`hosted.models.AccessInterest`) and the emails link to
-// (`/access/<need>`).
-const NEEDS = ['library', 'rent', 'shed', 'community'];
+// What needs asking for, in the order the page tells it: a library (lending and renting
+// out are one permission here) and a shed. A community is asked for from the collection
+// form's own option. The same two words the server counts by
+// (`hosted.models.AccessInterest`) and the emails and `/new` link to (`/access/<need>`).
+const NEEDS = ['library', 'shed'];
 
 /**
  * `/access/:need` — what opens on request, one section per need.
  *
  * The emails send a person here for the one thing they would need to ask for, and the
- * page explains all four, always: somebody who came for renting may well want the
- * library too. When the address names one, the page goes to it, puts the focus on its
+ * page explains both, always: somebody who came for the library may well want the
+ * shed too. When the address names one, the page goes to it, puts the focus on its
  * heading and reports — once, as a bare number and nothing about the reader — that the
  * section was opened. Each section has a "Request access" button of its own that goes
  * to the form with `?for=<need>`, so the count of presses can be told apart by need.

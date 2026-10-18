@@ -86,22 +86,14 @@ export const deploymentI18n = {
       docTitle: 'Request access — OIUEEI',
       title: 'What opens on request',
       intro:
-        'Here anyone can open a stall to give things away or sell them. The rest creates a commitment to other people: a thing that has to come back, a space that gets booked, a group where others put in their own. So before opening it we ask you for two sentences on who you are and what you want to share. A person reads them.',
+        'Here anyone can open a stall to give things away or sell them. Lending, renting out or booking creates a commitment to other people: a thing that has to come back, a space that gets booked. So before opening it we ask you for two sentences on who you are and what you want to share. A person reads them.',
       library: {
         title: 'Library of Things',
-        body: 'Lend your things: people take them home and bring them back. You choose which days they are picked up and returned, and you can explain how deposits work.',
-      },
-      rent: {
-        title: 'Renting out',
-        body: 'In a library of things, whatever has a price is rented out. People ask for it by the day and you confirm or decline each request.',
+        body: 'Lend your things, for free or for a price: people take them home and bring them back. You choose which days they are picked up and returned, confirm or decline each request, and can explain how deposits work.',
       },
       shed: {
         title: 'Shed',
         body: 'Machines and spaces used where they are. They are booked by the day or by the hour, within the opening hours you set, and a booking confirms itself.',
-      },
-      community: {
-        title: 'Community',
-        body: 'A stall or a library of things where each member puts in their own things, under their own name. You decide who joins and whether they can set a price.',
       },
       button: 'Request access',
       formNote: "The form opens in a new tab. We'll answer you by email.",
@@ -187,22 +179,14 @@ export const deploymentI18n = {
       docTitle: 'Pedir acceso — OIUEEI',
       title: 'Lo que se abre con una solicitud',
       intro:
-        'Aquí cualquiera puede abrir un rastrillo para regalar o vender. Lo demás crea un compromiso con otras personas: una cosa que tiene que volver, un espacio que se reserva, un grupo donde otros ponen lo suyo. Por eso, antes de abrirlo, te pedimos dos frases sobre quién eres y qué quieres compartir. Las lee una persona.',
+        'Aquí cualquiera puede abrir un rastrillo para regalar o vender. Prestar, alquilar o reservar crea un compromiso con otras personas: una cosa que tiene que volver, un espacio que se reserva. Por eso, antes de abrirlo, te pedimos dos frases sobre quién eres y qué quieres compartir. Las lee una persona.',
       library: {
         title: 'Biblioteca de las cosas',
-        body: 'Presta tus cosas: se las llevan a casa y las devuelven. Tú eliges qué días se recogen y se devuelven, y puedes explicar cómo funcionan las fianzas.',
-      },
-      rent: {
-        title: 'Alquilar',
-        body: 'En una biblioteca de las cosas, lo que tiene precio se alquila. Te lo piden por días y tú confirmas o rechazas cada solicitud.',
+        body: 'Presta tus cosas, gratis o con precio: se las llevan a casa y las devuelven. Tú eliges qué días se recogen y se devuelven, confirmas o rechazas cada solicitud y puedes explicar cómo funcionan las fianzas.',
       },
       shed: {
         title: 'Taller de máquinas',
         body: 'Máquinas y espacios que se usan donde están. Se reservan por días o por horas, dentro del horario que tú pongas, y la reserva se confirma sola.',
-      },
-      community: {
-        title: 'Comunidad',
-        body: 'Un rastrillo o una biblioteca de las cosas donde cada miembro pone sus propias cosas, con su nombre. Tú decides quién entra y si pueden poner precio.',
       },
       button: 'Pedir acceso',
       formNote: 'El formulario se abre en otra pestaña. Te contestamos por correo.',
@@ -288,22 +272,14 @@ export const deploymentI18n = {
       docTitle: 'Demanar accés — OIUEEI',
       title: "El que s'obre amb una sol·licitud",
       intro:
-        "Aquí qualsevol pot obrir una paradeta per regalar o vendre. La resta crea un compromís amb altres persones: una cosa que ha de tornar, un espai que es reserva, un grup on d'altres hi posen el que és seu. Per això, abans d'obrir-ho, et demanem dues frases sobre qui ets i què vols compartir. Les llegeix una persona.",
+        "Aquí qualsevol pot obrir una paradeta per regalar o vendre. Deixar, llogar o reservar crea un compromís amb altres persones: una cosa que ha de tornar, un espai que es reserva. Per això, abans d'obrir-ho, et demanem dues frases sobre qui ets i què vols compartir. Les llegeix una persona.",
       library: {
         title: 'Biblioteca de les coses',
-        body: 'Deixa les teves coses: se les emporten a casa i les tornen. Tu tries quins dies es recullen i es tornen, i pots explicar com funcionen les fiances.',
-      },
-      rent: {
-        title: 'Llogar',
-        body: "En una biblioteca de les coses, el que té preu es lloga. Te'l demanen per dies i tu confirmes o rebutges cada sol·licitud.",
+        body: 'Deixa les teves coses, gratis o amb preu: se les emporten a casa i les tornen. Tu tries quins dies es recullen i es tornen, confirmes o rebutges cada sol·licitud i pots explicar com funcionen les fiances.',
       },
       shed: {
         title: 'Taller de màquines',
         body: "Màquines i espais que es fan servir on són. Es reserven per dies o per hores, dins de l'horari que tu posis, i la reserva es confirma sola.",
-      },
-      community: {
-        title: 'Comunitat',
-        body: 'Una paradeta o una biblioteca de les coses on cada membre hi posa les seves coses, amb el seu nom. Tu decideixes qui hi entra i si hi poden posar preu.',
       },
       button: 'Demanar accés',
       formNote: "El formulari s'obre en una altra pestanya. Et responem per correu.",

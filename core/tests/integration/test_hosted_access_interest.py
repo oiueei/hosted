@@ -25,7 +25,9 @@ from hosted.models import AccessInterest
 from hosted.tally import REQUEST_ACCESS
 
 SEEN_URL = "/api/v1/access/seen/"
-NEEDS = ["library", "rent", "shed", "community"]
+NEEDS = ["library", "shed"]
+# The page used to have four sections; the two it dropped count nothing now.
+DROPPED = ["rent", "community"]
 DAY = "2026-10-21 12:00"
 
 
@@ -54,13 +56,18 @@ class TestSeen:
 
     def test_it_counts_every_reading_and_a_new_day_starts_a_new_row(self, api_client):
         with time_machine.travel("2026-10-21 12:00", tick=False):
-            seen(api_client, "rent")
-            seen(api_client, "rent")
+            seen(api_client, "library")
+            seen(api_client, "library")
         with time_machine.travel("2026-10-22 12:00", tick=False):
-            seen(api_client, "rent")
+            seen(api_client, "library")
 
-        assert count("rent", "SEEN", date(2026, 10, 21)) == 2
-        assert count("rent", "SEEN", date(2026, 10, 22)) == 1
+        assert count("library", "SEEN", date(2026, 10, 21)) == 2
+        assert count("library", "SEEN", date(2026, 10, 22)) == 1
+
+    def test_the_two_dropped_sections_count_nothing_like_any_unknown_need(self, api_client):
+        for need in DROPPED:
+            assert seen(api_client, need).status_code == 400
+        assert AccessInterest.objects.count() == 0
 
     @pytest.mark.parametrize("body", [{"need": "teleport"}, {"need": ""}, {}, {"need": 3}])
     def test_a_need_that_does_not_exist_is_a_400_and_writes_nothing(self, api_client, body):
@@ -90,11 +97,11 @@ class TestSeen:
         },
     )
     def test_thirty_a_minute_from_one_address_and_no_more(self, api_client):
-        statuses = [seen(api_client, "rent").status_code for _ in range(31)]
+        statuses = [seen(api_client, "library").status_code for _ in range(31)]
 
         assert statuses[:30] == [204] * 30
         assert statuses[30] == 429
-        assert count("rent", "SEEN") == 30
+        assert count("library", "SEEN") == 30
 
 
 @pytest.mark.django_db
@@ -113,10 +120,10 @@ class TestSeenWhateverCookieComesWithIt:
         client = self._client()
         client.cookies["access_token"] = "this-is-not-a-token"
 
-        response = seen(client, "rent")
+        response = seen(client, "library")
 
         assert response.status_code == 204
-        assert count("rent", "SEEN") == 1
+        assert count("library", "SEEN") == 1
 
     def test_an_expired_session_cookie_is_counted_and_answers_204(self, user):
         token = RefreshToken.for_user(user).access_token
@@ -133,10 +140,10 @@ class TestSeenWhateverCookieComesWithIt:
         client = self._client()
         client.cookies["access_token"] = str(RefreshToken.for_user(user).access_token)
 
-        response = seen(client, "community")
+        response = seen(client, "shed")
 
         assert response.status_code == 204
-        assert count("community", "SEEN") == 1
+        assert count("shed", "SEEN") == 1
 
 
 @pytest.mark.django_db
@@ -150,7 +157,9 @@ class TestAsked:
         assert response["Location"] == REQUEST_ACCESS["es"]
         assert count(need, "ASKED", date(2026, 10, 21)) == 1
 
-    @pytest.mark.parametrize("query", ["", "?for=", "?for=teleport", "?other=rent"])
+    @pytest.mark.parametrize(
+        "query", ["", "?for=", "?for=teleport", "?other=library", "?for=rent", "?for=community"]
+    )
     def test_without_a_valid_for_nothing_is_counted_and_the_redirect_is_the_same(
         self, api_client, query
     ):
@@ -166,7 +175,7 @@ class TestAsked:
         assert count("shed", "ASKED") == 1
 
     def test_the_form_is_still_the_one_of_the_browsers_language(self, api_client):
-        response = api_client.get("/request-access/?for=rent", HTTP_ACCEPT_LANGUAGE="en")
+        response = api_client.get("/request-access/?for=library", HTTP_ACCEPT_LANGUAGE="en")
 
         assert response["Location"] == REQUEST_ACCESS["en"]
 
@@ -174,7 +183,7 @@ class TestAsked:
         with patch(
             "hosted.models.AccessInterest.objects.get_or_create", side_effect=Exception("db down")
         ):
-            response = api_client.get("/request-access/?for=rent")
+            response = api_client.get("/request-access/?for=library")
 
         assert response.status_code == 302
         assert response["Location"] == REQUEST_ACCESS["es"]
@@ -191,11 +200,11 @@ class TestNobodyIsInTheCount:
         api_client.force_authenticate(user)
         seen(
             api_client,
-            "rent",
+            "library",
             HTTP_USER_AGENT="Mozilla/5.0 (iPhone) SecretAgent",
             REMOTE_ADDR="203.0.113.7",
         )
-        api_client.get("/request-access/?for=rent", HTTP_USER_AGENT="SecretAgent")
+        api_client.get("/request-access/?for=library", HTTP_USER_AGENT="SecretAgent")
 
         for row in AccessInterest.objects.all():
             held = " ".join(str(getattr(row, f.name)) for f in row._meta.get_fields())
@@ -206,9 +215,9 @@ class TestNobodyIsInTheCount:
 @pytest.mark.django_db
 class TestTheTable:
     def test_one_row_per_day_need_and_metric(self):
-        AccessInterest.objects.create(date=date(2026, 10, 21), need="rent", metric="SEEN")
+        AccessInterest.objects.create(date=date(2026, 10, 21), need="library", metric="SEEN")
         with pytest.raises(IntegrityError), transaction.atomic():
-            AccessInterest.objects.create(date=date(2026, 10, 21), need="rent", metric="SEEN")
+            AccessInterest.objects.create(date=date(2026, 10, 21), need="library", metric="SEEN")
 
     def test_the_admin_only_looks(self):
         model_admin = AccessInterestAdmin(AccessInterest, admin.site)
@@ -216,7 +225,7 @@ class TestTheTable:
         request.user = User.objects.create(
             code="SUPER2", email="super2@your-domain.test", is_staff=True, is_superuser=True
         )
-        row = AccessInterest.objects.create(date=date(2026, 10, 21), need="rent", metric="SEEN")
+        row = AccessInterest.objects.create(date=date(2026, 10, 21), need="library", metric="SEEN")
 
         assert model_admin.has_view_permission(request) is True
         assert model_admin.has_add_permission(request) is False

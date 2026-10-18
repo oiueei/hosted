@@ -15,7 +15,7 @@ expect.extend(toHaveNoViolations);
 /**
  * `/access/:need` — what opens on request, one section per need.
  *
- * What it protects: the page says the four things that need asking for, always in
+ * What it protects: the page says the two things that need asking for, always in
  * that order; a person sent here for one of them lands on it; the section reports
  * itself once, as a number and nothing more, and a failing report is never shown;
  * and each section has its own "Request access" button, so the press can be told
@@ -23,7 +23,7 @@ expect.extend(toHaveNoViolations);
  */
 
 window.scrollTo = vi.fn();
-const NEEDS = ['library', 'rent', 'shed', 'community'];
+const NEEDS = ['library', 'shed'];
 const SEEN = '/api/v1/access/seen/';
 
 const seenCalls = () => fetch.mock.calls.filter(([url]) => url === SEEN);
@@ -50,18 +50,13 @@ beforeEach(async () => {
 });
 
 describe('the sections', () => {
-  test('all four, always, in the same order, each under its own heading', async () => {
-    renderAt('/access/rent');
+  test('both, always, in the same order, each under its own heading', async () => {
+    renderAt('/access/library');
     await settle(fetch);
 
     const headings = screen.getAllByRole('heading', { level: 2 });
     expect(headings.map((h) => h.id)).toEqual(NEEDS);
-    expect(headings.map((h) => h.textContent)).toEqual([
-      'Library of Things',
-      'Renting out',
-      'Shed',
-      'Community',
-    ]);
+    expect(headings.map((h) => h.textContent)).toEqual(['Library of Things', 'Shed']);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('What opens on request');
   });
 
@@ -90,11 +85,11 @@ describe('the sections', () => {
 });
 
 describe('arriving for one need', () => {
-  test('/access/rent: the page goes to that section, focuses its heading and reports it once', async () => {
-    renderAt('/access/rent');
+  test('/access/library: the page goes to that section, focuses its heading and reports it once', async () => {
+    renderAt('/access/library');
     await settle(fetch);
 
-    const heading = document.getElementById('rent');
+    const heading = document.getElementById('library');
     expect(document.activeElement).toBe(heading);
     expect(heading).toHaveAttribute('tabindex', '-1');
     expect(heading.scrollIntoView).toBeDefined();
@@ -102,21 +97,19 @@ describe('arriving for one need', () => {
     expect(seenCalls()).toHaveLength(1);
     const [, options] = seenCalls()[0];
     expect(options.method).toBe('POST');
-    expect(JSON.parse(options.body)).toEqual({ need: 'rent' });
+    expect(JSON.parse(options.body)).toEqual({ need: 'library' });
   });
 
-  test.each([['/access'], ['/access/nothing']])(
+  test.each([['/access'], ['/access/nothing'], ['/access/rent'], ['/access/community']])(
     '%s: the whole page, nowhere to go and nothing reported',
     async (path) => {
       renderAt(path);
       await settle(fetch);
 
-      expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4);
+      expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(2);
       expect(seenCalls()).toHaveLength(0);
       expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
       expect(NEEDS.map((n) => document.getElementById(n) === document.activeElement)).toEqual([
-        false,
-        false,
         false,
         false,
       ]);
@@ -149,12 +142,12 @@ describe('arriving for one need', () => {
 
     expect(seenCalls()).toHaveLength(1);
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4);
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(2);
   });
 
   test('a report the server refuses is not shown either', async () => {
     fetch.mockResolvedValue({ ok: false, status: 429, json: () => Promise.resolve({}) });
-    renderAt('/access/community');
+    renderAt('/access/shed');
     await settle(fetch);
 
     expect(screen.queryByRole('alert')).toBeNull();
@@ -172,14 +165,25 @@ describe('in every language', () => {
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(title);
     expect(document.getElementById('library')).toHaveTextContent(library);
-    expect(screen.getAllByRole('link', { name: new RegExp(button) })).toHaveLength(4);
+    expect(screen.getAllByRole('link', { name: new RegExp(button) })).toHaveLength(2);
   });
 
   test('the texts are the ones written for the page, word for word', () => {
     expect(deploymentI18n.en.access.title).toBe('What opens on request');
-    expect(deploymentI18n.es.access.rent.body).toBe(
-      'En una biblioteca de las cosas, lo que tiene precio se alquila. Te lo piden por días y tú confirmas o rechazas cada solicitud.'
+    expect(deploymentI18n.es.access.library.body).toBe(
+      'Presta tus cosas, gratis o con precio: se las llevan a casa y las devuelven. Tú eliges qué días se recogen y se devuelven, confirmas o rechazas cada solicitud y puedes explicar cómo funcionan las fianzas.'
     );
+    expect(deploymentI18n.en.access.intro).toBe(
+      'Here anyone can open a stall to give things away or sell them. Lending, renting out or booking creates a commitment to other people: a thing that has to come back, a space that gets booked. So before opening it we ask you for two sentences on who you are and what you want to share. A person reads them.'
+    );
+    expect(deploymentI18n.ca.access.intro).toBe(
+      "Aquí qualsevol pot obrir una paradeta per regalar o vendre. Deixar, llogar o reservar crea un compromís amb altres persones: una cosa que ha de tornar, un espai que es reserva. Per això, abans d'obrir-ho, et demanem dues frases sobre qui ets i què vols compartir. Les llegeix una persona."
+    );
+    // The two sections the page dropped have no copy left.
+    for (const lang of ['en', 'es', 'ca']) {
+      expect(Object.keys(deploymentI18n[lang].access)).not.toContain('rent');
+      expect(Object.keys(deploymentI18n[lang].access)).not.toContain('community');
+    }
     expect(deploymentI18n.ca.access.formNote).toBe(
       "El formulari s'obre en una altra pestanya. Et responem per correu."
     );
@@ -188,7 +192,7 @@ describe('in every language', () => {
 
 describe('accessibility', () => {
   test('no violations, heading order included', async () => {
-    const { container } = renderAt('/access/rent');
+    const { container } = renderAt('/access/library');
     await settle(fetch);
 
     expect(await axe(container)).toHaveNoViolations();
