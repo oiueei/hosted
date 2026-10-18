@@ -269,3 +269,19 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
         # mailed for each, not merely the unified 200 a refusal returns too.
         assert RSVP.objects.filter(target_code=public_collection.code).count() == 3
         assert len(mail.outbox) == 3
+
+
+def test_a_deployment_that_never_defines_the_layer_switch_keeps_the_join_cap_on(settings):
+    """`getattr(settings, "RATELIMIT_ENABLE", True)`: a settings module that does
+    not name the switch at all has the limits ON, not silently off."""
+    from core.services.join_quota import consume_join_quota, join_quota_exhausted
+
+    settings.CACHES = TestOneCollectionCannotBeUsedAsAMailRelay.QUOTA_SETTINGS["CACHES"]
+    settings.COLLECTION_JOINS_PER_DAY = 1
+    del settings.RATELIMIT_ENABLE
+    caches["default"].clear()
+
+    assert join_quota_exhausted("NOSWIT") is False
+    consume_join_quota("NOSWIT")
+
+    assert join_quota_exhausted("NOSWIT") is True
