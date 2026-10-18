@@ -531,7 +531,7 @@
     "digestNone": "Cap",
     "digestWeekly": "Setmanal (dilluns)",
     "digestMonthly": "Mensual (dia 1)",
-    "digestHelper": "Envia automàticament als membres un resum de les novetats.",
+    "digestHelper": "Envia automàticament als membres i a qui dinamitza un resum de les novetats.",
     "titleRequired": "El títol és obligatori.",
     "maxHeadline": "Màxim 64 caràcters per idioma.",
     "errorLoading": "Error en carregar la col·lecció.",

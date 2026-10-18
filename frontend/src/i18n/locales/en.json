@@ -537,7 +537,7 @@
     "digestNone": "None",
     "digestWeekly": "Weekly (Mondays)",
     "digestMonthly": "Monthly (1st of month)",
-    "digestHelper": "Automatically email members a summary of new things.",
+    "digestHelper": "Automatically email members and whoever runs the group a summary of new things.",
     "titleRequired": "Title is required.",
     "maxHeadline": "Maximum 64 characters per language.",
     "errorLoading": "Error loading collection.",

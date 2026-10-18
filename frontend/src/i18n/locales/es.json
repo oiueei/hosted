@@ -531,7 +531,7 @@
     "digestNone": "Ninguno",
     "digestWeekly": "Semanal (lunes)",
     "digestMonthly": "Mensual (día 1)",
-    "digestHelper": "Envía automáticamente a los miembros un resumen de las novedades.",
+    "digestHelper": "Envía automáticamente a los miembros y a quienes dinamizan un resumen de las novedades.",
     "titleRequired": "El título es obligatorio.",
     "maxHeadline": "Máximo 64 caracteres por idioma.",
     "errorLoading": "Error al cargar la colección.",
