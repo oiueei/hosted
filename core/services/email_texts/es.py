@@ -342,6 +342,13 @@ TEXTS = {
     "digest_plain": "Cosas nuevas:\n\n{things}\n\n{members}Ver la colección: {url}",
     "digest_new_members_one": "Y 1 persona nueva se ha sumado al grupo.",
     "digest_new_members_other": "Y {count} personas nuevas se han sumado al grupo.",
+    "join_summary_subject_one": "Una persona nueva en {group}",
+    "join_summary_subject_other": "{count} personas nuevas en {group}",
+    "join_summary_intro_one": "Ayer se unió a {group}: {names}.",
+    "join_summary_intro_other": "Ayer se unieron a {group}: {names}.",
+    "join_summary_more": "y {count} más",
+    "join_summary_cta": "Ver los miembros",
+    "join_summary_and": "y",
     "digest_intro": "Cosas nuevas:",
     "proposal_subject": "{collection}: ¿invitamos a alguien?",
     "proposal_plain": (

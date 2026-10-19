@@ -288,6 +288,11 @@ class Collection(models.Model):
     things_alarm_sent = models.BooleanField(default=False)
     invites_alarm_sent = models.BooleanField(default=False)
     capacity_unblocked = models.BooleanField(default=False)
+    # The last day whose sign-ups ``send_join_summaries`` has already told the
+    # curators about. The command claims a day here (a conditional UPDATE) before
+    # it sends, so a second run — or two at once — finds nothing left to do, and a
+    # day the Scheduler skipped is picked up from the day after this one.
+    join_summary_sent_on = models.DateField(null=True, blank=True)
     things = models.ManyToManyField(
         "Thing",
         blank=True,

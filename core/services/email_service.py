@@ -2640,6 +2640,52 @@ def send_digest_email(
     )
 
 
+JOIN_SUMMARY_MAX_NAMES = 10
+
+
+def send_join_summary_email(collection, curator, names):
+    """Tell one curator who joined their group: ``names`` are the members' bare
+    ``name`` values (empty for someone who never set one, written as "a member").
+
+    At most ``JOIN_SUMMARY_MAX_NAMES`` are named, then "and N more". Activity mail,
+    so whoever silenced activity gets nothing.
+    """
+    user, lang = _recipient(curator.email, collection)
+    T, L = _texts(lang), _local(lang)
+    group = L(collection.headline)
+    count = len(names)
+    shown = [_member_name(n, lang) for n in names[:JOIN_SUMMARY_MAX_NAMES]]
+    if count > JOIN_SUMMARY_MAX_NAMES:
+        shown.append(T("join_summary_more").format(count=count - JOIN_SUMMARY_MAX_NAMES))
+    listed = (
+        shown[0]
+        if len(shown) == 1
+        else f"{', '.join(shown[:-1])} {T('join_summary_and')} {shown[-1]}"
+    )
+    one = count == 1
+    subject = T("join_summary_subject_one" if one else "join_summary_subject_other").format(
+        group=group, count=count
+    )
+    intro = T("join_summary_intro_one" if one else "join_summary_intro_other").format(
+        group=group, names=listed
+    )
+    url = f"{_frontend_base_url()}{_collection_path(collection.code, collection)}/invites"
+    cta = T("join_summary_cta")
+    plain = _headline_prefix(group, f"{intro}\n\n{cta}: {url}")
+    html = _render_email([_para(intro), _cta(url, cta, T("cta_fallback"))], lang=lang, header=group)
+    _send(
+        curator.email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        collection=collection,
+        header=group,
+    )
+
+
 def send_collection_capacity_alarm(collection, counter, count, threshold):
     """Alert the operator that a collection crossed the mass-upload alarm line.
 

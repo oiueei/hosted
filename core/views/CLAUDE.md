@@ -1115,6 +1115,14 @@ Daily command (`python manage.py send_reminders`) that sends reminder emails:
 - The fan-out is per recipient and swallows a failure with a warning on stderr, so one broken send costs neither the other side their reminder nor the rest of the run theirs (same reasoning as `send_digests`).
 - Outputs the total count of reminder emails sent (one for the borrower plus one per member of the team for each due loan/rental, one per due reservation).
 
+### Management Command: `send_join_summaries`
+
+Daily command (`python manage.py send_join_summaries`), chained **before** `send_digests`: one email per curator (founder + co-curators) for each ACTIVE collection that had sign-ups, read from the `MEMBER_JOINED` events (`send_join_summary_email`, `CATEGORY_ACTIVITY`, button to `/{kind}/{code}/invites`).
+- **Once per day without a table of sent mail**: `Collection.join_summary_sent_on` is the last day already told. The command claims `yesterday` there with a conditional UPDATE (`WHERE join_summary_sent_on = <what it read>`) **before** sending, so a second run, or two at once, finds nothing to do. The window runs from the day after that one to yesterday (`TIME_ZONE` days), at most 7 days back, so a skipped Scheduler day loses no sign-ups; with no earlier value, only yesterday.
+- **Only people still in `invites` are named**: someone who joined and left inside the window is not counted. With everybody gone there is no email, but the days are claimed anyway.
+- A curator who joined is not named to themselves (and gets nothing if they are the only one). At most 10 names, then "and N more". A nameless member reads "a member", never the address.
+- A send that raises on every curator gives the claim back (the previous value is restored) so the next run retries; once any email is out the claim stays, or a retry would tell that curator twice.
+
 ### Management Command: `send_digests`
 
 Daily command (`python manage.py send_digests`) that sends digest emails:
