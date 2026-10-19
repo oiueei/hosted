@@ -10,6 +10,7 @@ import i18n, { SUPPORTED_LANGUAGES } from './i18n';
 import RequireAuth from './components/RequireAuth';
 import LoadingSpinner from './components/LoadingSpinner';
 import SiteFooter from './components/SiteFooter';
+import NewVersionNotice from './components/NewVersionNotice';
 import { deploymentRoutes } from './deployment';
 import { COLLECTION_PREFIXES, COLLECTION_KINDS } from './utils/collectionPath';
 import './App.css';
@@ -228,6 +229,7 @@ function App() {
         </Suspense>
       </main>
       <SiteFooter />
+      <NewVersionNotice />
     </BrowserRouter>
   );
 }

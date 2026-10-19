@@ -549,3 +549,51 @@ describe('HomePage — collections that are switched off', () => {
     expect(screen.queryByRole('heading', { name: 'Inactive collections' })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * `/collections/` answers one page at a time; a founder of more groups than that
+ * has to see them all, not the first page's.
+ */
+describe('HomePage — more groups than one page holds', () => {
+  const many = Array.from({ length: 25 }, (_, i) => ({
+    ...GROUP,
+    code: `MYC${String(i).padStart(3, '0')}`,
+    headline: `Workshop ${i + 1}`,
+  }));
+  const pagedRoutes = (secondPage) => {
+    const routes = dashboardRoutes({});
+    return (url) => {
+      if (!url.startsWith('/api/v1/collections/')) return routes(url);
+      if (url.includes('page=2')) return secondPage();
+      return ok({
+        results: many.slice(0, 20),
+        next: 'https://app.test/api/v1/collections/?page=2&page_size=100',
+      });
+    };
+  };
+
+  test('it follows the next link and lists every group, asking for the biggest page', async () => {
+    apiFetch.mockImplementation(pagedRoutes(() => ok({ results: many.slice(20), next: null })));
+    renderHome();
+
+    expect(await screen.findByText('Workshop 25')).toBeInTheDocument();
+    expect(screen.getByText('Workshop 1')).toBeInTheDocument();
+    const listed = apiFetch.mock.calls
+      .map(([url]) => url)
+      .filter((u) => u.includes('/collections/?'));
+    expect(listed).toEqual([
+      '/api/v1/collections/?page_size=100',
+      '/api/v1/collections/?page=2&page_size=100',
+    ]);
+  });
+
+  test('a second page that fails lists the groups already read, under the section error', async () => {
+    apiFetch.mockImplementation(pagedRoutes(() => refused()));
+    renderHome();
+
+    expect(await screen.findByText("Couldn't load this section")).toBeInTheDocument();
+    expect(screen.getByText('Workshop 1')).toBeInTheDocument();
+    expect(screen.getByText('Workshop 20')).toBeInTheDocument();
+    expect(screen.queryByText('Workshop 21')).not.toBeInTheDocument();
+  });
+});

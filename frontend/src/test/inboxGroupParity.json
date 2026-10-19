@@ -242,6 +242,17 @@
       "informative": false
     },
     {
+      "what": "a member joined the group",
+      "type": "MEMBER_JOINED",
+      "payload": {
+        "collection_headline": "Tools",
+        "member_name": "Lili",
+        "collection_code": "COL001"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
       "what": "a member left the group",
       "type": "MEMBER_LEFT",
       "payload": {

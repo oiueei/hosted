@@ -124,6 +124,28 @@ def _send_magic_link(email, magic_link, collection_headline=None, user=None, col
         send_magic_link_email(email, magic_link, collection_headline, lang)
 
 
+def _tell_the_team_of_a_join(collection, user):
+    """One in-app notice per curator (founder and co-curators) for a new member.
+
+    Joining is never blocked or approved, in any mode and through any door; whoever
+    runs the group just hears of it. The one joining is left out when they are on
+    the team. ``member_name`` is the bare ``name``: the address never travels, and
+    the inbox words an empty one as "a member".
+    """
+    for curator in [collection.owner, *collection.co_owners.all()]:
+        if curator.code == user.code:
+            continue
+        InAppNotification.objects.create(
+            user=curator,
+            type=InAppNotification.Type.MEMBER_JOINED,
+            payload={
+                "collection_code": collection.code,
+                "collection_headline": collection.headline,
+                "member_name": user.name,
+            },
+        )
+
+
 def _join_collection(collection, user, source=""):
     """Add ``user`` to ``collection``'s members and run the first-join side effects.
 
@@ -160,6 +182,7 @@ def _join_collection(collection, user, source=""):
     collection.note_capacity("invites")
 
     Event.log(Event.Kind.MEMBER_JOINED, actor=user, collection=collection, source=source)
+    _tell_the_team_of_a_join(collection, user)
     if not collection.welcome_doc:
         return
     send_collection_welcome_doc_email(
@@ -820,12 +843,18 @@ class VerifyLinkView(APIView):
         response.delete_cookie("refresh_token", path=REFRESH_COOKIE_PATH)
         return response
 
-    def _handle_proposal_action(self, rsvp, approve):
+    def _handle_proposal_action(self, request, rsvp, approve):
         """Commit the owner's answer to a member's suggestion (POST only).
 
         The RSVP was addressed to the owner, so holding the link *is* the
         authorisation — the same standing an invitation's accept link has. It is
         consumed either way, so a forwarded email can't be replayed.
+
+        The link was minted to **one curator** (``create_proposal`` sends the
+        question to the whole team), and it is judged when it is *used*, not when
+        it was sent: a co-curator demoted or removed after the email must not
+        decide with the old link. A refused link is burnt and the suggestion stays
+        pending for whoever still runs the group.
         """
         proposal = InvitationProposal.objects.filter(code=rsvp.target_code).first()
         if not proposal or not proposal.is_valid():
@@ -833,6 +862,17 @@ class VerifyLinkView(APIView):
             return Response(
                 refusal_body("This suggestion is no longer pending", code="proposal_not_pending"),
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not proposal.collection.is_curator(rsvp.user_code_id):
+            security_logger.warning(
+                f"Proposal {proposal.code} decision refused for {rsvp.user_code_id}: "
+                f"no longer runs the collection, from IP {get_client_ip(request)}"
+            )
+            rsvp.delete()
+            return Response(
+                {"error": "Not authorized", "code": "no_longer_manages"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         if approve:
@@ -861,11 +901,8 @@ class VerifyLinkView(APIView):
             reject_proposal(proposal)
             message = "Suggestion declined"
 
-        # Both links die with the decision — the other one must not still work.
-        RSVP.objects.filter(
-            target_code=proposal.code,
-            action__in=[RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT],
-        ).delete()
+        # Every curator's links and notices went with the decision
+        # (``clear_proposal_traces``, called by approve/reject).
         return Response(
             {
                 "action": rsvp.action,
@@ -877,10 +914,10 @@ class VerifyLinkView(APIView):
         )
 
     def _handle_proposal_approve(self, request, rsvp):
-        return self._handle_proposal_action(rsvp, approve=True)
+        return self._handle_proposal_action(request, rsvp, approve=True)
 
     def _handle_proposal_reject(self, request, rsvp):
-        return self._handle_proposal_action(rsvp, approve=False)
+        return self._handle_proposal_action(request, rsvp, approve=False)
 
     def _handle_booking_accept(self, request, rsvp):
         """Handle booking accept action for all thing types."""

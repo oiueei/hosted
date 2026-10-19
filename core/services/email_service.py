@@ -2570,9 +2570,20 @@ def send_reservation_reminder_email(requester_email, thing, booking):
 
 
 def send_digest_email(
-    collection_headline, collection_code, thing_headlines, emails, collection=None
+    collection_headline,
+    collection_code,
+    thing_headlines,
+    emails,
+    collection=None,
+    new_members=0,
 ):
-    """Send a digest email listing new things added to a collection."""
+    """Send a digest email listing new things added to a collection.
+
+    ``new_members`` is how many people joined the group in the digest's window and
+    still belong to it: a **number and nothing else**, because the digest reaches
+    every member and a list of names would hand out the member list. With 0 the
+    line is not written, and nobody who left is ever mentioned.
+    """
     base_url = _frontend_base_url()
     collection_url = f"{base_url}{_collection_path(collection_code, collection)}"
 
@@ -2581,15 +2592,27 @@ def send_digest_email(
         headline = L(collection_headline)
         headlines = [L(h) for h in thing_headlines]
         things_plain = "\n".join(f"  - {h}" for h in headlines)
+        members_line = (
+            T("digest_new_members_one" if new_members == 1 else "digest_new_members_other").format(
+                count=new_members
+            )
+            if new_members > 0
+            else ""
+        )
         blocks, plain = _with_demo_note(
             collection,
             T,
             [
                 _para(T("digest_intro")),
                 _list(headlines),
+                *([_para(members_line)] if members_line else []),
                 _cta(collection_url, T("view_collection_cta"), T("cta_fallback")),
             ],
-            T("digest_plain").format(things=things_plain, url=collection_url),
+            T("digest_plain").format(
+                things=things_plain,
+                members=f"{members_line}\n\n" if members_line else "",
+                url=collection_url,
+            ),
         )
         return (
             T("digest_subject").format(collection=headline),
@@ -2614,6 +2637,54 @@ def send_digest_email(
         compose,
         collection=collection,
         extra_footer=per_recipient_footer,
+    )
+
+
+JOIN_SUMMARY_MAX_NAMES = 10
+
+
+def send_join_summary_email(collection, curator, names):
+    """Tell one curator who joined their group: ``names`` are the members' bare
+    ``name`` values (empty for someone who never set one, written as "a member").
+
+    At most ``JOIN_SUMMARY_MAX_NAMES`` are named, then "and N more". Activity mail,
+    so whoever silenced activity gets nothing.
+    """
+    user, lang = _recipient(curator.email, collection)
+    T, L = _texts(lang), _local(lang)
+    group = L(collection.headline)
+    count = len(names)
+    shown = [_member_name(n, lang) for n in names[:JOIN_SUMMARY_MAX_NAMES]]
+    if count > JOIN_SUMMARY_MAX_NAMES:
+        # "more" carries its own conjunction ("y 1 más"), so it closes the list
+        # in the conjunction's place.
+        more = T("join_summary_more").format(count=count - JOIN_SUMMARY_MAX_NAMES)
+        listed = f"{', '.join(shown)} {more}"
+    elif len(shown) == 1:
+        listed = shown[0]
+    else:
+        listed = f"{', '.join(shown[:-1])} {T('join_summary_and')} {shown[-1]}"
+    one = count == 1
+    subject = T("join_summary_subject_one" if one else "join_summary_subject_other").format(
+        group=group, count=count
+    )
+    intro = T("join_summary_intro_one" if one else "join_summary_intro_other").format(
+        group=group, names=listed
+    )
+    url = f"{_frontend_base_url()}{_collection_path(collection.code, collection)}/invites"
+    cta = T("join_summary_cta")
+    plain = _headline_prefix(group, f"{intro}\n\n{cta}: {url}")
+    html = _render_email([_para(intro), _cta(url, cta, T("cta_fallback"))], lang=lang, header=group)
+    _send(
+        curator.email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        collection=collection,
+        header=group,
     )
 
 

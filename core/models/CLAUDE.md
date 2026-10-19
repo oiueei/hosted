@@ -122,6 +122,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 | `pause_message` | CharField(256) | No | Owner's message to guests explaining why the collection is paused (default: empty string). Non-empty = paused. |
 | `share_token` | CharField(22) | No | URL-safe public share token (`secrets.token_urlsafe(16)` → 22 chars). Nullable, unique. Generated on demand the first time the owner opens the share menu. Anyone with the token can join the collection via `POST /api/v1/auth/join/` with `share_token`. **Bearer credential — must never appear in any read serializer.** |
 | `things_alarm_sent` | BooleanField | No | Mass-upload guard: the thing-count alarm has already emailed the superusers for this collection. Fire-once, so a crossing is reported one time and not on every subsequent add. Inert unless `COLLECTION_THINGS_ALARM` is set. |
+| `join_summary_sent_on` | DateField | No | Null | The last day `send_join_summaries` has already told the curators about. Claimed with a conditional UPDATE before sending, so a second run does nothing and a skipped day is picked up (at most 7 days back). |
 | `invites_alarm_sent` | BooleanField | No | The same fire-once flag for the **member**-count alarm (`COLLECTION_INVITES_ALARM`). The two counters are independent: dumping stock and harvesting a mailing list are different abuses. |
 | `capacity_unblocked` | BooleanField | No | Superuser override: lifts **both** hard ceilings (`COLLECTION_THINGS_BLOCK` / `COLLECTION_INVITES_BLOCK`) for this collection. One flag because the unblock follows one manual review of the account, the owner and the collection. Ticked in the Django admin — there is no API for it. |
 | `things` | ManyToManyField(Thing) | No | Things in this collection. **A thing lives in exactly one collection**: the app creates it in the one it is for and never moves it, and `core/services/single_collection.py` (an `m2m_changed` `pre_add` receiver) raises `ValidationError` for a second membership from either side (`collection.things.add`, `thing.collections.add`). Code that reasons about several collections of a thing (`resolve_request_collection`, `_viewable_collection`) is still there; its tests build that case through the through table (`core.tests.factories.also_in`) |
@@ -492,8 +493,9 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `FAQ_HIDDEN` | Owner hides a FAQ | Questioner | `thing_headline`, `owner_name` |
 | `INVITE_REJECTED` | Invitee declines a collection invite | Collection owner | `collection_headline`, `invitee_name` |
 | `MEMBER_LEFT` | A member leaves a collection (self-unlink); their things in it are deleted with them | Collection owner | `collection_headline`, `member_name`, `collection_code`, `things_deleted` (how many of their things went; absent in rows written before it existed, read as 0) |
+| `MEMBER_JOINED` | Someone becomes a member of a group, through any door (`_join_collection`, only on a new membership) | **Each curator** (founder + co-curators) except the one joining | `collection_code`, `collection_headline`, `member_name` (the bare `name`; empty reads as «a member», the address never travels). Informative, so it folds into «N updates»; `drop_team_notices_of` leaves it alone (it asks nothing) |
 | `THING_REPORTED` | A member reports a thing | Thing owner | `thing_headline`, `thing_code` (no reporter identity — anonymous to the owner) |
-| `INVITE_PROPOSED` | A member recommends a guest (`invitation_service.create_proposal`) | Collection owner | `collection_headline`, `collection_code`, `proposer_name`, `email`, `note` |
+| `INVITE_PROPOSED` | A member recommends a guest (`invitation_service.create_proposal`) | **Each curator** (founder + co-curators, never the one recommending), one copy apiece | `collection_headline`, `collection_code`, `proposal_code`, `proposer_name`, `email`, `note`. Every copy goes when anyone decides (`clear_proposal_traces`, matched by `proposal_code`); a copy written before the key existed never matches and stays until dismissed |
 | `INVITE_PROPOSAL_APPROVED` | The owner approves that recommendation | The proposer | `collection_headline`, `collection_code`, `email`, `approved: True` |
 | `INVITE_PROPOSAL_DECLINED` | The owner declines it | The proposer | `collection_headline`, `collection_code`, `owner_name`, `email` |
 | `PROMOTED_CO_OWNER` | The owner promotes a member to co-owner (`CollectionCoOwnerView.post`, first promotion only) | The promoted member | `collection_headline`, `collection_code` |
@@ -668,24 +670,11 @@ nothing about — so **the member proposes and the owner decides**.
 
 ---
 
-## CalendarExportMark
+## CalendarExportMark (leaving the schema)
 
-⚠️ **Dormant since 2026-09-28.** `calendar_export_service` used to watermark every reservation it had delivered so a curator's calendar **CSV** download only ever carried what was new; the CSV format itself turned out to be the bug — Google Calendar's CSV importer reads dates in the *importing account's* locale, so `10/01/2026` (meant as 1 October) landed as 10 January for a day/month account. The export moved to **iCalendar (.ics)**, whose per-booking UID (`{booking.code}@oiueei`) makes a re-import idempotent on the calendar app's own side, which retired the watermark this table existed for: `build_calendar_export` now ships every upcoming reservation on every download and neither reads nor writes this model at all.
+⚠️ **The model is gone from the code; its table is not yet gone from the database.** It is retired in two releases, because both its foreign keys (to `Collection` and to `BookingPeriod`) cascade, and during a release the previous release's dynos keep running against the new schema: their deletes of a collection or a booking still name `calendar_export_marks`.
 
-The model and its table are kept **one release, dormant, then dropped** — the two-release pattern `reservation_max_hours` set: dropping a column in the same release that stops writing it would break the previous release's dynos, which still name it in every query while the release phase runs. Everything below describes what it did; nothing in the running app still does it.
+1. **This release — migration `0159_forget_calendar_export_marks`.** A `SeparateDatabaseAndState`: in the state a `DeleteModel`, so the model, its import in `core/models/__init__.py` and every reference are gone and nothing here cascades into it; in the database only `DELETE FROM calendar_export_marks` (reverse: no-op). **The table stays, empty**, so the previous release's dynos find it and their cascading deletes do not fail while the release phase runs. Nothing writes to it, so it stays empty.
+2. **The next release — `DROP TABLE calendar_export_marks`** (a plain `DeleteModel` can no longer do it, the model is not in the state: a `RunSQL("DROP TABLE calendar_export_marks")`, reversed by recreating it from `0145`'s definition or left irreversible). Only then does the name disappear from the database.
 
-### Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `code` | CharField(6) | Auto | Primary key |
-| `collection` | ForeignKey(Collection) | **Yes** | CASCADE, reverse `calendar_export_marks` |
-| `booking` | ForeignKey(BookingPeriod) | **Yes** | CASCADE, reverse `calendar_export_marks` |
-| `exported_at` | DateTimeField | Auto | When this reservation went out |
-
-### Business Rules (historical — no longer enforced by any running code)
-
-1. **One mark per `(collection, booking)`** — `UniqueConstraint(collection, booking)` (`uniq_calendar_export_collection_booking`). `build_calendar_export` read the unmarked reservations and `bulk_create`d their marks inside a transaction that `select_for_update`d the collection row, so two curators pressing the button at once couldn't both carry — or both mark — the same reservation.
-2. **Per collection, not per curator** — a PROPRIETARY collection's curators run its catalogue together, so once anyone exported a reservation it was done for the group. It also couldn't be a flag on `BookingPeriod`: the mark belongs to the collection a booking is exported from, not to the booking itself.
-3. **Both FKs CASCADE** — a booking or collection that no longer exists can't be re-exported anyway.
-4. **No un-mark, no "export everything"** (superseded) — the download was purely forward. The `.ics` format is what made "export everything, every time" both correct and free of the earlier problem (losing a download used to mean those events never came back out).
+Why it existed: `calendar_export_service` used to watermark every reservation it had delivered so a curator's calendar **CSV** download only ever carried what was new. The CSV format was the bug — Google Calendar's CSV importer reads dates in the *importing account's* locale, so `10/01/2026` (meant as 1 October) landed as 10 January for a day/month account. The export became **iCalendar (.ics)**, whose per-booking UID (`{booking.code}@oiueei`) makes a re-import idempotent on the calendar app's own side, which retired the watermark: `build_calendar_export` ships every upcoming reservation on every download. Pinned in `core/tests/unit/test_migration_forget_calendar_export_marks.py` (the real migration through `MigrationExecutor`: the model leaves the state, the table stays and is empty, the step reverses, and deleting a collection and a booking still works).

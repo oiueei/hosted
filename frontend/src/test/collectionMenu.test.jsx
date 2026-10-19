@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { press } from './settle';
+import { press, settle } from './settle';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -1142,10 +1142,10 @@ describe('the collection menu — "Requests to me"', () => {
     // Close this one, open the account menu (a click outside closes it).
     const accountTrigger = screen.getByRole('button', { name: 'Your account' });
     fireEvent.pointerDown(accountTrigger);
-    fireEvent.click(accountTrigger);
+    await press(accountTrigger);
 
     expect(screen.getByRole('link', { name: 'My requests' })).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle(apiFetch);
     expect(screen.queryByRole('link', { name: REQUESTS })).not.toBeInTheDocument();
   });
 

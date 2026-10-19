@@ -349,7 +349,16 @@ TEXTS = {
     "reservation_reminder_intro": "La teva reserva comença demà:",
     # Digest
     "digest_subject": "Novetats a {collection}",
-    "digest_plain": "Coses noves:\n\n{things}\n\nVeure la col·lecció: {url}",
+    "digest_plain": "Coses noves:\n\n{things}\n\n{members}Veure la col·lecció: {url}",
+    "digest_new_members_one": "I 1 persona nova s'ha sumat al grup.",
+    "digest_new_members_other": "I {count} persones noves s'han sumat al grup.",
+    "join_summary_subject_one": "Una persona nova a {group}",
+    "join_summary_subject_other": "{count} persones noves a {group}",
+    "join_summary_intro_one": "S'ha unit a {group}: {names}.",
+    "join_summary_intro_other": "S'han unit a {group}: {names}.",
+    "join_summary_more": "i {count} més",
+    "join_summary_cta": "Veure els membres",
+    "join_summary_and": "i",
     "digest_intro": "Coses noves:",
     "proposal_subject": "{collection}: convidem algú?",
     "proposal_plain": (

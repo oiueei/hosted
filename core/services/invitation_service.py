@@ -161,55 +161,109 @@ def deliver_invitation(collection, email, inviter_name, quota_user_code=None, pr
     return invited_user, False
 
 
+def proposal_team(collection, proposer=None):
+    """The people a recommendation is put to: the founder and every co-curator.
+
+    Any of them may decide it (the members page lets a co-curator approve or
+    decline, ``require_collection_curator``), so the question goes to all of them,
+    the way a hold request goes to everyone who runs the thing. The one who made
+    the recommendation is left out if they happen to be on the team; the view
+    already sends a curator to the real invitation, so in practice that never
+    removes anyone. The founder comes first.
+    """
+    team = [collection.owner, *collection.co_owners.all()]
+    return [
+        curator
+        for curator in team
+        if curator.email and (proposer is None or curator.code != proposer.code)
+    ]
+
+
 def create_proposal(collection, proposer, email, note=""):
-    """Record a member's suggestion and put it in front of the owner.
+    """Record a member's suggestion and put it in front of the whole team.
 
     **Nothing reaches the proposed address here** — no User row, no email. If the
-    owner says no, that person must never learn they were suggested.
+    team says no, that person must never learn they were suggested.
 
-    Returns ``(proposal, approve_rsvp, reject_rsvp)``.
+    Each curator (``proposal_team``) gets their **own** approve/reject pair, minted
+    to them, an in-app ``INVITE_PROPOSED`` and an email in their language. Using a
+    link signs the decision as whoever it was minted to and re-checks, at the
+    click, that they still run the group (``VerifyLinkView``); once anyone decides,
+    every notice and link of the suggestion goes (``clear_proposal_traces``).
+
+    Returns ``(proposal, approve_rsvp, reject_rsvp)`` — the pair of the first on
+    the team, the founder.
     """
     email = email.lower()
+    team = proposal_team(collection, proposer)
+    sent = []
     with transaction.atomic():
         proposal = InvitationProposal.objects.create(
             collection=collection, proposer=proposer, email=email, note=note
         )
-        # Addressed to the OWNER — they are the one acting on these links.
-        approve_rsvp = RSVP.objects.create(
-            user_code=collection.owner,
-            user_email=collection.owner.email,
-            action=RSVP.Action.PROPOSAL_APPROVE,
-            target_code=proposal.code,
-        )
-        reject_rsvp = RSVP.objects.create(
-            user_code=collection.owner,
-            user_email=collection.owner.email,
-            action=RSVP.Action.PROPOSAL_REJECT,
-            target_code=proposal.code,
-        )
-        InAppNotification.objects.create(
-            user=collection.owner,
-            type=InAppNotification.Type.INVITE_PROPOSED,
-            payload={
-                "collection_headline": collection.headline,
-                "collection_code": collection.code,
-                "proposer_name": proposer.display_name,
-                "email": email,
-                "note": note,
-            },
-        )
+        for curator in team:
+            approve_rsvp = RSVP.objects.create(
+                user_code=curator,
+                user_email=curator.email,
+                action=RSVP.Action.PROPOSAL_APPROVE,
+                target_code=proposal.code,
+            )
+            reject_rsvp = RSVP.objects.create(
+                user_code=curator,
+                user_email=curator.email,
+                action=RSVP.Action.PROPOSAL_REJECT,
+                target_code=proposal.code,
+            )
+            InAppNotification.objects.create(
+                user=curator,
+                type=InAppNotification.Type.INVITE_PROPOSED,
+                payload={
+                    "collection_headline": collection.headline,
+                    "collection_code": collection.code,
+                    # What lets every copy go once the suggestion is decided.
+                    "proposal_code": proposal.code,
+                    "proposer_name": proposer.display_name,
+                    "email": email,
+                    "note": note,
+                },
+            )
+            sent.append((curator, approve_rsvp, reject_rsvp))
 
-    send_invitation_proposal_email(
-        owner_email=collection.owner.email,
-        proposer_name=proposer.display_name,
-        collection_headline=collection.headline,
-        proposed_email=email,
-        note=note,
-        approve_link=approve_rsvp.action_link(),
-        reject_link=reject_rsvp.action_link(),
-        collection=collection,
-    )
+    for curator, approve_rsvp, reject_rsvp in sent:
+        send_invitation_proposal_email(
+            owner_email=curator.email,
+            proposer_name=proposer.display_name,
+            collection_headline=collection.headline,
+            proposed_email=email,
+            note=note,
+            approve_link=approve_rsvp.action_link(),
+            reject_link=reject_rsvp.action_link(),
+            collection=collection,
+        )
+    if not sent:
+        return proposal, None, None
+    _, approve_rsvp, reject_rsvp = sent[0]
     return proposal, approve_rsvp, reject_rsvp
+
+
+def clear_proposal_traces(proposal):
+    """Take a decided suggestion off every curator's desk.
+
+    The suggestion was a question put to the whole team, so it must not outlive
+    its answer: every copy of its in-app notice goes (matched by
+    ``payload.proposal_code``, deliberately not by user, so the copy of a
+    co-curator who did not decide goes too) and so does every approve/reject link
+    minted for it. Notices written before the payload carried the code never match
+    and stay until dismissed.
+    """
+    InAppNotification.objects.filter(
+        type=InAppNotification.Type.INVITE_PROPOSED,
+        payload__proposal_code=proposal.code,
+    ).delete()
+    RSVP.objects.filter(
+        target_code=proposal.code,
+        action__in=[RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT],
+    ).delete()
 
 
 def approve_proposal(proposal):
@@ -249,6 +303,7 @@ def approve_proposal(proposal):
             "approved": True,
         },
     )
+    clear_proposal_traces(proposal)
     return invited_user, already
 
 
@@ -282,3 +337,4 @@ def reject_proposal(proposal):
         proposed_email=proposal.email,
         collection=collection,
     )
+    clear_proposal_traces(proposal)

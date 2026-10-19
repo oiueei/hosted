@@ -903,6 +903,160 @@ class TestSendDigestsCommand:
 
 
 @pytest.mark.django_db
+class TestTheDigestSaysHowManyJoined:
+    """One line, after the new things: how many people joined in the same window and
+    are still in the group. A number, never a name; nothing when there are none."""
+
+    MONDAY = date(2026, 4, 20)
+
+    @pytest.fixture
+    def group(self):
+        owner = User.objects.create(code="DJO001", email="lala@your-domain.test", name="Lala")
+        collection = Collection.objects.create(
+            code="DJC001", owner=owner, headline="The street", digest_frequency="WEEKLY"
+        )
+        thing = Thing.objects.create(code="DJT001", owner=owner, headline="New Widget")
+        thing.created = datetime.combine(
+            self.MONDAY - timedelta(days=3), time(12, 0), tzinfo=dt_timezone.utc
+        )
+        thing.save(update_fields=["created"])
+        collection.things.add(thing)
+        reader = User.objects.create(code="DJR001", email="lele@your-domain.test", name="Lele")
+        collection.invites.add(reader)
+        return collection
+
+    def _join(self, collection, n, days_ago=2, stay=True):
+        from core.models.event import Event
+
+        people = []
+        for i in range(n):
+            person = User.objects.create(
+                code=f"DJN{days_ago}{i}{int(stay)}",
+                email=f"lili{days_ago}{i}{int(stay)}@your-domain.test",
+                name=f"Newcomer{days_ago}{i}{int(stay)}",
+            )
+            Event.log(
+                Event.Kind.MEMBER_JOINED,
+                actor=person,
+                collection=collection,
+                created=datetime.combine(
+                    self.MONDAY - timedelta(days=days_ago), time(10, 0), tzinfo=dt_timezone.utc
+                ),
+            )
+            if stay:
+                collection.invites.add(person)
+            people.append(person)
+        return people
+
+    def _run(self):
+        mail.outbox.clear()
+        with time_machine.travel(self.MONDAY):
+            call_command("send_digests", stdout=StringIO())
+        return next(m for m in mail.outbox if m.to[0] == "lele@your-domain.test")
+
+    def _html(self, message):
+        return message.alternatives[0][0]
+
+    def test_three_joined_this_week_the_line_says_3_in_both_formats(self, group):
+        self._join(group, 3)
+
+        message = self._run()
+
+        assert "And 3 new people joined the group." in message.body
+        assert "And 3 new people joined the group." in self._html(message)
+
+    def test_one_is_said_in_the_singular(self, group):
+        self._join(group, 1)
+
+        assert "And 1 new person joined the group." in self._run().body
+
+    def test_the_line_comes_after_the_list_and_before_the_button(self, group):
+        self._join(group, 2)
+
+        body = self._run().body
+        assert (
+            body.index("New Widget")
+            < body.index("And 2 new people joined")
+            < body.index("View collection")
+        )
+        html = self._html(self._run())
+        assert (
+            html.index("New Widget") < html.index("And 2 new people joined") < html.index("View ")
+        )
+
+    def test_with_nobody_new_there_is_no_line_at_all(self, group):
+        message = self._run()
+
+        assert "joined the group" not in message.body
+        assert "joined the group" not in self._html(message)
+
+    def test_a_join_from_before_the_window_does_not_count(self, group):
+        self._join(group, 2, days_ago=9)
+
+        assert "joined the group" not in self._run().body
+
+    def test_someone_who_joined_and_left_is_not_counted_or_mentioned(self, group):
+        self._join(group, 2, stay=True)
+        self._join(group, 4, stay=False)
+
+        body = self._run().body
+
+        assert "And 2 new people joined the group." in body
+        assert "And 4 " not in body and "And 6 " not in body
+
+    def test_a_week_of_only_departures_says_nothing(self, group):
+        self._join(group, 3, stay=False)
+
+        assert "joined the group" not in self._run().body
+
+    def test_no_name_or_address_of_a_newcomer_is_in_the_email(self, group):
+        people = self._join(group, 3)
+
+        message = self._run()
+
+        for person in people:
+            for text in (message.body, self._html(message)):
+                assert person.name not in text
+                assert person.email not in text
+
+    def test_a_group_with_no_new_things_still_sends_nothing(self, group):
+        group.things.all().delete()
+        self._join(group, 3)
+
+        with time_machine.travel(self.MONDAY):
+            mail.outbox.clear()
+            call_command("send_digests", stdout=StringIO())
+
+        assert mail.outbox == []
+
+    @pytest.mark.parametrize(
+        ("language", "sentence"),
+        [
+            ("es", "Y 3 personas nuevas se han sumado al grupo."),
+            ("ca", "I 3 persones noves s'han sumat al grup."),
+            ("en", "And 3 new people joined the group."),
+        ],
+    )
+    def test_it_speaks_the_readers_language(self, group, language, sentence):
+        User.objects.filter(code="DJR001").update(language=language)
+        self._join(group, 3)
+
+        assert sentence in self._run().body
+
+    def test_the_count_costs_one_event_query_for_the_collection_not_one_per_reader(self, group):
+        self._join(group, 3)
+        for i in range(4):
+            group.invites.add(
+                User.objects.create(code=f"DJX00{i}", email=f"lolo{i}@your-domain.test")
+            )
+
+        with time_machine.travel(self.MONDAY), CaptureQueriesContext(connection) as queries:
+            call_command("send_digests", stdout=StringIO())
+
+        assert sum('FROM "events"' in q["sql"] for q in queries) == 1
+
+
+@pytest.mark.django_db
 class TestSeedDemoCommand:
     """Tests for the seed_demo management command (demo data integrity)."""
 

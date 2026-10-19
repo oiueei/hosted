@@ -18,6 +18,7 @@ import Toast from '../components/Toast';
 import { useCanonicalCollectionPath } from '../hooks/useCollectionBase';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { collectionPath } from '../utils/collectionPath';
+import { loginPathFor } from '../utils/nextPath';
 import { hasOpeningHours } from '../utils/rental';
 import CollectionHero from '../components/collection/CollectionHero';
 import BroadcastBox from '../components/collection/BroadcastBox';
@@ -31,7 +32,7 @@ export default function CollectionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { tc, btnStyle } = useTheeeme();
+  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
   const [collection, setCollection] = useState(null);
   // The move off a wrong address: a link made before kinds, or at the wrong
   // kind's prefix, is corrected here.
@@ -170,6 +171,25 @@ export default function CollectionPage() {
         <Notification label={t('common.error')} type="error">
           {t(error)}
         </Notification>
+        {error === 'collectionPage.noPermission' && (
+          // A refusal is a dead end unless it says where to go: with a session the
+          // way is Home (the groups they do belong to), without one it is the
+          // sign-in, which brings them back here.
+          <>
+            <div className="spacer-m" />
+            <div className="button-row-wide">
+              {localStorage.getItem('userCode') ? (
+                <ButtonLink to="/" style={btnSecondaryStyle}>
+                  {t('common.home')}
+                </ButtonLink>
+              ) : (
+                <ButtonLink to={loginPathFor(location)} style={btnStyle}>
+                  {t('login.signIn')}
+                </ButtonLink>
+              )}
+            </div>
+          </>
+        )}
       </PageLayout>
     );
   }
