@@ -715,7 +715,7 @@ describe('CollectionPage hero tags belong to the curators', () => {
   });
 });
 
-describe('CollectionPage — the kind is said under the name, to every reader', () => {
+describe('CollectionPage — the hero does not say the kind', () => {
   const LIBRARY = {
     ...COLLECTION_WITH_PHOTO,
     thumbnail_url: '',
@@ -749,10 +749,10 @@ describe('CollectionPage — the kind is said under the name, to every reader', 
     ['an anonymous reader', { is_member: false }, { signedIn: false }],
     ['a member', { is_member: true }, {}],
     ['a curator', { is_curator: true, owner: 'ABC123' }, {}],
-  ])('%s reads what kind of collection it is', async (_who, over, opts) => {
+  ])('%s reads the name and the description, not the kind', async (_who, over, opts) => {
     await renderAs({ ...LIBRARY, ...over }, opts);
 
-    expect(screen.getByText(en.kinds.LIBRARY.long)).toBeInTheDocument();
+    expect(screen.queryByText(en.kinds.LIBRARY.long)).toBeNull();
   });
 
   test('the title is still the collection’s name and nothing else', async () => {
@@ -760,13 +760,6 @@ describe('CollectionPage — the kind is said under the name, to every reader', 
 
     expect(title).toHaveTextContent(/^Kitchen Collection$/);
     expect(within(title).queryByText(en.kinds.LIBRARY.long)).toBeNull();
-  });
-
-  test('a collection read without its kind says nothing of the sort', async () => {
-    await renderAs({ ...LIBRARY, kind: undefined });
-
-    expect(screen.queryByText(/kinds\./)).toBeNull();
-    expect(screen.queryByText(en.kinds.LIBRARY.long)).toBeNull();
   });
 
   test('has no accessibility violations', async () => {
