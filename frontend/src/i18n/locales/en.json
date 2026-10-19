@@ -1084,6 +1084,10 @@
     "label": "Home page",
     "helper": "An optional web address for this collection (max 128 characters)."
   },
+  "newVersion": {
+    "body": "There's a new version of OIUEEI.",
+    "reload": "Reload"
+  },
   "requestInfo": {
     "label": "Note shown before someone asks (optional)",
     "helper": "Shown at the top of the request page — seen by anyone requesting a loan, a rental or a reservation; a gift or sale never reaches that page, since those complete straight from the card. E.g. \"bring ID\", \"pickup is Tuesdays only\". Markdown supported.",

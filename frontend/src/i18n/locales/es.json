@@ -1084,6 +1084,10 @@
     "label": "Página web",
     "helper": "Una dirección web opcional para esta colección (máx. 128 caracteres)."
   },
+  "newVersion": {
+    "body": "Hay una versión nueva de OIUEEI.",
+    "reload": "Recargar"
+  },
   "requestInfo": {
     "label": "Nota que se ve antes de pedir (opcional)",
     "helper": "Se muestra arriba de la página de solicitud — la ve quien pide un préstamo, un alquiler o una reserva; un regalo o una venta nunca llegan a esa página, se completan directamente desde la tarjeta. P. ej. «trae el DNI», «la recogida es solo los martes». Admite Markdown.",
