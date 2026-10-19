@@ -14,6 +14,10 @@ vi.mock('../utils/downloadBlob', async (importOriginal) => ({
   default: vi.fn(),
 }));
 
+// These pin the entries the product itself puts in the menu; a deployment that has a
+// guide for whoever runs a group adds one more (pinned in `curatorGuide.test.jsx`).
+vi.mock('../deployment', async (orig) => ({ ...(await orig()), curatorGuidePath: null }));
+
 import { apiFetch } from '../services/api';
 import downloadBlob from '../utils/downloadBlob';
 import ThingPage from '../pages/ThingPage';
