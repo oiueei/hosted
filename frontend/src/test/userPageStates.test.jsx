@@ -104,7 +104,7 @@ describe('UserPage on /me without a stored userCode', () => {
     await screen.findByRole('heading', { name: 'Lala' });
     // The groups lists are the page's own business; the profile is one request.
     await waitFor(() =>
-      expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/', expect.anything())
+      expect(apiFetch).toHaveBeenCalledWith('/api/v1/collections/?page_size=100', expect.anything())
     );
 
     expect(apiFetch.mock.calls.map(([url]) => url)).not.toContain('/api/v1/users/ME0001/');

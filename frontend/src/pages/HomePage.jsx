@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Koros, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
+import { fetchAllPages } from '../utils/fetchAllPages';
 import LoadingSpinner from '../components/LoadingSpinner';
 import FeedbackLink from '../components/FeedbackLink';
 import CollectionLinkbox from '../components/CollectionLinkbox';
@@ -60,15 +61,16 @@ export default function HomePage() {
 
     const fetchMyCollections = async () => {
       try {
-        const res = await apiFetch('/api/v1/collections/', { signal });
-        if (res.ok) {
-          const data = await res.json();
-          if (!signal?.aborted) {
-            setMyCollections(data.results);
-            setMyCollectionsError(false);
-          }
-        } else if (!signal?.aborted) {
-          setMyCollectionsError(true);
+        const { rows, complete } = await fetchAllPages(
+          apiFetch,
+          '/api/v1/collections/?page_size=100',
+          { signal }
+        );
+        if (!signal?.aborted) {
+          // A first page that failed leaves the list as it was (still loading),
+          // exactly as before; a later page that failed keeps what came.
+          if (complete || rows.length) setMyCollections(rows);
+          setMyCollectionsError(!complete);
         }
       } catch (err) {
         onNetworkError(err);
@@ -215,7 +217,10 @@ export default function HomePage() {
     <>
       <h2>{t('userPage.myCollections')}</h2>
       <div className="spacer-m" />
-      {myCollectionsError ? (
+      {/* A later page that failed leaves the groups already read: they are listed
+          under the notice rather than hidden behind it. */}
+      {myCollectionsError && myCollections?.length > 0 && sectionError}
+      {myCollectionsError && !myCollections?.length ? (
         sectionError
       ) : myCollections === null ? (
         <p className="text-muted">{t('userPage.loadingCollections')}</p>

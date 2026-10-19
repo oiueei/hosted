@@ -749,3 +749,52 @@ describe('UserPage — the bold links of My groups', () => {
     }
   });
 });
+
+describe('UserPage — My groups: more groups than one page holds', () => {
+  const run = Array.from({ length: 25 }, (_, i) => ({
+    code: `RUN${String(i).padStart(3, '0')}`,
+    headline: `Workshop ${i + 1}`,
+    status: 'ACTIVE',
+    owner: 'ME0001',
+  }));
+
+  test('the groups I run are read to the last page, not only the first', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/invited-collections/')) return ok([]);
+      if (url.startsWith('/api/v1/collections/')) {
+        return url.includes('page=2')
+          ? ok({ results: run.slice(20), next: null })
+          : ok({
+              results: run.slice(0, 20),
+              next: 'https://app.test/api/v1/collections/?page=2&page_size=100',
+            });
+      }
+      return ok(ME);
+    });
+
+    renderOwn();
+
+    expect(await screen.findByRole('link', { name: 'Workshop 25' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Workshop 1' })).toBeInTheDocument();
+  });
+
+  test('a second page that fails still lists the first page, and the profile stands', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/invited-collections/')) return ok([]);
+      if (url.startsWith('/api/v1/collections/')) {
+        return url.includes('page=2')
+          ? refused()
+          : ok({
+              results: run.slice(0, 20),
+              next: 'https://app.test/api/v1/collections/?page=2&page_size=100',
+            });
+      }
+      return ok(ME);
+    });
+
+    renderOwn();
+
+    expect(await screen.findByRole('link', { name: 'Workshop 20' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Workshop 21' })).not.toBeInTheDocument();
+  });
+});
