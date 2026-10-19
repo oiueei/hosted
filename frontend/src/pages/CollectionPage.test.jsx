@@ -715,7 +715,7 @@ describe('CollectionPage hero tags belong to the curators', () => {
   });
 });
 
-describe('CollectionPage — the kind is said under the name, to every reader', () => {
+describe('CollectionPage — the hero does not say the kind', () => {
   const LIBRARY = {
     ...COLLECTION_WITH_PHOTO,
     thumbnail_url: '',
@@ -749,10 +749,10 @@ describe('CollectionPage — the kind is said under the name, to every reader', 
     ['an anonymous reader', { is_member: false }, { signedIn: false }],
     ['a member', { is_member: true }, {}],
     ['a curator', { is_curator: true, owner: 'ABC123' }, {}],
-  ])('%s reads what kind of collection it is', async (_who, over, opts) => {
+  ])('%s reads the name and the description, not the kind', async (_who, over, opts) => {
     await renderAs({ ...LIBRARY, ...over }, opts);
 
-    expect(screen.getByText(en.kinds.LIBRARY.long)).toBeInTheDocument();
+    expect(screen.queryByText(en.kinds.LIBRARY.long)).toBeNull();
   });
 
   test('the title is still the collection’s name and nothing else', async () => {
@@ -760,13 +760,6 @@ describe('CollectionPage — the kind is said under the name, to every reader', 
 
     expect(title).toHaveTextContent(/^Kitchen Collection$/);
     expect(within(title).queryByText(en.kinds.LIBRARY.long)).toBeNull();
-  });
-
-  test('a collection read without its kind says nothing of the sort', async () => {
-    await renderAs({ ...LIBRARY, kind: undefined });
-
-    expect(screen.queryByText(/kinds\./)).toBeNull();
-    expect(screen.queryByText(en.kinds.LIBRARY.long)).toBeNull();
   });
 
   test('has no accessibility violations', async () => {
@@ -1451,6 +1444,55 @@ describe('the ways a collection fails to load', () => {
     renderAfter(refused(403));
 
     expect(await screen.findByText(/your access may have changed/i)).toBeInTheDocument();
+  });
+
+  describe('a refusal leaves a way out', () => {
+    const THEEEME = {
+      color_01: 'bus',
+      color_02: 'white',
+      color_03: 'bus-light',
+      color_04: 'black',
+      color_06: 'white',
+    };
+    const wayOut = (container) => container.querySelector('.button-row-wide a');
+
+    test('with a session it is a secondary button to Home', async () => {
+      localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+      const { container } = renderAfter(refused(403));
+      await screen.findByText(/your access may have changed/i);
+
+      const link = wayOut(container);
+      expect(link).toHaveTextContent('Home');
+      expect(link).toHaveAttribute('href', '/');
+      expect(link.className).toMatch(/hds-button/);
+      // Secondary: the white fill with the theeeme's border, not the primary's fill.
+      expect(link.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+      expect(link.style.getPropertyValue('--border-color')).toBe('var(--color-bus)');
+      expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
+    });
+
+    test('without one it is a primary Sign in that brings them back to this collection', async () => {
+      localStorage.removeItem('userCode');
+      localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+      const { container } = renderAfter(refused(403));
+      await screen.findByText(/your access may have changed/i);
+
+      const link = wayOut(container);
+      expect(link).toHaveTextContent('Sign in');
+      expect(link).toHaveAttribute('href', '/login?next=%2Fcollections%2FCOL001');
+      expect(link.style.getPropertyValue('--background-color')).toBe('var(--color-bus)');
+    });
+
+    test.each([[404], [500]])(
+      'a %i has no such row: the access is not what is wrong',
+      async (status) => {
+        const { container } = renderAfter(refused(status));
+        await screen.findByRole('heading', { level: 1 });
+        await screen.findAllByRole('link');
+
+        expect(wayOut(container)).toBeNull();
+      }
+    );
   });
 
   test('a collection that is not there says only that', async () => {
@@ -2173,7 +2215,7 @@ describe('CollectionPage — the owner wrote in the visitor’s language', () =>
     expect(
       await screen.findByRole('heading', { level: 1, name: /Neighbourhood tools/ })
     ).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle(apiFetch);
     expect(screen.queryByText(/Eines del barri/)).not.toBeInTheDocument();
   });
 

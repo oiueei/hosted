@@ -338,7 +338,16 @@ TEXTS = {
     "reservation_reminder_intro": "Your reservation starts tomorrow:",
     # Digest
     "digest_subject": "What's new in {collection}",
-    "digest_plain": "New things:\n\n{things}\n\nView collection: {url}",
+    "digest_plain": "New things:\n\n{things}\n\n{members}View collection: {url}",
+    "digest_new_members_one": "And 1 new person joined the group.",
+    "digest_new_members_other": "And {count} new people joined the group.",
+    "join_summary_subject_one": "Someone new in {group}",
+    "join_summary_subject_other": "{count} new people in {group}",
+    "join_summary_intro_one": "Joined {group}: {names}.",
+    "join_summary_intro_other": "Joined {group}: {names}.",
+    "join_summary_more": "and {count} more",
+    "join_summary_cta": "See the members",
+    "join_summary_and": "and",
     "digest_intro": "New things:",
     "proposal_subject": "{collection}: can we invite someone?",
     "proposal_plain": (

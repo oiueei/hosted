@@ -5,6 +5,7 @@ import { Koros, Notification } from 'hds-react';
 import BackLink from '../components/BackLink';
 import PageLayout from '../components/PageLayout';
 import { apiFetch } from '../services/api';
+import { fetchAllPages } from '../utils/fetchAllPages';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MarkdownText from '../components/MarkdownText';
 import CollectionLinkbox from '../components/CollectionLinkbox';
@@ -108,9 +109,8 @@ export default function UserPage() {
   useEffect(() => {
     if (!isOwnProfile) return undefined;
     const controller = new AbortController();
-    apiFetch('/api/v1/collections/', { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setRunning(Array.isArray(data?.results) ? data.results : []))
+    fetchAllPages(apiFetch, '/api/v1/collections/?page_size=100', { signal: controller.signal })
+      .then(({ rows }) => setRunning(rows))
       // A failed fetch only costs its half of the groups — it must never take the
       // profile down with it.
       .catch(() => {});

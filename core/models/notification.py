@@ -53,6 +53,10 @@ class InAppNotification(models.Model):
         # trace of their own call. It carries no question, and it is not good
         # or bad news for its readers — a trail, so it renders as info.
         BOOKING_DECIDED = "BOOKING_DECIDED"
+        # Someone joined a group the reader runs (`_join_collection`, every door):
+        # one per sign-up, to the founder and each co-curator, never to the one
+        # joining. Joining is neither blocked nor approved; the team is told.
+        MEMBER_JOINED = "MEMBER_JOINED"
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="inbox_notifications")

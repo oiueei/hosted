@@ -75,16 +75,6 @@ body {
   padding: var(--spacing-s) 0;
 }
 
-/* The kind of collection, under its name: a quiet line in the hero's own text
-   colour (the grey of `.collection-kind` is for a white page). */
-.form-hero-kind {
-  font-size: var(--fontsize-body-m);
-  line-height: var(--lineheight-m);
-  color: var(--hero-text-color, var(--color-black-90));
-  margin: 0;
-  padding-bottom: var(--spacing-s);
-}
-
 .form-hero-text {
   font-size: var(--fontsize-body-l);
   line-height: 28px;

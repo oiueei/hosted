@@ -34,11 +34,11 @@ import StatusRegion from './StatusRegion';
  * team — any of them can approve the recommendation and all of them read the
  * note — so the four sentences that named the founder have `_team` twins that
  * name the curators instead (the same case as the "we have told
- * the curators" wording of the request emails). They promise only what is true
- * today: the server still notifies the founder alone (`create_proposal`, a
- * decision still pending), so none of them says the curators were
- * told or that anything was sent to them. `coOwnerCount` is how many
- * co-curators the page knows of (`collection.co_owners`, which members get).
+ * the curators" wording of the request emails). That is what the server does:
+ * `create_proposal` puts the question to the founder and every co-curator, each
+ * with an email, a notice and a pair of links of their own, and the first to
+ * decide settles it for all. `coOwnerCount` is how many co-curators the page
+ * knows of (`collection.co_owners`, which members get).
  */
 export default function RecommendGuest({
   id,

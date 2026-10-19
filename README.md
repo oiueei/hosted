@@ -34,7 +34,7 @@ What I'm looking for is honest feedback from people willing to poke at it: thing
 - **Deployment**: Heroku (Procfile + `.python-version` included)
 - **Static files**: WhiteNoise
 - **PWA**: installable web app manifest + icons ("Add to Home Screen"); no service worker yet
-- **Scheduled tasks**: one daily Heroku Scheduler job chains `expire_bookings`, `cleanup_rsvps`, `close_transfers`, `send_reminders`, `send_digests` and `purge_expired_data --commit` (see [HEROKU.md](HEROKU.md))
+- **Scheduled tasks**: one daily Heroku Scheduler job chains `expire_bookings`, `cleanup_rsvps`, `close_transfers`, `send_reminders`, `send_join_summaries`, `send_digests` and `purge_expired_data --commit` (see [HEROKU.md](HEROKU.md))
 - **Retention**: `purge_expired_data` enforces a period per category of data (`RETENTION_*` settings; 0 = keep indefinitely). Dry-run by default
 
 ## UI & Design System
@@ -97,6 +97,7 @@ core/
       cleanup_rsvps.py         # Delete expired RSVPs (24h+)
       close_transfers.py       # Close overdue loan transfers
       send_reminders.py        # Daily booking/delivery reminders
+      send_join_summaries.py   # Daily email to each group's curators: who joined since the last summary
       send_digests.py          # Weekly/monthly digest emails
       device_share.py          # Weekly share of mobile among people and form saves (reads DeviceDay)
       send_test_emails.py      # One sample of every email, sent to one address you choose
@@ -326,6 +327,7 @@ python manage.py expire_bookings   # expire stale bookings
 python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)
 python manage.py close_transfers   # close overdue loan transfers
 python manage.py send_reminders    # loan pickup and return reminders (both sides) + reservation arrival reminders (daily)
+python manage.py send_join_summaries  # who joined since the last summary, to each group's curators (daily, before send_digests)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 
 # Look at every email in a real mail client — sample data, every builder, one address.
@@ -520,7 +522,7 @@ Everything below is written so you don't have to take my word for it. Each claim
 | Claim | How to verify it |
 |---|---|
 | Third-party scripts *cannot* load | `curl -sI https://<your-domain>/ \| grep -i content-security-policy` — the policy is `default-src 'self'; script-src 'self'`. A third-party script is blocked by the browser, not by a promise. See `core/middleware.py`. |
-| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and the host the photos are served from — whatever `MEDIA_PUBLIC_BASE_URL` names. On a deployment that puts a CDN in front of its bucket the CSP allows one host more, the bucket itself, because that is where an upload is written even when reads come from the CDN. Two hosts at most, and that is the whole list. |
+| Nothing is sent anywhere | DevTools → Network, on any page. You will see this origin and the host the photos are served from — whatever `MEDIA_PUBLIC_BASE_URL` names. On a deployment that puts a CDN in front of its bucket the CSP allows one host more, the bucket itself, because that is where an upload is written even when reads come from the CDN. Two hosts at most, and that is the whole list. A tab left open for hours also asks this same origin for the app's front page, at most once every ten minutes and only when it comes back into view, to tell whether a newer version is out: no parameters, nothing of yours in it, nothing stored (`frontend/src/hooks/useNewVersion.js`). |
 | No trackers in the bundle | `frontend/package.json` — 12 runtime dependencies, all listed above. |
 | Only technical cookies | DevTools → Application → Cookies. |
 | Browser storage is strictly necessary, nothing more | **Inventoried 2026-09-07, `sessionStorage` line updated 2026-09-29.** Three `localStorage` keys, all session/preference, none observed behaviour: `userCode` (which account is signed in), `theeemeColors` + `koro` (your own display preferences). `sessionStorage` holds one key, `staleChunkReloadAt`: the time of the last automatic reload of a tab that was open across an update and asked for a page's code that no longer exists. It is what stops a page that stays broken from reloading in a loop; it lives as long as the tab, nothing else reads it, and it is never sent anywhere. One more key exists but isn't ours to name in code: `i18next-browser-languagedetector` caches your chosen UI language as `i18nextLng` under its own default — same category, a dependency's own write. `frontend/src/test/browserStorage.test.jsx` sweeps every source file and fails the build if a key outside this list ever appears — a public claim like this one needs a test that breaks when it stops being true, not just a paragraph. |

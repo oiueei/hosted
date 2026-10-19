@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { press } from './settle';
+import { press, settle } from './settle';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
@@ -20,6 +20,10 @@ vi.mock('../utils/downloadBlob', async (importOriginal) => ({
   ...(await importOriginal()),
   default: vi.fn(),
 }));
+
+// These pin the entries the product itself puts in the menu; a deployment that has a
+// guide for whoever runs a group adds one more (pinned in `curatorGuide.test.jsx`).
+vi.mock('../deployment', async (orig) => ({ ...(await orig()), curatorGuidePath: null }));
 
 import { apiFetch } from '../services/api';
 import downloadBlob from '../utils/downloadBlob';
@@ -1138,10 +1142,10 @@ describe('the collection menu — "Requests to me"', () => {
     // Close this one, open the account menu (a click outside closes it).
     const accountTrigger = screen.getByRole('button', { name: 'Your account' });
     fireEvent.pointerDown(accountTrigger);
-    fireEvent.click(accountTrigger);
+    await press(accountTrigger);
 
     expect(screen.getByRole('link', { name: 'My requests' })).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle(apiFetch);
     expect(screen.queryByRole('link', { name: REQUESTS })).not.toBeInTheDocument();
   });
 

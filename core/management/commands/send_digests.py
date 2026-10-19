@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 
 from core.models.collection import Collection
+from core.models.event import Event
 from core.models.thing import Thing
 from core.services.email_service import send_digest_email
 
@@ -75,6 +76,19 @@ class Command(BaseCommand):
             # co-curators are), so they are added, once.
             recipients = list(dict.fromkeys([*invitee_emails, collection.owner.email]))
 
+            # How many people joined in the same window and are still in the
+            # group: one query for the collection, never one per recipient. Only
+            # the number reaches the email.
+            joined = set(
+                Event.objects.filter(
+                    kind=Event.Kind.MEMBER_JOINED,
+                    collection_code=collection.code,
+                    created__date__gte=since,
+                    created__date__lt=until,
+                ).values_list("actor_code", flat=True)
+            )
+            new_members = len(joined & {u.code for u in collection.invites.all()})
+
             try:
                 send_digest_email(
                     collection_headline=collection.headline,
@@ -82,6 +96,7 @@ class Command(BaseCommand):
                     thing_headlines=headlines,
                     emails=recipients,
                     collection=collection,
+                    new_members=new_members,
                 )
             except Exception as exc:
                 self.stderr.write(self.style.WARNING(f"Digest failed for {collection.code}: {exc}"))

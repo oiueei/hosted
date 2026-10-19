@@ -7,7 +7,7 @@ vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
 
 import { apiFetch } from '../services/api';
 import AccountMenu from './AccountMenu';
-import { press } from '../test/settle';
+import { press, settle } from '../test/settle';
 
 expect.extend(toHaveNoViolations);
 
@@ -316,11 +316,11 @@ describe('AccountMenu — where the collection menu carries "Requests to me"', (
     meSays(true);
     renderWithCollectionMenu();
 
-    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+    await press(screen.getByRole('button', { name: /your account/i }));
 
     expect(screen.getByRole('link', { name: /my requests/i })).toBeInTheDocument();
-    // Give the (unasked) answer every chance to arrive.
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Let any answer the menu asked for arrive, inside act.
+    await settle(apiFetch);
     expect(screen.queryByRole('link', { name: REQUESTS_TO_ME.name })).not.toBeInTheDocument();
   });
 
@@ -328,8 +328,8 @@ describe('AccountMenu — where the collection menu carries "Requests to me"', (
     meSays(true);
     renderWithCollectionMenu();
 
-    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await press(screen.getByRole('button', { name: /your account/i }));
+    await settle(apiFetch);
 
     expect(apiFetch).not.toHaveBeenCalled();
   });

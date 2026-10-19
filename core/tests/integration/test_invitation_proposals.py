@@ -22,6 +22,7 @@ from core.models.notification import InAppNotification
 from core.services.invitation_service import deliver_invitation
 
 PROPOSE_URL = "/api/v1/collections/{code}/invite/propose/"
+CO_OWNERS_URL = "/api/v1/collections/{code}/co-owners/"
 
 # The quota follows RATELIMIT_ENABLE, which the test settings turn off; switch it
 # on with a local-memory cache, the same way test_invite_quota.py does.
@@ -779,3 +780,218 @@ class TestANewCollectionAsksItsOwnerNothing:
 
         assert resp.status_code == 403
         assert InvitationProposal.objects.count() == 0
+
+
+@pytest.fixture
+def team(group):
+    """The founder plus two co-curators, each with an address of their own."""
+    first = User.objects.create(code="COOW01", email="lili@your-domain.test", name="Lili")
+    second = User.objects.create(code="COOW02", email="lolo@your-domain.test", name="Lolo")
+    group.invites.add(first, second)
+    group.co_owners.add(first, second)
+    return group.owner, first, second
+
+
+def _suggest(group, member, email="lele11@your-domain.test"):
+    client_for(member).post(PROPOSE_URL.format(code=group.code), {"email": email}, format="json")
+    return InvitationProposal.objects.get(collection=group, email=email)
+
+
+def _pair(proposal, curator):
+    return (
+        RSVP.objects.get(
+            target_code=proposal.code, user_code=curator, action=RSVP.Action.PROPOSAL_APPROVE
+        ),
+        RSVP.objects.get(
+            target_code=proposal.code, user_code=curator, action=RSVP.Action.PROPOSAL_REJECT
+        ),
+    )
+
+
+def _proposal_notices(proposal=None):
+    notices = InAppNotification.objects.filter(type=InAppNotification.Type.INVITE_PROPOSED)
+    if proposal is not None:
+        notices = notices.filter(payload__proposal_code=proposal.code)
+    return notices
+
+
+def _proposal_links(proposal):
+    return RSVP.objects.filter(
+        target_code=proposal.code,
+        action__in=[RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT],
+    )
+
+
+@pytest.mark.django_db
+class TestTheWholeTeamIsAsked:
+    """A recommendation is a question for everyone who can answer it."""
+
+    def test_each_curator_gets_an_email_a_notice_and_a_pair_of_links_of_their_own(
+        self, group, member, team
+    ):
+        mail.outbox.clear()
+        proposal = _suggest(group, member)
+
+        for curator in team:
+            approve, reject = _pair(proposal, curator)
+            notice = _proposal_notices(proposal).get(user=curator)
+            assert notice.payload["collection_code"] == group.code
+            sent = [m for m in mail.outbox if m.to == [curator.email]]
+            assert len(sent) == 1, curator.email
+            # Their own links, nobody else's.
+            assert approve.action_link() in sent[0].body
+            assert reject.action_link() in sent[0].body
+        tokens = {r.token for r in _proposal_links(proposal)}
+        assert len(tokens) == 6, "three curators, two links each, all different"
+
+    def test_the_one_who_recommended_is_told_nothing(self, group, member, team):
+        mail.outbox.clear()
+        proposal = _suggest(group, member)
+
+        assert not _proposal_notices(proposal).filter(user=member).exists()
+        assert not _proposal_links(proposal).filter(user_code=member).exists()
+        assert member.email not in [addr for m in mail.outbox for addr in m.to]
+
+    def test_each_email_speaks_its_recipients_language(self, group, member, team):
+        from core.services.email_service import _texts
+
+        _, first, _ = team
+        first.language = "ca"
+        first.save(update_fields=["language"])
+        mail.outbox.clear()
+        _suggest(group, member)
+
+        subject = {m.to[0]: m.subject for m in mail.outbox}
+        assert subject[first.email] == _texts("ca")("proposal_subject").format(
+            collection=group.headline
+        )
+        assert subject[group.owner.email] != subject[first.email]
+
+    def test_nobody_reaches_the_proposed_address_even_with_a_team(self, group, member, team):
+        mail.outbox.clear()
+        _suggest(group, member)
+
+        assert "lele11@your-domain.test" not in [addr for m in mail.outbox for addr in m.to]
+        assert not User.objects.filter(email="lele11@your-domain.test").exists()
+
+    @pytest.mark.parametrize("answer", ["approve", "reject"])
+    def test_one_curator_deciding_in_the_app_takes_it_off_everyones_desk(
+        self, group, member, team, answer
+    ):
+        proposal = _suggest(group, member)
+        _, first, _ = team
+
+        resp = client_for(first).post(f"/api/v1/proposals/{proposal.code}/{answer}/")
+
+        assert resp.status_code == 200
+        assert not _proposal_notices(proposal).exists()
+        assert not _proposal_links(proposal).exists()
+
+    @pytest.mark.parametrize("which", ["approve", "reject"])
+    def test_one_curator_deciding_by_link_takes_it_off_everyones_desk(
+        self, group, member, team, which
+    ):
+        proposal = _suggest(group, member)
+        _, _, second = team
+        approve, reject = _pair(proposal, second)
+        link = approve if which == "approve" else reject
+
+        resp = APIClient().post(f"/api/v1/rsvp/{link.token}/")
+
+        assert resp.status_code == 200
+        assert not _proposal_notices(proposal).exists()
+        assert not _proposal_links(proposal).exists()
+
+    def test_the_decision_clears_only_its_own_suggestion(self, group, member, team):
+        settled = _suggest(group, member, "lele11@your-domain.test")
+        other = _suggest(group, member, "lele12@your-domain.test")
+
+        client_for(team[1]).post(f"/api/v1/proposals/{settled.code}/reject/")
+
+        assert not _proposal_notices(settled).exists()
+        assert _proposal_notices(other).count() == 3
+        assert _proposal_links(other).count() == 6
+
+    def test_a_demoted_curators_link_is_refused_and_the_suggestion_stays_pending(
+        self, group, member, team
+    ):
+        proposal = _suggest(group, member)
+        owner, first, _ = team
+        approve, reject = _pair(proposal, first)
+        group.co_owners.remove(first)
+        mail.outbox.clear()
+
+        resp = APIClient().post(f"/api/v1/rsvp/{approve.token}/")
+
+        assert resp.status_code == 403
+        assert resp.data["code"] == "no_longer_manages"
+        proposal.refresh_from_db()
+        assert proposal.status == InvitationProposal.Status.PENDING
+        assert mail.outbox == []
+        assert not User.objects.filter(email="lele11@your-domain.test").exists()
+        # Their link is burnt; the founder's pair still decides.
+        assert not RSVP.objects.filter(pk=approve.pk).exists()
+        assert _pair(proposal, owner)
+
+    def test_a_removed_curators_decline_link_cannot_decline_either(self, group, member, team):
+        proposal = _suggest(group, member)
+        _, first, _ = team
+        _, reject = _pair(proposal, first)
+        group.co_owners.remove(first)
+        group.invites.remove(first)
+
+        resp = APIClient().post(f"/api/v1/rsvp/{reject.token}/")
+
+        assert resp.status_code == 403
+        proposal.refresh_from_db()
+        assert proposal.status == InvitationProposal.Status.PENDING
+
+    def test_a_curator_who_still_runs_the_group_decides_with_their_link(self, group, member, team):
+        proposal = _suggest(group, member)
+        owner, first, _ = team
+        group.co_owners.remove(first)
+        approve, _ = _pair(proposal, owner)
+
+        assert APIClient().post(f"/api/v1/rsvp/{approve.token}/").status_code == 200
+
+    def test_demoting_a_curator_takes_their_recommendation_notices_of_that_group(
+        self, group, member, team
+    ):
+        owner, first, second = team
+        other_group = Collection.objects.create(code="GRP002", owner=owner, headline="Elsewhere")
+        other_group.co_owners.add(first)
+        proposal = _suggest(group, member)
+        elsewhere = InAppNotification.objects.create(
+            user=first,
+            type=InAppNotification.Type.INVITE_PROPOSED,
+            payload={"collection_code": other_group.code, "proposal_code": "ZZZZZZ"},
+        )
+        kept_for_proposer = InAppNotification.objects.create(
+            user=first,
+            type=InAppNotification.Type.INVITE_PROPOSED,
+            payload={"collection_code": group.code, "approved": True},
+        )
+
+        resp = client_for(owner).delete(
+            CO_OWNERS_URL.format(code=group.code), {"user_code": first.code}, format="json"
+        )
+
+        assert resp.status_code == 200
+        assert not _proposal_notices(proposal).filter(user=first).exists()
+        assert _proposal_notices(proposal).filter(user=owner).exists()
+        assert _proposal_notices(proposal).filter(user=second).exists()
+        assert InAppNotification.objects.filter(pk=elsewhere.pk).exists()
+        assert InAppNotification.objects.filter(pk=kept_for_proposer.pk).exists()
+
+    def test_a_curator_who_is_the_one_recommending_is_left_out_of_the_team(self, group, team):
+        from core.services.invitation_service import create_proposal
+
+        owner, first, second = team
+        mail.outbox.clear()
+
+        proposal, _, _ = create_proposal(group, first, "lele13@your-domain.test")
+
+        asked = set(_proposal_notices(proposal).values_list("user_id", flat=True))
+        assert asked == {owner.code, second.code}
+        assert not _proposal_links(proposal).filter(user_code=first).exists()
+        assert first.email not in [addr for m in mail.outbox for addr in m.to]

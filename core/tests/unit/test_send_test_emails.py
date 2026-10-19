@@ -8,6 +8,7 @@ also the broadest smoke test the emails have.
 """
 
 import ast
+import html
 import inspect
 import re
 from html.parser import HTMLParser
@@ -473,3 +474,19 @@ def test_every_sample_thing_lives_in_a_collection_of_its_own_kind():
             assert kind_for_thing_type(thing.type) == collection.kind, thing.headline
     assert {c.kind for c in Collection.objects.all()} == {"STALL", "LIBRARY", "SHED"}
     assert world.lend.collections.get() == world.library
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("lang", "sentence"),
+    [
+        ("es", "Y 3 personas nuevas se han sumado al grupo."),
+        ("ca", "I 3 persones noves s'han sumat al grup."),
+        ("en", "And 3 new people joined the group."),
+    ],
+)
+def test_the_digest_sample_shows_how_many_people_joined(lang, sentence):
+    (message,) = _run("--only", "digest", "--lang", lang)
+
+    assert sentence in message.body
+    assert sentence in html.unescape(message.alternatives[0][0])

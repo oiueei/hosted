@@ -341,12 +341,12 @@ heroku config:set \
 
 ## Scheduled jobs (cron)
 
-The app relies on six management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). Run them as **one daily job** (05:00 UTC is a good choice), each guarded so that one failure does not cancel the rest:
+The app relies on seven management commands run on [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler). Run them as **one daily job** (05:00 UTC is a good choice), each guarded so that one failure does not cancel the rest:
 
-A seventh, `cleanup_orphan_images`, is **its own second job** — see the end of this section.
+An eighth, `cleanup_orphan_images`, is **its own second job** — see the end of this section.
 
 ```
-rc=0; python manage.py expire_bookings || rc=1; python manage.py cleanup_rsvps || rc=1; python manage.py close_transfers || rc=1; python manage.py send_reminders || rc=1; python manage.py send_digests || rc=1; python manage.py purge_expired_data --commit || rc=1; exit $rc
+rc=0; python manage.py expire_bookings || rc=1; python manage.py cleanup_rsvps || rc=1; python manage.py close_transfers || rc=1; python manage.py send_reminders || rc=1; python manage.py send_join_summaries || rc=1; python manage.py send_digests || rc=1; python manage.py purge_expired_data --commit || rc=1; exit $rc
 ```
 
 **Why not `&&`.** It was `&&`, and the shape is wrong for this chain: `&&` stops at the first failure, so a transient error in `expire_bookings` silently cancels the five behind it — `purge_expired_data` included, which is the command that keeps the retention policy true rather than aspirational. A plain `;` runs them all but reports the **last** command's status, so the job exits 0 and scheduler-monitor never says a word. The form above does both jobs: every command runs, `rc` remembers that one of them failed, and `exit $rc` is what Heroku sees — so a broken stage still turns the run red.
@@ -369,6 +369,7 @@ Heroku Scheduler config lives in the dashboard and nowhere else, so keep the das
 | `python manage.py cleanup_rsvps` | daily (chained) | Deletes RSVP tokens that expired 24h+ ago. |
 | `python manage.py close_transfers` | daily (chained) | Sets `returned_date` on transfers whose ACCEPTED booking's `end_date` has passed. |
 | `python manage.py send_reminders` | daily (chained) | Pickup reminders for loans and rentals that start tomorrow and return reminders for those that end tomorrow (to the borrower and to the team that runs the thing), and arrival reminders for on-site reservations that start tomorrow (to the member who booked). |
+| `python manage.py send_join_summaries` | daily (chained, **before** `send_digests`) | Tells each group's curators (founder and co-curators) who joined since the last summary, one email each; names only people still in the group. Safe to run twice: the day is claimed in `Collection.join_summary_sent_on` before anything is sent, and a day the Scheduler skipped is picked up (up to 7 days back). |
 | `python manage.py send_digests` | daily (chained) | Weekly digests (Mondays) and monthly digests (1st); the command no-ops on other days. |
 | `python manage.py purge_expired_data --commit` | daily (chained) | Enforces the retention periods (GDPR art. 5.1.e): anonymises the analytics log, and deletes invited guests who never came in, old activity rows, notifications, reports, and inactive accounts after a warning email (at most 200 warnings per run — see `--max-warnings`). **Dry-run without `--commit`** — read the warning above before arming it. |
 | `python manage.py cleanup_orphan_images --bucket <bucket> --commit` | daily (its own job, after the chain) | Deletes uploads that never became a record (a form opened, a photo uploaded, never submitted) from the bucket, between 24 hours and 30 days old. **Not chained**, and **dry-run without `--commit`** — see the end of this section. |

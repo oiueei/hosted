@@ -501,6 +501,11 @@ def _(w):
     )
 
 
+@sample("join-summary", "send_join_summary_email")
+def _(w):
+    es.send_join_summary_email(w.collection, w.me, ["Lala", "", "Lolo"])
+
+
 # --- Category 3: news --------------------------------------------------------------
 
 
@@ -512,6 +517,7 @@ def _(w):
         ["Silla de madera", "Escalera de mano"],
         [w.to],
         collection=w.collection,
+        new_members=3,
     )
 
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
+import { useParams, useNavigate, useLocation, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
@@ -25,6 +25,7 @@ import { useLocalized } from '../utils/localized';
 import useTheeeme from '../hooks/useTheeeme';
 import useThingActions from '../hooks/useThingActions';
 import ButtonLink from '../components/ButtonLink';
+import { loginPathFor } from '../utils/nextPath';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useDigestPreference from '../hooks/useDigestPreference';
@@ -35,6 +36,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 export default function ThingPage() {
   const { code, thingCode } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const userCode = localStorage.getItem('userCode');
   const isAuthenticated = !!userCode;
@@ -186,6 +188,25 @@ export default function ThingPage() {
         <Notification label={t('common.error')} type="error">
           {t(error)}
         </Notification>
+        {error === 'thingPage.noPermission' && (
+          // A refusal is a dead end unless it says where to go: Home for a
+          // signed-in reader, the sign-in (which brings them back) for one
+          // with no session.
+          <>
+            <div className="spacer-m" />
+            <div className="button-row-wide">
+              {localStorage.getItem('userCode') ? (
+                <ButtonLink to="/" style={btnSecondaryStyle}>
+                  {t('common.home')}
+                </ButtonLink>
+              ) : (
+                <ButtonLink to={loginPathFor(location)} style={btnStyle}>
+                  {t('login.signIn')}
+                </ButtonLink>
+              )}
+            </div>
+          </>
+        )}
       </PageLayout>
     );
   }

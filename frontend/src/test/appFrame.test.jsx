@@ -1,6 +1,6 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { switchLanguage } from './settle';
+import { settle, switchLanguage } from './settle';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
@@ -145,7 +145,7 @@ describe('the account own saved language', () => {
     // The page of the address is a lazy chunk: let it arrive, then give the
     // language check a moment to (not) happen.
     await screen.findByRole('heading', { level: 1 });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle(globalThis.fetch);
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
@@ -165,7 +165,7 @@ describe('the account own saved language', () => {
     render(<App />);
 
     await screen.findByRole('heading', { level: 1 });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle(globalThis.fetch);
     expect(i18n.language).toBe(before);
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });

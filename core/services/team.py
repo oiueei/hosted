@@ -67,6 +67,10 @@ def drop_team_notices_of(user, collection):
       collections is still theirs to decide if they curate the other one. The
       notice about it still asks for something they can do, so it stays.
 
+    ``INVITE_PROPOSED`` goes too: a recommendation is put to the whole team and
+    nobody who no longer runs the group can decide it (the old record kept for a
+    proposer, which carries ``approved``, is not a question and stays).
+
     ``FAQ_QUESTION`` is handled the same way: it is a question put to the team, and
     its payload carries the collection since it was written with one. Its thing
     comes from the FAQ (``faq_code``). A question written before the payload
@@ -80,7 +84,18 @@ def drop_team_notices_of(user, collection):
     mine = InAppNotification.objects.filter(user=user, payload__collection_code=collection.code)
     notices = list(InAppNotification.team_booking_notices(mine))
     questions = list(mine.filter(type=InAppNotification.Type.FAQ_QUESTION))
-    if not notices and not questions:
+    # A recommendation put to the team: nobody who has stopped running the group
+    # can decide it, and it concerns no thing they could still manage. (An
+    # INVITE_PROPOSED carrying ``approved`` is the old record kept for the
+    # proposer, not a question: it stays.)
+    # Told apart in Python: an ``exclude(payload__approved=True)`` on a JSON key
+    # the payload does not have is NULL in SQL, and drops the very rows wanted.
+    proposals = [
+        n
+        for n in mine.filter(type=InAppNotification.Type.INVITE_PROPOSED)
+        if not n.payload.get("approved")
+    ]
+    if not notices and not questions and not proposals:
         return 0
     thing_of_faq = dict(
         FAQ.objects.filter(code__in=[q.payload.get("faq_code") for q in questions]).values_list(
@@ -103,5 +118,6 @@ def drop_team_notices_of(user, collection):
         if thing.can_manage(user.code)
     }
     doomed = [n.pk for n in notices if thing_code(n) not in still_run]
+    doomed += [n.pk for n in proposals]
     InAppNotification.objects.filter(pk__in=doomed).delete()
     return len(doomed)
