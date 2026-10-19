@@ -57,6 +57,11 @@ describe('the hero’s navigation band', () => {
   test('the back link’s 24px line sits at y=28 of it and gives the rest of the band back', () => {
     const sel = '.form-hero-content .back-link';
     expect(declarations(sel, 'line-height')).toEqual(['24px']);
+    // A flex row centring the arrow with the text, 24px tall: an inline svg on the
+    // baseline made it 31px and the band closed at y=87.
+    expect(declarations(sel, 'display')).toEqual(['flex']);
+    expect(declarations(sel, 'align-items')).toEqual(['center']);
+    expect(declarations(sel, 'min-height')).toEqual(['24px']);
     // 28px - 80px climbs back into the padding; 28px under it closes 28 + 24 + 28 = 80.
     expect(declarations(sel, 'margin')).toEqual(['calc(28px - var(--hero-band)) 0 28px']);
   });
