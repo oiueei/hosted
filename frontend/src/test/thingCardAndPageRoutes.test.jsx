@@ -292,7 +292,58 @@ describe('ThingPage — how it fails to load', () => {
     renderPage();
 
     expect(await screen.findByText(message)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: en.common.home })).toHaveAttribute('href', '/');
+    // The hero's back link; a 403 has a second Home, the button below the message.
+    expect(screen.getAllByRole('link', { name: en.common.home })[0]).toHaveAttribute('href', '/');
+  });
+
+  describe('a refusal leaves a way out', () => {
+    const THEEEME = {
+      color_01: 'bus',
+      color_02: 'white',
+      color_03: 'bus-light',
+      color_04: 'black',
+      color_06: 'white',
+    };
+    const wayOut = (container) => container.querySelector('.button-row-wide a');
+
+    test('with a session it is a secondary button to Home', async () => {
+      localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+      setApi({ thing: {}, thingStatus: 403 });
+      const { container } = renderPage();
+      await screen.findByText(en.thingPage.noPermission);
+
+      const link = wayOut(container);
+      expect(link).toHaveTextContent(en.common.home);
+      expect(link).toHaveAttribute('href', '/');
+      expect(link.className).toMatch(/hds-button/);
+      expect(link.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
+      expect(link.style.getPropertyValue('--border-color')).toBe('var(--color-bus)');
+      expect(screen.queryByRole('link', { name: en.login.signIn })).toBeNull();
+    });
+
+    test('without one it is a primary Sign in that brings them back to this thing', async () => {
+      localStorage.removeItem('userCode');
+      localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+      setApi({ thing: {}, thingStatus: 403 });
+      const { container } = renderPage('/collections/COL001/things/THG001');
+      await screen.findByText(en.thingPage.noPermission);
+
+      const link = wayOut(container);
+      expect(link).toHaveTextContent(en.login.signIn);
+      expect(link).toHaveAttribute('href', '/login?next=%2Fcollections%2FCOL001%2Fthings%2FTHG001');
+      expect(link.style.getPropertyValue('--background-color')).toBe('var(--color-bus)');
+    });
+
+    test.each([[404], [500]])(
+      'a %i has no such row: access is not what is wrong',
+      async (status) => {
+        setApi({ thing: {}, thingStatus: status });
+        const { container } = renderPage();
+        await screen.findByRole('heading', { level: 1 });
+
+        expect(wayOut(container)).toBeNull();
+      }
+    );
   });
 
   test('a request that never arrives says the connection is down', async () => {
