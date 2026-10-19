@@ -2656,12 +2656,14 @@ def send_join_summary_email(collection, curator, names):
     count = len(names)
     shown = [_member_name(n, lang) for n in names[:JOIN_SUMMARY_MAX_NAMES]]
     if count > JOIN_SUMMARY_MAX_NAMES:
-        shown.append(T("join_summary_more").format(count=count - JOIN_SUMMARY_MAX_NAMES))
-    listed = (
-        shown[0]
-        if len(shown) == 1
-        else f"{', '.join(shown[:-1])} {T('join_summary_and')} {shown[-1]}"
-    )
+        # "more" carries its own conjunction ("y 1 más"), so it closes the list
+        # in the conjunction's place.
+        more = T("join_summary_more").format(count=count - JOIN_SUMMARY_MAX_NAMES)
+        listed = f"{', '.join(shown)} {more}"
+    elif len(shown) == 1:
+        listed = shown[0]
+    else:
+        listed = f"{', '.join(shown[:-1])} {T('join_summary_and')} {shown[-1]}"
     one = count == 1
     subject = T("join_summary_subject_one" if one else "join_summary_subject_other").format(
         group=group, count=count

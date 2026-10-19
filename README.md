@@ -97,7 +97,7 @@ core/
       cleanup_rsvps.py         # Delete expired RSVPs (24h+)
       close_transfers.py       # Close overdue loan transfers
       send_reminders.py        # Daily booking/delivery reminders
-      send_join_summaries.py   # Daily email to each group's curators: who joined yesterday
+      send_join_summaries.py   # Daily email to each group's curators: who joined since the last summary
       send_digests.py          # Weekly/monthly digest emails
       device_share.py          # Weekly share of mobile among people and form saves (reads DeviceDay)
       send_test_emails.py      # One sample of every email, sent to one address you choose
@@ -327,7 +327,7 @@ python manage.py expire_bookings   # expire stale bookings
 python manage.py cleanup_rsvps     # delete expired RSVPs (24h+)
 python manage.py close_transfers   # close overdue loan transfers
 python manage.py send_reminders    # loan pickup and return reminders (both sides) + reservation arrival reminders (daily)
-python manage.py send_join_summaries  # who joined yesterday, to each group's curators (daily, before send_digests)
+python manage.py send_join_summaries  # who joined since the last summary, to each group's curators (daily, before send_digests)
 python manage.py send_digests      # weekly/monthly digest emails (daily)
 
 # Look at every email in a real mail client — sample data, every builder, one address.

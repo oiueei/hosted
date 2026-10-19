@@ -1,5 +1,5 @@
 """
-Management command to tell each group's curators who joined the day before.
+Management command to tell each group's curators who joined since the last summary.
 
 One email per curator (the founder and the co-curators) for every ACTIVE
 collection that had sign-ups, read from the ``Event`` log. Run once a day, before
@@ -27,7 +27,7 @@ MAX_DAYS = 7
 
 
 class Command(BaseCommand):
-    help = "Email each group's curators the people who joined it yesterday"
+    help = "Email each group's curators the people who joined it since the last summary"
 
     def handle(self, *args, **options):
         yesterday = timezone.localdate() - timedelta(days=1)

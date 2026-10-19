@@ -147,8 +147,18 @@ class TestNamesAndLanguages:
         run()
         body = to("lala@your-domain.test")[0].body
         assert "Guest09" in body and "Guest10" not in body
-        assert "and 1 more" in body
+        assert "Guest08, Guest09 and 1 more." in body
+        assert "and and" not in body
         assert "11" in to("lala@your-domain.test")[0].subject
+
+    def test_the_closing_more_replaces_the_conjunction_in_spanish(self, group):
+        User.objects.filter(email="lala@your-domain.test").update(language="es")
+        for i in range(12):
+            join(group, f"Guest{i:02d}")
+        run()
+        body = to("lala@your-domain.test")[0].body
+        assert "Guest09 y 2 más." in body
+        assert "y y" not in body
 
     def test_ten_names_have_no_more(self, group):
         for i in range(10):
@@ -163,21 +173,21 @@ class TestNamesAndLanguages:
             (
                 "en",
                 "2 new people in The street",
-                "Joined The street yesterday: Lili and Lolo.",
+                "Joined The street: Lili and Lolo.",
                 None,
                 "See the members",
             ),
             (
                 "es",
                 "2 personas nuevas en The street",
-                "Ayer se unieron a The street: Lili y Lolo.",
+                "Se han unido a The street: Lili y Lolo.",
                 None,
                 "Ver los miembros",
             ),
             (
                 "ca",
                 "2 persones noves a The street",
-                "Ahir es van unir a The street: Lili i Lolo.",
+                "S'han unit a The street: Lili i Lolo.",
                 None,
                 "Veure els membres",
             ),
@@ -199,7 +209,7 @@ class TestNamesAndLanguages:
         run()
         message = to("lala@your-domain.test")[0]
         assert "Una persona nueva" in message.subject
-        assert "Ayer se unió a The street: Lili." in message.body
+        assert "Se ha unido a The street: Lili." in message.body
 
 
 class TestOncePerDay:
