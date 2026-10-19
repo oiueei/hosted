@@ -804,7 +804,9 @@ div[class*='Linkbox-module_linkbox'] {
 .tag-filter-bar {
   display: flex;
   gap: var(--spacing-2-xs);
-  margin-bottom: var(--spacing-m);
+  /* G under the bar to the cards: the 4px of padding below are room for the focus
+     ring the clipped overflow would otherwise cut, so they come off the margin. */
+  margin-bottom: calc(var(--page-margin) - var(--spacing-3-xs));
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -817,15 +819,16 @@ div[class*='Linkbox-module_linkbox'] {
   border: 1px solid transparent;
   background-color: var(--color-bus-light);
   color: var(--color-bus);
-  border-radius: 999px;
-  padding: var(--spacing-3-xs) var(--spacing-s);
-  /* WCAG 2.5.5 / mobile-first: 44px-tall tap target while keeping the pill look. */
-  min-height: 44px;
+  border-radius: 24px;
+  padding: 0 20px;
+  /* 48px tall: above the 44px tap target WCAG 2.5.5 asks for. */
+  height: 48px;
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
   white-space: nowrap;
-  font-size: var(--fontsize-body-s);
+  font-size: var(--fontsize-body-m);
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
 }
