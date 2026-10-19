@@ -653,9 +653,13 @@ div[class*='Linkbox-module_linkbox'] {
   width: 100%;
   min-width: 0;
   background: var(--color-white);
-  border-radius: 2px;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
+  /* 16px above and at the sides, 24px under, and 16px between the image, the
+     text, the attributes and the buttons. */
+  padding: var(--spacing-s) var(--spacing-s) var(--spacing-m);
+  gap: var(--spacing-s);
 }
 
 /* The card of the thing just uploaded, marked for a couple of seconds on a phone
@@ -673,19 +677,20 @@ div[class*='Linkbox-module_linkbox'] {
 
 .thing-card-image {
   display: block;
-  width: calc(100% - 2 * var(--spacing-s));
-  margin: var(--spacing-s) var(--spacing-s) 0;
+  width: 100%;
   aspect-ratio: 3 / 2;
   object-fit: cover;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
+/* The text block opens with 8px of its own, and its pieces — who and when, the
+   title, the description, the tags — are 16px apart, as the card's blocks are. */
 .thing-card-body {
   display: flex;
   flex-direction: column;
   flex: 1;
   gap: var(--spacing-s);
-  padding: var(--spacing-m) var(--spacing-s) var(--spacing-m);
+  padding: var(--spacing-2-xs) 0 0;
 }
 
 .thing-card-meta {
@@ -695,7 +700,7 @@ div[class*='Linkbox-module_linkbox'] {
 }
 
 .thing-card-headline {
-  font-size: var(--fontsize-heading-s);
+  font-size: var(--fontsize-heading-m);
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.2px;
@@ -712,8 +717,9 @@ div[class*='Linkbox-module_linkbox'] {
 }
 
 .thing-card-description {
-  font-size: var(--fontsize-body-l);
-  line-height: 28px;
+  font-size: var(--fontsize-body-m);
+  font-weight: 400;
+  line-height: 24px;
   color: var(--color-black-90);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -755,6 +761,20 @@ div[class*='Linkbox-module_linkbox'] {
   font-weight: 700;
 }
 
+/* On a card the attributes are 16/24 with 8px between rows and between an icon
+   and its text, in a block with 8px above and below. A thing's page reads the
+   same rows at 18/28 (the rules above), so these name the card. */
+.thing-card .thing-card-info {
+  gap: var(--spacing-2-xs);
+  padding: var(--spacing-2-xs) 0;
+}
+
+.thing-card .thing-card-info-row {
+  gap: var(--spacing-2-xs);
+  font-size: var(--fontsize-body-m);
+  line-height: 24px;
+}
+
 .thing-card-bookings {
   font-size: var(--fontsize-body-s);
   padding-left: 1.25rem;
@@ -768,7 +788,6 @@ div[class*='Linkbox-module_linkbox'] {
   flex-direction: column;
   gap: var(--spacing-s);
   margin-top: auto;
-  padding-top: var(--spacing-s);
 }
 
 /* No `.thing-card-buttons a { display: contents }` here. It was added in 2026-03
@@ -890,26 +909,10 @@ body :focus-visible {
 
 .things-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-@media (min-width: 768px) {
-  .things-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 992px) {
-  .things-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 1248px) {
-  .things-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  /* 1, 2, 3, 4 columns at the HDS breakpoints (`--grid-columns`, which the
+     collection's logo takes a column of), G apart. */
+  grid-template-columns: repeat(var(--grid-columns), 1fr);
+  gap: var(--page-margin);
 }
 
 /* Collections render as image-less full-width rows, one under another at
@@ -1388,9 +1391,8 @@ body :focus-visible {
 
 .image-carousel-viewport--card {
   display: block;
-  width: calc(100% - 2 * var(--spacing-s));
+  width: 100%;
   max-width: none;
-  margin: var(--spacing-s) var(--spacing-s) 0;
 }
 
 .image-carousel-image--card {
@@ -1398,7 +1400,7 @@ body :focus-visible {
   width: 100%;
   aspect-ratio: 3 / 2;
   object-fit: cover;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 /* Collection tag editor (TagInput) — chip row of removable HDS Tags */
