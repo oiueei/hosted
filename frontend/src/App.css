@@ -4,6 +4,20 @@
   box-sizing: border-box;
 }
 
+/* The page's side margin, the "G" every vertical rhythm in a hero and a grid is
+   measured in: 16px below 768px, 24px from it (the Breakpoints table in
+   frontend/CLAUDE.md). One variable so the content column, the hero's, the
+   footer's and the corner row's right edge cannot disagree. */
+:root {
+  --page-margin: var(--spacing-s);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --page-margin: var(--spacing-m);
+  }
+}
+
 body {
   font-family:
     var(--font-default),
@@ -18,7 +32,7 @@ body {
 .page-container {
   max-width: 1248px;
   margin: 0 auto;
-  padding: var(--spacing-s);
+  padding: var(--page-margin);
 }
 
 .page-title {
@@ -52,9 +66,13 @@ body {
      page will render. Pinned in test/heroCornerLayout.test.jsx, which recomputes
      it from the DOM and these rules. */
   --hero-corners-width: calc(3 * 44px + 2 * var(--spacing-2-xs));
+  /* The first 80px are the navigation band: the back link and the corner icons
+     sit centred in it. Under it the content runs one rhythm (see below), and
+     24px close it against the koro. */
+  --hero-band: 80px;
   max-width: 1248px;
   margin: 0 auto;
-  padding: var(--spacing-xl) var(--spacing-s) var(--spacing-xl);
+  padding: var(--hero-band) var(--page-margin) var(--spacing-m);
 }
 
 .form-hero-content .back-link {
@@ -64,6 +82,13 @@ body {
      nothing: a long name ran underneath them. Capped so the text wraps before
      the icons instead (a 320px screen leaves the link 288 - 148 - 8 = 132px). */
   max-width: calc(100% - var(--hero-corners-width) - var(--spacing-xs));
+  /* Its 24px line sits at y=28..52 of the band (centred in 80px): the band is
+     the hero's top padding, so the link climbs back into it and gives the rest
+     of the band back under itself. */
+  display: block;
+  width: fit-content;
+  line-height: 24px;
+  margin: calc(28px - var(--hero-band)) 0 28px;
 }
 
 .form-hero-title {
@@ -72,14 +97,38 @@ body {
   line-height: var(--lineheight-s);
   letter-spacing: -0.8px;
   color: var(--hero-text-color, var(--color-black-90));
-  padding: var(--spacing-s) 0;
+}
+
+@media (min-width: 768px) {
+  .form-hero-title {
+    font-size: var(--fontsize-heading-xl);
+    letter-spacing: -1px;
+  }
 }
 
 .form-hero-text {
   font-size: var(--fontsize-body-l);
+  font-weight: 500;
   line-height: 28px;
   color: var(--hero-text-color, var(--color-black-90));
-  padding-bottom: var(--spacing-s);
+}
+
+/* The hero's one vertical rhythm: whatever follows the first block after the
+   navigation band — title, description, who runs it, the buttons — is G below
+   the one before it, and none of them carries a padding or a spacer of its own.
+   A live region with nothing in it takes no room. */
+.form-hero-content > :not(.hero-corners):not(.back-link) ~ * {
+  margin-top: var(--page-margin);
+}
+
+.form-hero-content > .status-region:empty {
+  margin-top: 0;
+}
+
+/* The buttons of a hero are 24px apart; on a phone they stack and fill the
+   width, from 768px they sit in a row, each as wide as its text. */
+.form-hero .button-row-wide {
+  gap: var(--spacing-m);
 }
 
 .form-hero-koros {
@@ -87,7 +136,7 @@ body {
 }
 
 .form-hero-koros svg {
-  height: 60px;
+  height: 48px;
 }
 
 /* The hero's top-right icon row: AccountMenu, CollectionMenu and
@@ -108,8 +157,9 @@ body {
    footer on 2026-10-04 ("Contact us") — too many icons up here. */
 .hero-corners {
   position: absolute;
-  top: calc(var(--spacing-l) - 2px);
-  right: calc((100% - min(100%, 1248px)) / 2 + var(--spacing-s));
+  /* 44px icons centred in the 80px navigation band. */
+  top: 18px;
+  right: calc((100% - min(100%, 1248px)) / 2 + var(--page-margin));
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-2-xs);
@@ -461,7 +511,7 @@ main > .page-container {
 .site-footer-inner {
   max-width: 1248px;
   margin: 0 auto;
-  padding: var(--spacing-m) var(--spacing-s) var(--spacing-l);
+  padding: var(--spacing-m) var(--page-margin) var(--spacing-l);
 }
 
 .site-footer-tagline {
@@ -1080,7 +1130,6 @@ body :focus-visible {
    the order, the width of the row from 768px (a flex-basis only means "the whole
    line" in a row; in the column of a phone `align-self` gives it the width). */
 .hero-actions {
-  margin-top: var(--spacing-m);
   flex-wrap: wrap;
   align-items: flex-start;
 }

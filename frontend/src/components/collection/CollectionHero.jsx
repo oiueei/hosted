@@ -221,7 +221,7 @@ export default function CollectionHero({
                 who they are. */}
           {collection.co_owners?.length > 0
             ? teamLine.length > 0 && (
-                <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                <p className="form-hero-text">
                   <strong>{t('collectionPage.curatorsLabel')}</strong>{' '}
                   {teamLine.map((part, i) => {
                     if (part.type === 'member') {
@@ -239,7 +239,7 @@ export default function CollectionHero({
               )
             : !isOwner &&
               collection.owner_name && (
-                <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                <p className="form-hero-text">
                   <strong>{t('collectionPage.curator')}</strong>{' '}
                   <Link to={`/${collection.owner}`} className="owner-link">
                     {collection.owner_name}
@@ -300,7 +300,6 @@ export default function CollectionHero({
             )}
           {isCurator && (
             <>
-              <div className="spacer-m"></div>
               {/* "Add thing" first and primary, then "Edit collection":
                     what a curator does most, and what
                     an empty group needs before anything else, is put things in it;
@@ -331,7 +330,6 @@ export default function CollectionHero({
                 </ButtonLink>
               </div>
               <CollectionDownloadsStatus downloads={downloads} />
-              <div className="spacer-s"></div>
             </>
           )}
           {/* Everything in here is a rank-and-file member's control —
@@ -341,7 +339,6 @@ export default function CollectionHero({
               collection, which is how the dead-end button got here. */}
           {isAuthenticated && !isOwner && collection.is_member && (
             <>
-              <div className="spacer-m"></div>
               {/* One row, each button on its own condition:
                 "Invite someone" first and primary — it opens the recommend form
                 below the row, and stays on screen while the form is open so the
