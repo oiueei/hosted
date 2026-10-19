@@ -2222,7 +2222,7 @@ describe('CollectionPage — the owner wrote in the visitor’s language', () =>
     expect(
       await screen.findByRole('heading', { level: 1, name: /Neighbourhood tools/ })
     ).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle(apiFetch);
     expect(screen.queryByText(/Eines del barri/)).not.toBeInTheDocument();
   });
 

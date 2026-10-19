@@ -4,6 +4,7 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 vi.mock('../services/api', () => ({ apiFetch: vi.fn() }));
 
 import { apiFetch } from '../services/api';
+import { press, settle } from '../test/settle';
 import PageLayout from './PageLayout';
 import { declarations, declarationsInMedia } from '../test/cssRules';
 
@@ -101,10 +102,10 @@ describe('PageLayout — collectionMenu', () => {
     meSays(true);
     renderLayout({ collectionMenu: MENU });
 
-    fireEvent.click(screen.getByRole('button', { name: /your account/i }));
+    await press(screen.getByRole('button', { name: /your account/i }));
 
     expect(screen.getByRole('link', { name: 'My requests' })).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await settle(apiFetch);
     expect(screen.queryByRole('link', { name: 'Requests to me' })).not.toBeInTheDocument();
   });
 
