@@ -1002,7 +1002,7 @@ class TestTheDigestSaysHowManyJoined:
         body = self._run().body
 
         assert "And 2 new people joined the group." in body
-        assert "4" not in body.replace("2026", "")
+        assert "And 4 " not in body and "And 6 " not in body
 
     def test_a_week_of_only_departures_says_nothing(self, group):
         self._join(group, 3, stay=False)
