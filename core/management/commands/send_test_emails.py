@@ -512,6 +512,7 @@ def _(w):
         ["Silla de madera", "Escalera de mano"],
         [w.to],
         collection=w.collection,
+        new_members=3,
     )
 
 

@@ -182,7 +182,7 @@ Every user-facing string lives in a per-language catalogue — `email_texts/en.p
 | `send_faq_hide_email(owner_name, thing_headline, question, questioner_email)` | Owner hides a FAQ | Questioner |
 | `send_thing_reported_email(thing, owner_email)` | A member reports a thing | Thing owner (**anonymous** — the reporter is never named; body links to the listing so they can review it) |
 | `send_broadcast_email(owner_name, owner_email, collection_headline, collection_code, message, emails)` | Owner sends broadcast to collection | All collection invitees (individually, Reply-To owner + a link to the collection). Subject auto-generated as `Hey! {collection}`. |
-| `send_digest_email(collection_headline, collection_code, thing_headlines, emails)` | Daily command (weekly/monthly) | All collection invitees (individually) |
+| `send_digest_email(collection_headline, collection_code, thing_headlines, emails, collection=None, new_members=0)` | Daily command (weekly/monthly) | The whole team (individually); `new_members` adds one line with the number of people who joined in the window |
 | `send_return_reminder_email(requester_name, thing, end_date, owner_email)` | Daily command (end_date = tomorrow) | Each member of the team that runs the thing (`Thing.managers()` minus the borrower — the owner, and every curator of a PROPRIETARY collection it sits in) — "{thing} comes back tomorrow", naming who returns it; nothing is asked of them |
 | `send_return_overdue_email(manager, thing, end_date, requester_email)` | A manager presses "remind them to return it" (`BookingRemindReturnView`) — a person, not the daily command | The **borrower** of a loan or rental past its return date: "{manager} is reminding you that {thing} was due back on {end}. If you've already returned it, you can ignore this email.", with the CTA to the listing. **The one return email sent by somebody**: it names the manager by bare `name` through `_member_name` ("A member" when they set none — never the address `display_name` falls back to) and sets `Reply-To` to `manager.email`, so the borrower's answer goes to whoever asked — a deliberate exception to the rule that a manager's address never reaches the requester, since here the manager chose to write in their own name, and `/owner-bookings` says so above the action before it is pressed (`ownerBookings.remindReturnNotice`); `/legal` says it too. The wording leaves room for a return that was simply never recorded: OIUEEI only assumes a loan comes back. Cat. 2 |
 | `send_return_due_email(owner_name, thing, end_date, requester_email)` | Daily command (end_date = tomorrow), **alongside** the team's | The **borrower** — "tomorrow you take it back", naming the owner they owe it to. The caller passes the owner's bare `name` and the sender runs it through `_member_name`: the borrower does not hold the owner's address, and `display_name` would hand it to them whenever the owner never set a name. The half that used to be missing: only the owner was told a loan was ending, so the one person with something to do heard nothing. `send_reminders` fans out to both and swallows a failure per recipient, so one broken send costs neither the other side nor the rest of the run |
@@ -249,8 +249,15 @@ product decision, written down here so the next change to it starts from the sam
   (the 7 days before) and on the 1st for `MONTHLY` ones (the month before). `digest_frequency`
   defaults to `WEEKLY`; `NONE` sends nothing.
 - **What:** the headlines of the things **created** in that window that are `ACTIVE` or
-  `TAKEN`, as a list, plus one button to the collection. Headlines resolve per reader's
-  language. Nothing else: no questions, no handovers, no members.
+  `TAKEN`, as a list, then — only when there is someone — one line with **how many people
+  joined the group in the same window and still belong to it** (`digest_new_members_one` /
+  `_other`: "And 3 new people joined the group."), then one button to the collection.
+  The count is `MEMBER_JOINED` events of the collection in the window, distinct people,
+  intersected with today's `invites`: **a number, never names** (the digest reaches every
+  member, and a list of names would hand out the member list), **nothing with 0**, and
+  **departures are never mentioned**. One query per collection, not per recipient. It
+  rides only the digests that already go out: a group with no new things still sends none.
+  Headlines resolve per reader's language. Nothing else: no questions, no handovers.
 - **Whom:** the whole team: every member (`invites`, which holds the co-curators) **and the
   founder**, once each, except those with `notify_news` off or who muted this group
   (`digest_muted`). The founder's footer link and the muting work as for anyone.
@@ -266,8 +273,6 @@ already see in the app?):
   never who asked (the app shows the asker's name only on the thing's own page).
 - **What comes back soon** — things on loan or rent in this group due back in the next
   days, so a member waiting for one knows; by thing, never by borrower.
-- **New members**, as a count ("3 people joined"), not names: a name list is a roster mailed
-  to everyone, which the members table deliberately keeps for whoever runs the group.
 - **Nothing new is not nothing:** with no new things but some of the above, send; with none
   of it, keep skipping — a digest that says "nothing happened" teaches people to ignore it.
 

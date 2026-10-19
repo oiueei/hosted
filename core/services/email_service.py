@@ -2570,9 +2570,20 @@ def send_reservation_reminder_email(requester_email, thing, booking):
 
 
 def send_digest_email(
-    collection_headline, collection_code, thing_headlines, emails, collection=None
+    collection_headline,
+    collection_code,
+    thing_headlines,
+    emails,
+    collection=None,
+    new_members=0,
 ):
-    """Send a digest email listing new things added to a collection."""
+    """Send a digest email listing new things added to a collection.
+
+    ``new_members`` is how many people joined the group in the digest's window and
+    still belong to it: a **number and nothing else**, because the digest reaches
+    every member and a list of names would hand out the member list. With 0 the
+    line is not written, and nobody who left is ever mentioned.
+    """
     base_url = _frontend_base_url()
     collection_url = f"{base_url}{_collection_path(collection_code, collection)}"
 
@@ -2581,15 +2592,27 @@ def send_digest_email(
         headline = L(collection_headline)
         headlines = [L(h) for h in thing_headlines]
         things_plain = "\n".join(f"  - {h}" for h in headlines)
+        members_line = (
+            T("digest_new_members_one" if new_members == 1 else "digest_new_members_other").format(
+                count=new_members
+            )
+            if new_members > 0
+            else ""
+        )
         blocks, plain = _with_demo_note(
             collection,
             T,
             [
                 _para(T("digest_intro")),
                 _list(headlines),
+                *([_para(members_line)] if members_line else []),
                 _cta(collection_url, T("view_collection_cta"), T("cta_fallback")),
             ],
-            T("digest_plain").format(things=things_plain, url=collection_url),
+            T("digest_plain").format(
+                things=things_plain,
+                members=f"{members_line}\n\n" if members_line else "",
+                url=collection_url,
+            ),
         )
         return (
             T("digest_subject").format(collection=headline),
