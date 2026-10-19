@@ -21,11 +21,8 @@ Outlook all import them — on a phone, opening the file is enough.
 **Every upcoming reservation, not just the new ones.** Each VEVENT's UID is
 ``{booking.code}@oiueei``, stable across downloads, so a calendar that
 re-imports the file updates its events in place instead of duplicating them —
-which is what made the old incremental watermark unnecessary. The
-``CalendarExportMark`` model (and its lock) is therefore **dormant**: this
-module neither reads nor writes it, the row stays in the schema for the
-release after this one, and it is dropped then (the two-release rule
-``reservation_max_hours`` followed).
+which is what made the old incremental watermark unnecessary, and the
+``CalendarExportMark`` model and its table are gone.
 
 **A cancelled reservation travels too, marked as cancelled.** A calendar that
 imported a reservation keeps it after the member (or a curator) cancels it —
@@ -307,8 +304,7 @@ def build_calendar_export(collection, user=None):
     missed: the per-booking UID makes re-importing idempotent, which is what
     retired the incremental watermark — and that watermark was exactly what
     locked a curator out of downloading again after a failed import.
-    ``CalendarExportMark`` is neither read nor written any more; the model stays
-    in the schema, dormant, and is dropped in the release after this one.
+    ``CalendarExportMark`` no longer exists.
 
     **``user`` also decides which reservations are in it** in a COMMUNITY
     collection: only those of things they own, none without a ``user`` (see
