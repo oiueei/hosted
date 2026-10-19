@@ -820,12 +820,18 @@ class VerifyLinkView(APIView):
         response.delete_cookie("refresh_token", path=REFRESH_COOKIE_PATH)
         return response
 
-    def _handle_proposal_action(self, rsvp, approve):
+    def _handle_proposal_action(self, request, rsvp, approve):
         """Commit the owner's answer to a member's suggestion (POST only).
 
         The RSVP was addressed to the owner, so holding the link *is* the
         authorisation — the same standing an invitation's accept link has. It is
         consumed either way, so a forwarded email can't be replayed.
+
+        The link was minted to **one curator** (``create_proposal`` sends the
+        question to the whole team), and it is judged when it is *used*, not when
+        it was sent: a co-curator demoted or removed after the email must not
+        decide with the old link. A refused link is burnt and the suggestion stays
+        pending for whoever still runs the group.
         """
         proposal = InvitationProposal.objects.filter(code=rsvp.target_code).first()
         if not proposal or not proposal.is_valid():
@@ -833,6 +839,17 @@ class VerifyLinkView(APIView):
             return Response(
                 refusal_body("This suggestion is no longer pending", code="proposal_not_pending"),
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not proposal.collection.is_curator(rsvp.user_code_id):
+            security_logger.warning(
+                f"Proposal {proposal.code} decision refused for {rsvp.user_code_id}: "
+                f"no longer runs the collection, from IP {get_client_ip(request)}"
+            )
+            rsvp.delete()
+            return Response(
+                {"error": "Not authorized", "code": "no_longer_manages"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         if approve:
@@ -861,11 +878,8 @@ class VerifyLinkView(APIView):
             reject_proposal(proposal)
             message = "Suggestion declined"
 
-        # Both links die with the decision — the other one must not still work.
-        RSVP.objects.filter(
-            target_code=proposal.code,
-            action__in=[RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT],
-        ).delete()
+        # Every curator's links and notices went with the decision
+        # (``clear_proposal_traces``, called by approve/reject).
         return Response(
             {
                 "action": rsvp.action,
@@ -877,10 +891,10 @@ class VerifyLinkView(APIView):
         )
 
     def _handle_proposal_approve(self, request, rsvp):
-        return self._handle_proposal_action(rsvp, approve=True)
+        return self._handle_proposal_action(request, rsvp, approve=True)
 
     def _handle_proposal_reject(self, request, rsvp):
-        return self._handle_proposal_action(rsvp, approve=False)
+        return self._handle_proposal_action(request, rsvp, approve=False)
 
     def _handle_booking_accept(self, request, rsvp):
         """Handle booking accept action for all thing types."""
