@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe('CollectionPage with a collection thumbnail', () => {
-  test('renders the photo hero with no accessibility violations', async () => {
+  test('renders the logo hero with no accessibility violations', async () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/collections/COL001']}>
         <Routes>
@@ -61,10 +61,9 @@ describe('CollectionPage with a collection thumbnail', () => {
     );
 
     await waitFor(() => {
-      expect(container.querySelector('.hero-photo-wrap')).toBeTruthy();
+      expect(container.querySelector('img.hero-logo')).toBeTruthy();
     });
-    expect(container.querySelector('.form-hero--photo')).toBeTruthy();
-    expect(container.querySelector('img.hero-photo')).toHaveAttribute(
+    expect(container.querySelector('img.hero-logo')).toHaveAttribute(
       'src',
       COLLECTION_WITH_PHOTO.thumbnail_url
     );
@@ -135,15 +134,12 @@ describe('CollectionPage with a collection thumbnail', () => {
   });
 
   /**
-   * The description keeps out of the photo's third on wide screens:
-   * the photo is an absolute background across the right of the
-   * hero and the full-width description ran over it. jsdom does no layout, so
-   * what can silently break — and what is pinned here — is the contract around
-   * the rule: it still matches the real DOM, and it still sits behind the
-   * breakpoint below which the photo stacks under the text and there is
-   * nothing to avoid (squeezing a 320px phone by a third would buy nothing).
+   * The image is the collection's logo, not a backdrop: an ordinary `<img>` before
+   * the title, with no alt (the `<h1>` names the collection), and none of the
+   * photo composition. jsdom does no layout; the widths and the place it takes are
+   * pinned against the stylesheet in `test/collectionLogo.test.jsx`.
    */
-  describe('the description keeps out of the photo', () => {
+  describe('the logo', () => {
     const renderPage = async (collection) => {
       apiFetch.mockImplementation(() =>
         Promise.resolve({ ok: true, status: 200, json: async () => collection })
@@ -159,34 +155,37 @@ describe('CollectionPage with a collection thumbnail', () => {
       return utils;
     };
 
-    test('with a photo, the description is the block the rule names, inside the photo hero', async () => {
-      const { container } = await renderPage({
-        ...COLLECTION_WITH_PHOTO,
-        description: 'Things from the kitchen',
-      });
+    test('is a plain image of the thumbnail, before the title, with no alt', async () => {
+      const { container } = await renderPage(COLLECTION_WITH_PHOTO);
 
-      const description = container.querySelector(
-        '.form-hero--photo .markdown-text.form-hero-text'
-      );
-      expect(description).toHaveTextContent('Things from the kitchen');
+      const logo = container.querySelector('img.hero-logo');
+      expect(logo).toHaveAttribute('src', COLLECTION_WITH_PHOTO.thumbnail_url);
+      expect(logo).toHaveAttribute('alt', '');
+      const title = container.querySelector('h1.form-hero-title');
+      expect(logo.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    test('without a photo, nothing is in a photo hero, so the rule cannot apply', async () => {
-      const { container } = await renderPage({
-        ...COLLECTION_WITH_PHOTO,
-        thumbnail_url: '',
-        description: 'Things from the kitchen',
-      });
+    test('the photo composition is gone from a collection', async () => {
+      const { container } = await renderPage(COLLECTION_WITH_PHOTO);
 
       expect(container.querySelector('.form-hero--photo')).toBeNull();
-      expect(container.querySelector('.markdown-text.form-hero-text')).not.toBeNull();
+      expect(container.querySelector('.hero-photo-wrap')).toBeNull();
+      expect(container.querySelector('.hero-photo-diag')).toBeNull();
+      expect(container.querySelector('.form-hero')).toHaveClass('form-hero--collection');
     });
 
-    test('the padding lives only inside the >=768px media query', () => {
+    test('without a thumbnail there is no image in the hero', async () => {
+      const { container } = await renderPage({ ...COLLECTION_WITH_PHOTO, thumbnail_url: '' });
+
+      expect(container.querySelector('.hero-logo')).toBeNull();
+      expect(container.querySelector('.form-hero img')).toBeNull();
+    });
+
+    test('the padding that keeps text off a photo background is still only behind 768px', () => {
+      // `.form-hero--photo` is now the profile's and the join page's; the rule stays
+      // for them and must not reach a phone.
       const css = readFileSync('src/App.css', 'utf8');
       const selector = '.form-hero--photo .markdown-text.form-hero-text';
-      // Exactly one rule for it, and it is the one inside the breakpoint —
-      // a copy outside would squeeze every phone.
       expect(css.split(selector).length - 1).toBe(1);
       const gated = new RegExp(
         String.raw`@media \(min-width: 768px\)\s*\{\s*` +

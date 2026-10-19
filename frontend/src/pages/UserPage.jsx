@@ -146,7 +146,6 @@ export default function UserPage() {
         <AccountMenu />
       </span>
       <BackLink to="/" label={t('common.home')} />
-      <div className="spacer-m" />
       {user.headline && (
         <p
           style={{
@@ -169,7 +168,7 @@ export default function UserPage() {
         </p>
       )}
       {isOwnProfile && (
-        <div className="button-row-wide" style={{ paddingBottom: 'var(--spacing-s)' }}>
+        <div className="button-row-wide">
           <ButtonLink to="/me/edit" style={btnStyle}>
             {t('userPage.editProfile')}
           </ButtonLink>

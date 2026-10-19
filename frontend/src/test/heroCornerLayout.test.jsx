@@ -362,10 +362,10 @@ describe('the hero photo ends at the content column on a wide screen', () => {
 
   test("it is the corner row's own centring sum, without the corner's gutter", () => {
     const [corner] = declarations('.hero-corners', 'right');
-    expect(corner).toMatch(/ \+ var\(--spacing-s\)\)$/);
+    expect(corner).toMatch(/ \+ var\(--page-margin\)\)$/);
 
     const [photo] = photoRightIn(mediaBlocks(wide));
-    expect(photo).toBe(corner.replace(/ \+ var\(--spacing-s\)\)$/, ')'));
+    expect(photo).toBe(corner.replace(/ \+ var\(--page-margin\)\)$/, ')'));
     // And it is the sum that is 0 up to the column's own width.
     expect(photo).toBe('calc((100% - min(100%, 1248px)) / 2)');
   });

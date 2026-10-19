@@ -10,7 +10,6 @@ import CollectionMenu, {
   CollectionDigestStatus,
   CollectionDownloadsStatus,
 } from '../CollectionMenu';
-import HeroPhoto from '../HeroPhoto';
 import MarkdownText, { sanitizeUrl } from '../MarkdownText';
 import RecommendGuest from '../RecommendGuest';
 import ShareCollectionMenu from '../ShareCollectionMenu';
@@ -142,7 +141,7 @@ export default function CollectionHero({
 
   return (
     <div
-      className={`form-hero${collection.thumbnail_url ? ' form-hero--photo' : ''}`}
+      className="form-hero form-hero--collection"
       style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
     >
       <div className="form-hero-split">
@@ -191,6 +190,13 @@ export default function CollectionHero({
                 worded "The group's site" with an external-link icon; the wording
                 and the icon went, the destination stayed. */}
           <BackLink to="/" href={backHref} label={t('common.home')} />
+          {/* The collection's image is its logo, not a backdrop: an ordinary image
+              in the column of one card, as tall as its own proportion makes it
+              (App.css puts it above the title under 992px and in the last column
+              from there). The <h1> already names the collection. */}
+          {collection.thumbnail_url && (
+            <img className="hero-logo" src={collection.thumbnail_url} alt="" />
+          )}
           <h1 className="form-hero-title">
             {headline}
             {isCurator && collection.mode === 'COMMUNITY' && (
@@ -221,7 +227,7 @@ export default function CollectionHero({
                 who they are. */}
           {collection.co_owners?.length > 0
             ? teamLine.length > 0 && (
-                <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                <p className="form-hero-text">
                   <strong>{t('collectionPage.curatorsLabel')}</strong>{' '}
                   {teamLine.map((part, i) => {
                     if (part.type === 'member') {
@@ -239,7 +245,7 @@ export default function CollectionHero({
               )
             : !isOwner &&
               collection.owner_name && (
-                <p className="form-hero-text" style={{ fontSize: 'var(--fontsize-body-m)' }}>
+                <p className="form-hero-text">
                   <strong>{t('collectionPage.curator')}</strong>{' '}
                   <Link to={`/${collection.owner}`} className="owner-link">
                     {collection.owner_name}
@@ -300,7 +306,6 @@ export default function CollectionHero({
             )}
           {isCurator && (
             <>
-              <div className="spacer-m"></div>
               {/* "Add thing" first and primary, then "Edit collection":
                     what a curator does most, and what
                     an empty group needs before anything else, is put things in it;
@@ -331,7 +336,6 @@ export default function CollectionHero({
                 </ButtonLink>
               </div>
               <CollectionDownloadsStatus downloads={downloads} />
-              <div className="spacer-s"></div>
             </>
           )}
           {/* Everything in here is a rank-and-file member's control —
@@ -341,7 +345,6 @@ export default function CollectionHero({
               collection, which is how the dead-end button got here. */}
           {isAuthenticated && !isOwner && collection.is_member && (
             <>
-              <div className="spacer-m"></div>
               {/* One row, each button on its own condition:
                 "Invite someone" first and primary — it opens the recommend form
                 below the row, and stays on screen while the form is open so the
@@ -401,14 +404,6 @@ export default function CollectionHero({
           )}
         </div>
       </div>
-      {collection.thumbnail_url && (
-        <HeroPhoto
-          photoUrl={collection.thumbnail_url}
-          alt={headline}
-          koroType={koro}
-          color03={tc.color_03}
-        />
-      )}
       <Koros
         className="form-hero-koros"
         type={koro}
