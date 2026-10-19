@@ -69,7 +69,6 @@ export default function ThingsSection({
             heading-order flags. It also stays a landmark a screen-reader user can
             jump to, next to "Messages to the group". */}
       <h2 className="sr-only">{t('collectionPage.things')}</h2>
-      <div className="spacer-m" />
       {/* A recorded DESIGN §1 exception, not an oversight: these are plain
             `<button aria-pressed>`s, not HDS `Tag`. HDS `Tag` (`variant="action"`)
             has no pressed/selected state to bind `aria-pressed` to, and a filter

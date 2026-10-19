@@ -4,6 +4,40 @@
   box-sizing: border-box;
 }
 
+/* The page's side margin, the "G" every vertical rhythm in a hero and a grid is
+   measured in: 16px below 768px, 24px from it (the Breakpoints table in
+   frontend/CLAUDE.md). One variable so the content column, the hero's, the
+   footer's and the corner row's right edge cannot disagree. */
+:root {
+  --page-margin: var(--spacing-s);
+  /* The columns of the card grid, and of the collection hero's logo that is one
+     of them: 1, 2, 3, 4 at the HDS breakpoints. `--grid-column` is one of them
+     as a width of the content column, with a gap of G between neighbours. */
+  --grid-columns: 1;
+  --grid-column: calc(
+    (100% - (var(--grid-columns) - 1) * var(--page-margin)) / var(--grid-columns)
+  );
+}
+
+@media (min-width: 768px) {
+  :root {
+    --page-margin: var(--spacing-m);
+    --grid-columns: 2;
+  }
+}
+
+@media (min-width: 992px) {
+  :root {
+    --grid-columns: 3;
+  }
+}
+
+@media (min-width: 1248px) {
+  :root {
+    --grid-columns: 4;
+  }
+}
+
 body {
   font-family:
     var(--font-default),
@@ -18,7 +52,7 @@ body {
 .page-container {
   max-width: 1248px;
   margin: 0 auto;
-  padding: var(--spacing-s);
+  padding: var(--page-margin);
 }
 
 .page-title {
@@ -52,9 +86,13 @@ body {
      page will render. Pinned in test/heroCornerLayout.test.jsx, which recomputes
      it from the DOM and these rules. */
   --hero-corners-width: calc(3 * 44px + 2 * var(--spacing-2-xs));
+  /* The first 80px are the navigation band: the back link and the corner icons
+     sit centred in it. Under it the content runs one rhythm (see below), and
+     24px close it against the koro. */
+  --hero-band: 80px;
   max-width: 1248px;
   margin: 0 auto;
-  padding: var(--spacing-xl) var(--spacing-s) var(--spacing-xl);
+  padding: var(--hero-band) var(--page-margin) var(--spacing-m);
 }
 
 .form-hero-content .back-link {
@@ -64,6 +102,13 @@ body {
      nothing: a long name ran underneath them. Capped so the text wraps before
      the icons instead (a 320px screen leaves the link 288 - 148 - 8 = 132px). */
   max-width: calc(100% - var(--hero-corners-width) - var(--spacing-xs));
+  /* Its 24px line sits at y=28..52 of the band (centred in 80px): the band is
+     the hero's top padding, so the link climbs back into it and gives the rest
+     of the band back under itself. */
+  display: block;
+  width: fit-content;
+  line-height: 24px;
+  margin: calc(28px - var(--hero-band)) 0 28px;
 }
 
 .form-hero-title {
@@ -72,14 +117,73 @@ body {
   line-height: var(--lineheight-s);
   letter-spacing: -0.8px;
   color: var(--hero-text-color, var(--color-black-90));
-  padding: var(--spacing-s) 0;
+}
+
+@media (min-width: 768px) {
+  .form-hero-title {
+    font-size: var(--fontsize-heading-xl);
+    letter-spacing: -1px;
+  }
 }
 
 .form-hero-text {
   font-size: var(--fontsize-body-l);
+  font-weight: 500;
   line-height: 28px;
   color: var(--hero-text-color, var(--color-black-90));
-  padding-bottom: var(--spacing-s);
+}
+
+/* The hero's one vertical rhythm: whatever follows the first block after the
+   navigation band — title, description, who runs it, the buttons — is G below
+   the one before it, and none of them carries a padding or a spacer of its own.
+   A live region with nothing in it takes no room. */
+.form-hero-content > :not(.hero-corners):not(.back-link) ~ * {
+  margin-top: var(--page-margin);
+}
+
+.form-hero-content > .status-region:empty {
+  margin-top: 0;
+}
+
+/* The collection's logo: an ordinary image the width of one card column and as
+   tall as its own proportion makes it, never cropped or stretched. Under 992px it
+   is the first thing under the navigation band, on the left, with G under it (the
+   rhythm above). From 992px it is the last column, top right, level with the top
+   of the title; the text takes the columns before it and never runs under it —
+   with a logo or without one. */
+.hero-logo {
+  display: block;
+  width: var(--grid-column);
+  max-width: 100%;
+  height: auto;
+}
+
+@media (min-width: 992px) {
+  .form-hero--collection .form-hero-content {
+    display: flow-root;
+  }
+
+  .form-hero--collection .hero-logo {
+    float: right;
+    margin-left: var(--page-margin);
+  }
+
+  .form-hero--collection .form-hero-content > :not(.hero-corners):not(.back-link):not(.hero-logo) {
+    max-width: calc(
+      (var(--grid-columns) - 1) * var(--grid-column) + (var(--grid-columns) - 2) *
+        var(--page-margin)
+    );
+  }
+
+  .form-hero--collection .form-hero-content > .hero-logo + .form-hero-title {
+    margin-top: 0;
+  }
+}
+
+/* The buttons of a hero are 24px apart; on a phone they stack and fill the
+   width, from 768px they sit in a row, each as wide as its text. */
+.form-hero .button-row-wide {
+  gap: var(--spacing-m);
 }
 
 .form-hero-koros {
@@ -87,7 +191,7 @@ body {
 }
 
 .form-hero-koros svg {
-  height: 60px;
+  height: 48px;
 }
 
 /* The hero's top-right icon row: AccountMenu, CollectionMenu and
@@ -108,8 +212,9 @@ body {
    footer on 2026-10-04 ("Contact us") — too many icons up here. */
 .hero-corners {
   position: absolute;
-  top: calc(var(--spacing-l) - 2px);
-  right: calc((100% - min(100%, 1248px)) / 2 + var(--spacing-s));
+  /* 44px icons centred in the 80px navigation band. */
+  top: 18px;
+  right: calc((100% - min(100%, 1248px)) / 2 + var(--page-margin));
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-2-xs);
@@ -461,7 +566,7 @@ main > .page-container {
 .site-footer-inner {
   max-width: 1248px;
   margin: 0 auto;
-  padding: var(--spacing-m) var(--spacing-s) var(--spacing-l);
+  padding: var(--spacing-m) var(--page-margin) var(--spacing-l);
 }
 
 .site-footer-tagline {
@@ -548,9 +653,13 @@ div[class*='Linkbox-module_linkbox'] {
   width: 100%;
   min-width: 0;
   background: var(--color-white);
-  border-radius: 2px;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
+  /* 16px above and at the sides, 24px under, and 16px between the image, the
+     text, the attributes and the buttons. */
+  padding: var(--spacing-s) var(--spacing-s) var(--spacing-m);
+  gap: var(--spacing-s);
 }
 
 /* The card of the thing just uploaded, marked for a couple of seconds on a phone
@@ -568,19 +677,20 @@ div[class*='Linkbox-module_linkbox'] {
 
 .thing-card-image {
   display: block;
-  width: calc(100% - 2 * var(--spacing-s));
-  margin: var(--spacing-s) var(--spacing-s) 0;
+  width: 100%;
   aspect-ratio: 3 / 2;
   object-fit: cover;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
+/* The text block opens with 8px of its own, and its pieces — who and when, the
+   title, the description, the tags — are 16px apart, as the card's blocks are. */
 .thing-card-body {
   display: flex;
   flex-direction: column;
   flex: 1;
   gap: var(--spacing-s);
-  padding: var(--spacing-m) var(--spacing-s) var(--spacing-m);
+  padding: var(--spacing-2-xs) 0 0;
 }
 
 .thing-card-meta {
@@ -590,7 +700,7 @@ div[class*='Linkbox-module_linkbox'] {
 }
 
 .thing-card-headline {
-  font-size: var(--fontsize-heading-s);
+  font-size: var(--fontsize-heading-m);
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.2px;
@@ -607,8 +717,9 @@ div[class*='Linkbox-module_linkbox'] {
 }
 
 .thing-card-description {
-  font-size: var(--fontsize-body-l);
-  line-height: 28px;
+  font-size: var(--fontsize-body-m);
+  font-weight: 400;
+  line-height: 24px;
   color: var(--color-black-90);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -650,6 +761,20 @@ div[class*='Linkbox-module_linkbox'] {
   font-weight: 700;
 }
 
+/* On a card the attributes are 16/24 with 8px between rows and between an icon
+   and its text, in a block with 8px above and below. A thing's page reads the
+   same rows at 18/28 (the rules above), so these name the card. */
+.thing-card .thing-card-info {
+  gap: var(--spacing-2-xs);
+  padding: var(--spacing-2-xs) 0;
+}
+
+.thing-card .thing-card-info-row {
+  gap: var(--spacing-2-xs);
+  font-size: var(--fontsize-body-m);
+  line-height: 24px;
+}
+
 .thing-card-bookings {
   font-size: var(--fontsize-body-s);
   padding-left: 1.25rem;
@@ -663,7 +788,6 @@ div[class*='Linkbox-module_linkbox'] {
   flex-direction: column;
   gap: var(--spacing-s);
   margin-top: auto;
-  padding-top: var(--spacing-s);
 }
 
 /* No `.thing-card-buttons a { display: contents }` here. It was added in 2026-03
@@ -699,7 +823,9 @@ div[class*='Linkbox-module_linkbox'] {
 .tag-filter-bar {
   display: flex;
   gap: var(--spacing-2-xs);
-  margin-bottom: var(--spacing-m);
+  /* G under the bar to the cards: the 4px of padding below are room for the focus
+     ring the clipped overflow would otherwise cut, so they come off the margin. */
+  margin-bottom: calc(var(--page-margin) - var(--spacing-3-xs));
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -712,15 +838,16 @@ div[class*='Linkbox-module_linkbox'] {
   border: 1px solid transparent;
   background-color: var(--color-bus-light);
   color: var(--color-bus);
-  border-radius: 999px;
-  padding: var(--spacing-3-xs) var(--spacing-s);
-  /* WCAG 2.5.5 / mobile-first: 44px-tall tap target while keeping the pill look. */
-  min-height: 44px;
+  border-radius: 24px;
+  padding: 0 20px;
+  /* 48px tall: above the 44px tap target WCAG 2.5.5 asks for. */
+  height: 48px;
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
   white-space: nowrap;
-  font-size: var(--fontsize-body-s);
+  font-size: var(--fontsize-body-m);
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
 }
@@ -782,26 +909,10 @@ body :focus-visible {
 
 .things-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-@media (min-width: 768px) {
-  .things-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 992px) {
-  .things-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 1248px) {
-  .things-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  /* 1, 2, 3, 4 columns at the HDS breakpoints (`--grid-columns`, which the
+     collection's logo takes a column of), G apart. */
+  grid-template-columns: repeat(var(--grid-columns), 1fr);
+  gap: var(--page-margin);
 }
 
 /* Collections render as image-less full-width rows, one under another at
@@ -1080,7 +1191,6 @@ body :focus-visible {
    the order, the width of the row from 768px (a flex-basis only means "the whole
    line" in a row; in the column of a phone `align-self` gives it the width). */
 .hero-actions {
-  margin-top: var(--spacing-m);
   flex-wrap: wrap;
   align-items: flex-start;
 }
@@ -1281,9 +1391,8 @@ body :focus-visible {
 
 .image-carousel-viewport--card {
   display: block;
-  width: calc(100% - 2 * var(--spacing-s));
+  width: 100%;
   max-width: none;
-  margin: var(--spacing-s) var(--spacing-s) 0;
 }
 
 .image-carousel-image--card {
@@ -1291,7 +1400,7 @@ body :focus-visible {
   width: 100%;
   aspect-ratio: 3 / 2;
   object-fit: cover;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 /* Collection tag editor (TagInput) — chip row of removable HDS Tags */

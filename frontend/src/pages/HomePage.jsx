@@ -322,7 +322,7 @@ export default function HomePage() {
           </span>
           {/* The address is never the greeting: someone who arrived by invitation and
               never set a name is just greeted. */}
-          <h1 className="form-hero-title" style={{ paddingTop: 'var(--spacing-xl)' }}>
+          <h1 className="form-hero-title">
             {user.name ? t('home.greeting', { name: user.name }) : t('home.greetingNoName')}
           </h1>
           {user.headline && <p className="form-hero-text">{user.headline}</p>}
