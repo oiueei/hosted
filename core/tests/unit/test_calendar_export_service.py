@@ -12,7 +12,7 @@ The behaviours this file guards:
 - the file is honest RFC 5545: CRLF everywhere, TEXT escaping, folding at 75
   *octets* that never splits a UTF-8 character;
 - every upcoming reservation ships every time, under a stable UID — no
-  watermark, no ``CalendarExportMark`` written;
+  watermark;
 - what is *not* a calendar commitment — a pending hold, a rejected or cancelled
   one, a gift/sale with no dates, a booking that already ended — stays out.
 """
@@ -24,7 +24,7 @@ import pytest
 import time_machine
 from django.test import override_settings
 
-from core.models import BookingPeriod, CalendarExportMark, Collection, Thing, User
+from core.models import BookingPeriod, Collection, Thing, User
 from core.services.calendar_export_service import (
     CALENDAR_TEXTS,
     build_calendar_export,
@@ -363,7 +363,6 @@ class TestEveryDownloadCarriesEverything:
 
         assert first_count == second_count == 1
         assert _events(second_bytes) == _events(first_bytes)
-        assert not CalendarExportMark.objects.exists()  # nothing written, ever
 
     def test_the_uid_is_identical_across_downloads(self, group, owner, member):
         thing = _thing(owner)
@@ -753,15 +752,3 @@ class TestCatalogueParity:
 
 def test_the_filename_is_an_ics():
     assert calendar_filename("ABC123") == "ABC123-calendar.ics"
-
-
-def test_a_mark_names_its_collection_and_booking(group, owner, member):
-    # The admin row an operator reads when a reservation was exported twice.
-    # The model is dormant since the .ics switch; this stays so the moment it
-    # is dropped from the schema, this test goes with it.
-    thing = _thing(owner)
-    group.things.add(thing)
-    booking = _booking(thing, member, owner, code="BKG777")
-    mark = CalendarExportMark.objects.create(collection=group, booking=booking)
-
-    assert group.code in str(mark) and "BKG777" in str(mark)

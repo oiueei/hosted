@@ -12,8 +12,7 @@ Behaviours guarded here:
   the event count in ``X-Calendar-Events``;
 - a second POST the same day carries the **same** events, not an empty file —
   the stable per-booking UID (``calendar_export_service``) is what makes
-  re-importing idempotent, which is what retired the old incremental watermark
-  (``CalendarExportMark``, end to end: this view never writes one any more).
+  re-importing idempotent, which is what retired the old incremental watermark.
 """
 
 import datetime
@@ -23,7 +22,7 @@ import time_machine
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import BookingPeriod, CalendarExportMark, Collection, Thing
+from core.models import BookingPeriod, Collection, Thing
 
 pytestmark = pytest.mark.django_db
 
@@ -147,8 +146,6 @@ class TestTheFile:
 
         assert first["X-Calendar-Events"] == second["X-Calendar-Events"] == "1"
         assert _uids(second.content) == _uids(first.content)
-        # No watermark, ever — the stable UID is what makes re-import safe.
-        assert not CalendarExportMark.objects.exists()
 
     def test_a_reservation_confirmed_between_downloads_joins_the_earlier_one(
         self, authenticated_client, user, user2, collection

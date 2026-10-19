@@ -668,24 +668,11 @@ nothing about — so **the member proposes and the owner decides**.
 
 ---
 
-## CalendarExportMark
+## CalendarExportMark (leaving the schema)
 
-⚠️ **Dormant since 2026-09-28.** `calendar_export_service` used to watermark every reservation it had delivered so a curator's calendar **CSV** download only ever carried what was new; the CSV format itself turned out to be the bug — Google Calendar's CSV importer reads dates in the *importing account's* locale, so `10/01/2026` (meant as 1 October) landed as 10 January for a day/month account. The export moved to **iCalendar (.ics)**, whose per-booking UID (`{booking.code}@oiueei`) makes a re-import idempotent on the calendar app's own side, which retired the watermark this table existed for: `build_calendar_export` now ships every upcoming reservation on every download and neither reads nor writes this model at all.
+⚠️ **The model is gone from the code; its table is not yet gone from the database.** It is retired in two releases, because both its foreign keys (to `Collection` and to `BookingPeriod`) cascade, and during a release the previous release's dynos keep running against the new schema: their deletes of a collection or a booking still name `calendar_export_marks`.
 
-The model and its table are kept **one release, dormant, then dropped** — the two-release pattern `reservation_max_hours` set: dropping a column in the same release that stops writing it would break the previous release's dynos, which still name it in every query while the release phase runs. Everything below describes what it did; nothing in the running app still does it.
+1. **This release — migration `0159_forget_calendar_export_marks`.** A `SeparateDatabaseAndState`: in the state a `DeleteModel`, so the model, its import in `core/models/__init__.py` and every reference are gone and nothing here cascades into it; in the database only `DELETE FROM calendar_export_marks` (reverse: no-op). **The table stays, empty**, so the previous release's dynos find it and their cascading deletes do not fail while the release phase runs. Nothing writes to it, so it stays empty.
+2. **The next release — `DROP TABLE calendar_export_marks`** (a plain `DeleteModel` can no longer do it, the model is not in the state: a `RunSQL("DROP TABLE calendar_export_marks")`, reversed by recreating it from `0145`'s definition or left irreversible). Only then does the name disappear from the database.
 
-### Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `code` | CharField(6) | Auto | Primary key |
-| `collection` | ForeignKey(Collection) | **Yes** | CASCADE, reverse `calendar_export_marks` |
-| `booking` | ForeignKey(BookingPeriod) | **Yes** | CASCADE, reverse `calendar_export_marks` |
-| `exported_at` | DateTimeField | Auto | When this reservation went out |
-
-### Business Rules (historical — no longer enforced by any running code)
-
-1. **One mark per `(collection, booking)`** — `UniqueConstraint(collection, booking)` (`uniq_calendar_export_collection_booking`). `build_calendar_export` read the unmarked reservations and `bulk_create`d their marks inside a transaction that `select_for_update`d the collection row, so two curators pressing the button at once couldn't both carry — or both mark — the same reservation.
-2. **Per collection, not per curator** — a PROPRIETARY collection's curators run its catalogue together, so once anyone exported a reservation it was done for the group. It also couldn't be a flag on `BookingPeriod`: the mark belongs to the collection a booking is exported from, not to the booking itself.
-3. **Both FKs CASCADE** — a booking or collection that no longer exists can't be re-exported anyway.
-4. **No un-mark, no "export everything"** (superseded) — the download was purely forward. The `.ics` format is what made "export everything, every time" both correct and free of the earlier problem (losing a download used to mean those events never came back out).
+Why it existed: `calendar_export_service` used to watermark every reservation it had delivered so a curator's calendar **CSV** download only ever carried what was new. The CSV format was the bug — Google Calendar's CSV importer reads dates in the *importing account's* locale, so `10/01/2026` (meant as 1 October) landed as 10 January for a day/month account. The export became **iCalendar (.ics)**, whose per-booking UID (`{booking.code}@oiueei`) makes a re-import idempotent on the calendar app's own side, which retired the watermark: `build_calendar_export` ships every upcoming reservation on every download. Pinned in `core/tests/unit/test_migration_forget_calendar_export_marks.py` (the real migration through `MigrationExecutor`: the model leaves the state, the table stays and is empty, the step reverses, and deleting a collection and a booking still works).
