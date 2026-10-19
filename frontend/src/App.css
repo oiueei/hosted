@@ -807,10 +807,16 @@ div[class*='Linkbox-module_linkbox'] {
    `<ButtonLink style={btnStyle}>` in the collection hero. `.button-link--full`
    gives it its width; the rest is HDS's own button CSS, left to do its job. */
 
-/* The label of every button is 16/24 Bold, as the button component is drawn;
-   `ButtonLink` carries `hds-button` too. The button's own height (56px) does not
-   come from its text. */
-.hds-button {
+/* The label of every button is 16/24 Bold, as the button component is drawn.
+   HDS 6 hashes its class names, so there is no bare `hds-button`: a `Button`
+   carries `Button-module_button__…` and a `ButtonLink` (an HDS `Link` with the
+   button styles) `Link-module_button__…` and `button_hds-button__…`. The `__`
+   keeps `Button-module_buttonLabel` and the like out. The size is set outright
+   because a button takes the one of whatever holds it otherwise (a hero's
+   `.invite-nudge` is body-s, which left its "Join" at 14px). The button's own
+   height (56px) does not come from its text. */
+[class*='Button-module_button__'],
+[class*='button_hds-button__'] {
   font-size: var(--fontsize-body-m) !important;
   font-weight: 700 !important;
   line-height: 24px !important;
