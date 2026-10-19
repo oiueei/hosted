@@ -105,8 +105,15 @@ body {
   /* Its 24px line sits at y=28..52 of the band (centred in 80px): the band is
      the hero's top padding, so the link climbs back into it and gives the rest
      of the band back under itself. */
-  display: block;
+  /* A flex row, not a block: the arrow is an inline svg that sat on the text's
+     baseline and made the link 31px tall, so the band closed at y=87. Centred with
+     the text in a 24px row (more only when a long name wraps), the band closes at
+     y=80. The gap is the space that stood between arrow and label. */
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3-xs);
   width: fit-content;
+  min-height: 24px;
   line-height: 24px;
   margin: calc(28px - var(--hero-band)) 0 28px;
 }
