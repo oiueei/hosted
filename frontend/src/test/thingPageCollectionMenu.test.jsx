@@ -21,7 +21,7 @@ vi.mock('../deployment', async (orig) => ({ ...(await orig()), curatorGuidePath:
 import { apiFetch } from '../services/api';
 import downloadBlob from '../utils/downloadBlob';
 import ThingPage from '../pages/ThingPage';
-import { press } from './settle';
+import { press, settle } from './settle';
 
 /**
  * The thing's page, read through a collection, has the same corner menu as the
@@ -76,14 +76,19 @@ const json = (data, status = 200) => ({
  * The endpoints the page touches. `menu` is the thing's `collection_menu`; `me` is
  * `GET /auth/me/`; `answers` overrides a URL's response (a value, or a function).
  */
-function setApi({ menu = CURATOR_MENU, receives = false, answers = {} } = {}) {
+function setApi({ menu = CURATOR_MENU, receives = false, answers = {}, lateReads = 0 } = {}) {
+  // `lateReads` is how long the page's own side reads (questions, journey,
+  // calendar) take to answer, in ms: they start once the thing has loaded, so
+  // their answers land after a test that only waited for the thing.
+  const later = (value) =>
+    lateReads ? new Promise((resolve) => setTimeout(() => resolve(value), lateReads)) : value;
   apiFetch.mockImplementation((url, options) => {
     const given = answers[url];
     if (given !== undefined)
       return Promise.resolve(typeof given === 'function' ? given(options) : given);
     if (url === '/api/v1/auth/me/') return Promise.resolve(json({ receives_requests: receives }));
     if (/\/things\/[^/]+\/(faq|transfers|calendar)\//.test(url))
-      return Promise.resolve(json({ results: [], transfers: [], total_transfers: 0 }));
+      return Promise.resolve(later(json({ results: [], transfers: [], total_transfers: 0 })));
     if (/^\/api\/v1\/things\/THG001\//.test(url))
       return Promise.resolve(json({ ...THING, collection_menu: menu }));
     if (url === '/api/v1/collections/COL001/calendar-export/') {
@@ -255,15 +260,22 @@ describe('the thing page — "Requests to me"', () => {
   );
 
   test('and the account menu no longer has it on this page', async () => {
-    setApi({ menu: CURATOR_MENU, receives: true });
+    // The page's own side reads (questions, journey) start once the thing is there
+    // and answer after it: held back a few ms, so the test cannot win the race by
+    // luck of timing. Each wait below is for those answers, inside `act`, and not
+    // a sleep that hopes they are in.
+    setApi({ menu: CURATOR_MENU, receives: true, lateReads: 5 });
     renderThing();
     await screen.findByRole('button', { name: TRIGGER });
+    await settle(apiFetch);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Your account' }));
+    await press(screen.getByRole('button', { name: 'Your account' }));
 
     expect(screen.getByRole('link', { name: 'My requests' })).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Had the menu asked who receives requests, the answer would be in by now.
+    await settle(apiFetch);
     expect(screen.queryByRole('link', { name: REQUESTS })).not.toBeInTheDocument();
+    expect(apiFetch.mock.calls.some(([url]) => url === '/api/v1/auth/me/')).toBe(false);
   });
 
   test('somebody who receives none has it in neither', async () => {
