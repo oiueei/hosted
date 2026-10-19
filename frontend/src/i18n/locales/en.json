@@ -279,6 +279,8 @@
     "reportedLabel": "A listing was reported",
     "reportedBody": "Someone reported “{{thing_headline}}”. Please take a look.",
     "viewThing": "View listing",
+    "memberJoinedLabel": "Someone joined",
+    "memberJoinedBody": "{{member_name}} joined {{collection_headline}}.",
     "memberLeftLabel": "Someone left the group",
     "memberLeftBody": "{{member_name}} has left “{{collection_headline}}”.",
     "memberLeftThings_one": "Their thing in it was deleted with them.",

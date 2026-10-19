@@ -245,6 +245,8 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.reportedLabel');
       case 'MEMBER_LEFT':
         return t('home.memberLeftLabel');
+      case 'MEMBER_JOINED':
+        return t('home.memberJoinedLabel');
       case 'INVITE_PROPOSAL_APPROVED':
         return t('home.proposalApprovedLabel');
       case 'INVITE_PROPOSAL_DECLINED':
@@ -317,6 +319,11 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         });
       case 'THING_REPORTED':
         return t('home.reportedBody', { thing_headline: p.thing_headline });
+      case 'MEMBER_JOINED':
+        return t('home.memberJoinedBody', {
+          collection_headline: p.collection_headline,
+          member_name: p.member_name,
+        });
       case 'MEMBER_LEFT': {
         const left = t('home.memberLeftBody', {
           collection_headline: p.collection_headline,
@@ -415,6 +422,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     if (
       (n.type === 'BROADCAST' ||
         n.type === 'MEMBER_LEFT' ||
+        n.type === 'MEMBER_JOINED' ||
         n.type === 'INVITE_PROPOSAL_APPROVED' ||
         n.type === 'INVITE_PROPOSAL_DECLINED' ||
         n.type === 'INVITE_PROPOSED' ||

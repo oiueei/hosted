@@ -171,6 +171,32 @@ describe('InboxNotifications — every type says something', () => {
       links: '/collections/COL001',
     },
     {
+      what: 'a member joined: names them and the group, and links to the group',
+      notification: {
+        code: 'NOTJ01',
+        type: 'MEMBER_JOINED',
+        payload: {
+          collection_headline: 'Toy library',
+          member_name: 'Lulu',
+          collection_code: 'COL001',
+        },
+        created: '2026-10-19T10:00:00Z',
+      },
+      says: [/Someone joined/, /Lulu joined Toy library\./],
+      links: '/collections/COL001',
+    },
+    {
+      what: 'a member who set no name is "a member", never an address',
+      notification: {
+        code: 'NOTJ02',
+        type: 'MEMBER_JOINED',
+        payload: { collection_headline: 'Toy library', member_name: '', collection_code: 'COL001' },
+        created: '2026-10-19T10:00:00Z',
+      },
+      says: [/A member joined Toy library\./i],
+      links: '/collections/COL001',
+    },
+    {
       what: 'a pending recommendation names the member, the guest and whose call it is',
       notification: {
         code: 'NOTA02',

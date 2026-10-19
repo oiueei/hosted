@@ -124,6 +124,28 @@ def _send_magic_link(email, magic_link, collection_headline=None, user=None, col
         send_magic_link_email(email, magic_link, collection_headline, lang)
 
 
+def _tell_the_team_of_a_join(collection, user):
+    """One in-app notice per curator (founder and co-curators) for a new member.
+
+    Joining is never blocked or approved, in any mode and through any door; whoever
+    runs the group just hears of it. The one joining is left out when they are on
+    the team. ``member_name`` is the bare ``name``: the address never travels, and
+    the inbox words an empty one as "a member".
+    """
+    for curator in [collection.owner, *collection.co_owners.all()]:
+        if curator.code == user.code:
+            continue
+        InAppNotification.objects.create(
+            user=curator,
+            type=InAppNotification.Type.MEMBER_JOINED,
+            payload={
+                "collection_code": collection.code,
+                "collection_headline": collection.headline,
+                "member_name": user.name,
+            },
+        )
+
+
 def _join_collection(collection, user, source=""):
     """Add ``user`` to ``collection``'s members and run the first-join side effects.
 
@@ -160,6 +182,7 @@ def _join_collection(collection, user, source=""):
     collection.note_capacity("invites")
 
     Event.log(Event.Kind.MEMBER_JOINED, actor=user, collection=collection, source=source)
+    _tell_the_team_of_a_join(collection, user)
     if not collection.welcome_doc:
         return
     send_collection_welcome_doc_email(

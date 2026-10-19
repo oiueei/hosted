@@ -273,6 +273,8 @@
     "reportedLabel": "Han denunciado una publicación",
     "reportedBody": "Alguien ha denunciado «{{thing_headline}}». Échale un vistazo.",
     "viewThing": "Ver publicación",
+    "memberJoinedLabel": "Alguien se ha unido",
+    "memberJoinedBody": "{{member_name}} se ha unido a {{collection_headline}}.",
     "memberLeftLabel": "Alguien ha dejado el grupo",
     "memberLeftBody": "{{member_name}} ha dejado “{{collection_headline}}”.",
     "memberLeftThings_one": "Su cosa en él se ha borrado con su salida.",
