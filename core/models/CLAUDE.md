@@ -493,7 +493,7 @@ The `InAppNotification` model stores in-app inbox notifications. Every user-acti
 | `INVITE_REJECTED` | Invitee declines a collection invite | Collection owner | `collection_headline`, `invitee_name` |
 | `MEMBER_LEFT` | A member leaves a collection (self-unlink); their things in it are deleted with them | Collection owner | `collection_headline`, `member_name`, `collection_code`, `things_deleted` (how many of their things went; absent in rows written before it existed, read as 0) |
 | `THING_REPORTED` | A member reports a thing | Thing owner | `thing_headline`, `thing_code` (no reporter identity — anonymous to the owner) |
-| `INVITE_PROPOSED` | A member recommends a guest (`invitation_service.create_proposal`) | Collection owner | `collection_headline`, `collection_code`, `proposer_name`, `email`, `note` |
+| `INVITE_PROPOSED` | A member recommends a guest (`invitation_service.create_proposal`) | **Each curator** (founder + co-curators, never the one recommending), one copy apiece | `collection_headline`, `collection_code`, `proposal_code`, `proposer_name`, `email`, `note`. Every copy goes when anyone decides (`clear_proposal_traces`, matched by `proposal_code`); a copy written before the key existed never matches and stays until dismissed |
 | `INVITE_PROPOSAL_APPROVED` | The owner approves that recommendation | The proposer | `collection_headline`, `collection_code`, `email`, `approved: True` |
 | `INVITE_PROPOSAL_DECLINED` | The owner declines it | The proposer | `collection_headline`, `collection_code`, `owner_name`, `email` |
 | `PROMOTED_CO_OWNER` | The owner promotes a member to co-owner (`CollectionCoOwnerView.post`, first promotion only) | The promoted member | `collection_headline`, `collection_code` |
