@@ -10,11 +10,31 @@
    footer's and the corner row's right edge cannot disagree. */
 :root {
   --page-margin: var(--spacing-s);
+  /* The columns of the card grid, and of the collection hero's logo that is one
+     of them: 1, 2, 3, 4 at the HDS breakpoints. `--grid-column` is one of them
+     as a width of the content column, with a gap of G between neighbours. */
+  --grid-columns: 1;
+  --grid-column: calc(
+    (100% - (var(--grid-columns) - 1) * var(--page-margin)) / var(--grid-columns)
+  );
 }
 
 @media (min-width: 768px) {
   :root {
     --page-margin: var(--spacing-m);
+    --grid-columns: 2;
+  }
+}
+
+@media (min-width: 992px) {
+  :root {
+    --grid-columns: 3;
+  }
+}
+
+@media (min-width: 1248px) {
+  :root {
+    --grid-columns: 4;
   }
 }
 
@@ -123,6 +143,41 @@ body {
 
 .form-hero-content > .status-region:empty {
   margin-top: 0;
+}
+
+/* The collection's logo: an ordinary image the width of one card column and as
+   tall as its own proportion makes it, never cropped or stretched. Under 992px it
+   is the first thing under the navigation band, on the left, with G under it (the
+   rhythm above). From 992px it is the last column, top right, level with the top
+   of the title; the text takes the columns before it and never runs under it —
+   with a logo or without one. */
+.hero-logo {
+  display: block;
+  width: var(--grid-column);
+  max-width: 100%;
+  height: auto;
+}
+
+@media (min-width: 992px) {
+  .form-hero--collection .form-hero-content {
+    display: flow-root;
+  }
+
+  .form-hero--collection .hero-logo {
+    float: right;
+    margin-left: var(--page-margin);
+  }
+
+  .form-hero--collection .form-hero-content > :not(.hero-corners):not(.back-link):not(.hero-logo) {
+    max-width: calc(
+      (var(--grid-columns) - 1) * var(--grid-column) + (var(--grid-columns) - 2) *
+        var(--page-margin)
+    );
+  }
+
+  .form-hero--collection .form-hero-content > .hero-logo + .form-hero-title {
+    margin-top: 0;
+  }
 }
 
 /* The buttons of a hero are 24px apart; on a phone they stack and fill the

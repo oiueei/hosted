@@ -10,7 +10,6 @@ import CollectionMenu, {
   CollectionDigestStatus,
   CollectionDownloadsStatus,
 } from '../CollectionMenu';
-import HeroPhoto from '../HeroPhoto';
 import MarkdownText, { sanitizeUrl } from '../MarkdownText';
 import RecommendGuest from '../RecommendGuest';
 import ShareCollectionMenu from '../ShareCollectionMenu';
@@ -142,7 +141,7 @@ export default function CollectionHero({
 
   return (
     <div
-      className={`form-hero${collection.thumbnail_url ? ' form-hero--photo' : ''}`}
+      className="form-hero form-hero--collection"
       style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
     >
       <div className="form-hero-split">
@@ -191,6 +190,13 @@ export default function CollectionHero({
                 worded "The group's site" with an external-link icon; the wording
                 and the icon went, the destination stayed. */}
           <BackLink to="/" href={backHref} label={t('common.home')} />
+          {/* The collection's image is its logo, not a backdrop: an ordinary image
+              in the column of one card, as tall as its own proportion makes it
+              (App.css puts it above the title under 992px and in the last column
+              from there). The <h1> already names the collection. */}
+          {collection.thumbnail_url && (
+            <img className="hero-logo" src={collection.thumbnail_url} alt="" />
+          )}
           <h1 className="form-hero-title">
             {headline}
             {isCurator && collection.mode === 'COMMUNITY' && (
@@ -398,14 +404,6 @@ export default function CollectionHero({
           )}
         </div>
       </div>
-      {collection.thumbnail_url && (
-        <HeroPhoto
-          photoUrl={collection.thumbnail_url}
-          alt={headline}
-          koroType={koro}
-          color03={tc.color_03}
-        />
-      )}
       <Koros
         className="form-hero-koros"
         type={koro}
