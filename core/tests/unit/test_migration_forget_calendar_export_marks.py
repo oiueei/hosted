@@ -43,6 +43,11 @@ def _count():
 def at_before():
     """Land on 0158, and always come back to the latest migration."""
     apps = _migrate(BEFORE)
+    # Going back past the step that drops the table does not bring it back (that
+    # step has no reverse), so it is rebuilt from the model as 0158 knew it.
+    if TABLE not in _tables():
+        with connection.schema_editor() as editor:
+            editor.create_model(apps.get_model("core", "CalendarExportMark"))
     try:
         yield apps
     finally:
@@ -121,3 +126,10 @@ def test_deleting_a_collection_and_a_booking_still_works_without_the_model():
 
     assert not BookingPeriod.objects.filter(code="DLBKG1").exists()
     assert not Collection.objects.filter(code="DLCOL1").exists()
+
+
+def test_the_following_migration_drops_the_table(at_before):
+    executor = MigrationExecutor(connection)
+    executor.migrate(executor.loader.graph.leaf_nodes())
+
+    assert TABLE not in _tables()
