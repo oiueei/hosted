@@ -293,6 +293,7 @@
     "proposalDeclinedBody": "The owner of “{{collection_headline}}” decided not to invite {{email}} this time. Nobody was contacted, and they haven't been told why.",
     "viewProposal": "Decide now",
     "viewGroup": "Open the group",
+    "viewMembers": "See the members",
     "reservationMadeLabel": "New reservation",
     "reservationMadeBody": "{{requester_name}} reserved {{thing_headline}}.",
     "reservationCancelledLabel": "Reservation cancelled",

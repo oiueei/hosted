@@ -416,13 +416,19 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         label: t('home.viewProposal'),
       };
     }
+    // Someone joined or left: the roster is what the team opens next, and only
+    // the team gets these notices.
+    if ((n.type === 'MEMBER_JOINED' || n.type === 'MEMBER_LEFT') && p.collection_code) {
+      return {
+        to: collectionPath(p.collection_code, p.collection_kind, '/invites'),
+        label: t('home.viewMembers'),
+      };
+    }
     // A broadcast says whatever its curator wrote, so its link only says where
     // it goes. It was labelled "I can help!" — the call-for-help CTA of the
     // retired WISH_THING flow — under every group message, whatever it said.
     if (
       (n.type === 'BROADCAST' ||
-        n.type === 'MEMBER_LEFT' ||
-        n.type === 'MEMBER_JOINED' ||
         n.type === 'INVITE_PROPOSAL_APPROVED' ||
         n.type === 'INVITE_PROPOSAL_DECLINED' ||
         n.type === 'INVITE_PROPOSED' ||
@@ -498,7 +504,14 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         .filter((n) => !folded || !isTeamBookingNotice(n))
         .filter((n) => !infoFolded || infoOpen || !isInformativeNotice(n))
         .map((n, position) => {
-          const link = notificationLink(n);
+          // Inside a collection, a link back to that same page leads nowhere.
+          const found = notificationLink(n);
+          const link =
+            found &&
+            collection &&
+            found.to === collectionPath(collection, n.payload?.collection_kind)
+              ? null
+              : found;
           // Every request- and reservation-notice says when, under its body:
           // when the event the notice records happened (`created` — for a
           // cancellation that is the cancellation's own stamp, which is the fact

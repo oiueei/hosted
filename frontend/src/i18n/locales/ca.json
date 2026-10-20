@@ -287,6 +287,7 @@
     "proposalDeclinedBody": "Qui porta “{{collection_headline}}” ha decidit no convidar {{email}} aquesta vegada. No s'ha contactat amb ningú, i no se li ha dit per què.",
     "viewProposal": "Decidir ara",
     "viewGroup": "Obrir el grup",
+    "viewMembers": "Veure els membres",
     "reservationMadeLabel": "Nova reserva",
     "reservationMadeBody": "{{requester_name}} ha reservat {{thing_headline}}.",
     "reservationCancelledLabel": "Reserva cancel·lada",
