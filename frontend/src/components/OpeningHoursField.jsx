@@ -125,6 +125,7 @@ export default function OpeningHoursField({
         id={id}
         label={t('openingHours.label')}
         helperText={t('openingHours.helper')}
+        required
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}

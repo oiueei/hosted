@@ -520,7 +520,32 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         _validate_reservation_minutes(
             attrs.get("reservation_min_minutes", 60), attrs.get("reservation_max_minutes", 180)
         )
+        _validate_hourly_opening_hours(
+            attrs.get("reservation_unit", Collection.ReservationUnit.DAY),
+            attrs.get("opening_hours", {}),
+        )
         return attrs
+
+
+def _validate_hourly_opening_hours(unit, opening_hours):
+    """A collection booked by the hour needs at least one opening block.
+
+    With none it is closed every day: nobody can reserve, and nothing says why
+    until a member tries. Judged on the state the request leaves behind (the value
+    in the request, or what the instance already holds), so switching a day-unit
+    collection to HOUR without hours is refused too. The app's ``hasOpeningHours``
+    is the same rule.
+    """
+    if unit != Collection.ReservationUnit.HOUR:
+        return
+    if any(blocks for blocks in (opening_hours or {}).values()):
+        return
+    raise serializers.ValidationError(
+        Refusal(
+            "To book by the hour, add at least one time range to 'Weekly opening hours'.",
+            "opening_hours_required",
+        )
+    )
 
 
 def _validate_reservation_minutes(min_minutes, max_minutes):
@@ -864,6 +889,13 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             attrs.get(
                 "reservation_max_minutes", instance.reservation_max_minutes if instance else 180
             ),
+        )
+        _validate_hourly_opening_hours(
+            attrs.get(
+                "reservation_unit",
+                instance.reservation_unit if instance else Collection.ReservationUnit.DAY,
+            ),
+            attrs.get("opening_hours", instance.opening_hours if instance else {}),
         )
         # Orphan check: narrowing the list must leave every thing of the collection's
         # own family a valid slot. A thing of the other family (a lend in a stall, kept
