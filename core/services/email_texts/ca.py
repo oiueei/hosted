@@ -17,6 +17,8 @@ TEXTS = {
     # Com s'anomena algú que mai no ha posat nom, allà on qui llegeix no té dret
     # a la seva adreça. Vegeu "a_member" a en.py i `_member_name`.
     "a_member": "Un membre",
+    # The same stand-in in the middle of a sentence or a list (`_member_name(inline=True)`).
+    "a_member_inline": "un membre",
     "view_collection_cta": "Veure la col·lecció",
     # Substantius d'acció per als correus de reserva — calquen el vocabulari del
     # frontend (thingCard.action / types): una sol·licitud SELL és "sol·licitud

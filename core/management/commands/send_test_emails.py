@@ -506,6 +506,14 @@ def _(w):
     es.send_join_summary_email(w.collection, w.me, ["Lala", "", "Lolo"])
 
 
+@sample("join-summary-many", "send_join_summary_email")
+def _(w):
+    # Twelve people, some without a name: the list closes with "and 2 more" and the
+    # nameless ones read as "a member" inside it.
+    names = ["Lala", "", "Lele", "Lili", "", "Lolo", "Lulu", "Lola", "", "Lalo", "Lila", "Lilo"]
+    es.send_join_summary_email(w.collection, w.me, names)
+
+
 # --- Category 3: news --------------------------------------------------------------
 
 
