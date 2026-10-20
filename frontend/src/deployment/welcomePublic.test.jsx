@@ -78,7 +78,7 @@ describe('WelcomePage — readable without an account', () => {
   });
 
   // A stranger's hero has no buttons — the title and the wave. The two
-  // doors it had ("New here?" primary, "Already have an account?") are the last row of
+  // doors it had ("Create an account" primary, "Already have an account?") are the last row of
   // the page now, after the personas (see "the closing row of buttons" below). A
   // member's hero keeps "Create collection" and "Edit profile".
   test('the hero of an anonymous visitor has no buttons, no links and no row of them', async () => {
@@ -94,7 +94,7 @@ describe('WelcomePage — readable without an account', () => {
     expect(hero.querySelectorAll('a')).toHaveLength(0);
     expect(hero.querySelectorAll('button')).toHaveLength(0);
     expect(hero.querySelector('.button-row-wide')).toBeNull();
-    expect(within(hero).queryByText('New here?')).toBeNull();
+    expect(within(hero).queryByText('Create an account')).toBeNull();
     expect(within(hero).queryByText('Already have an account?')).toBeNull();
   });
 
@@ -181,7 +181,7 @@ describe('WelcomePage — readable without an account', () => {
  * the commitment section, "Ideas and bugs" a line under the row, and a signed-in
  * visitor had an "Enter and see how it works" button that took them home.
  *
- * A stranger's row is "New here?" · the FAQ · "Already have an
+ * A stranger's row is "Create an account" · the FAQ · "Already have an
  * account?" — the two doors their hero used to have, which now has none — and no "Ideas
  * and bugs"; a member's is as it was: the FAQ (primary) and "Ideas and bugs".
  */
@@ -217,12 +217,12 @@ describe('WelcomePage — the closing row of buttons', () => {
     return view;
   }
 
-  test('signed out: "New here?" (primary), the FAQ and "Already have an account?" (secondary), in that order', async () => {
+  test('signed out: "Create an account" (primary), the FAQ and "Already have an account?" (secondary), in that order', async () => {
     const { container } = await renderSignedOut();
 
     const links = linksOf(closingRow(container));
     expect(links).toHaveLength(3);
-    expect(links[0]).toHaveAccessibleName('New here?');
+    expect(links[0]).toHaveAccessibleName('Create an account');
     expect(links[1]).toHaveAccessibleName('Frequently asked questions');
     expect(links[2]).toHaveAccessibleName('Already have an account?');
     expect(links.map((a) => a.getAttribute('href'))).toEqual(['/popin', '/faq', '/login']);
@@ -274,12 +274,12 @@ describe('WelcomePage — the closing row of buttons', () => {
     expect(screen.queryByRole('link', { name: /enter and see/i })).toBeNull();
   });
 
-  test('"New here?" is only at the end of the page: one link to /popin, in the closing row', async () => {
+  test('"Create an account" is only at the end of the page: one link to /popin, in the closing row', async () => {
     const { container } = await renderSignedOut();
 
     const popIn = [...container.querySelectorAll('a[href="/popin"]')];
     expect(popIn).toHaveLength(1);
-    expect(popIn[0].textContent).toBe('New here?');
+    expect(popIn[0].textContent).toBe('Create an account');
     expect(closingRow(container).contains(popIn[0])).toBe(true);
     // …and so is the way back to /login.
     const login = [...container.querySelectorAll('a[href="/login"]')];

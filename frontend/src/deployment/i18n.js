@@ -47,7 +47,7 @@ export const deploymentI18n = {
       editProfile: 'Edit profile',
       // The two doors for someone with no session, at the end of the page: the
       // primary opens the door, the secondary goes back to /login.
-      newHereCta: 'New here?',
+      newHereCta: 'Create an account',
       haveAccountCta: 'Already have an account?',
       whoUsesTitle: 'Who uses OIUEEI?',
       exampleIntro:
@@ -139,7 +139,7 @@ export const deploymentI18n = {
         'El código es público y puedes leerlo todo; este compromiso está <1>escrito en nuestras reglas de diseño</1>. OIUEEI está en fase alfa —queda mucho por pulir— pero esto no es la letra pequeña: es el punto de partida.',
       createCollection: 'Crear colección',
       editProfile: 'Editar perfil',
-      newHereCta: '¿Nuevo por aquí?',
+      newHereCta: 'Crear una cuenta',
       haveAccountCta: '¿Ya tienes cuenta?',
       whoUsesTitle: '¿Quién usa OIUEEI?',
       exampleIntro:
@@ -232,7 +232,7 @@ export const deploymentI18n = {
         'El codi és públic i pots llegir-lo tot; aquest compromís està <1>escrit a les nostres regles de disseny</1>. OIUEEI és en fase alfa —queda molt per polir— però això no és la lletra petita: és el punt de partida.',
       createCollection: 'Crear col·lecció',
       editProfile: 'Editar perfil',
-      newHereCta: 'Nou per aquí?',
+      newHereCta: 'Crear un compte',
       haveAccountCta: 'Ja tens un compte?',
       whoUsesTitle: 'Qui fa servir OIUEEI?',
       exampleIntro:

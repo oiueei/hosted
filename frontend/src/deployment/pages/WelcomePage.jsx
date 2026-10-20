@@ -228,7 +228,7 @@ export default function WelcomePage() {
         <div className="spacer-xl" />
         {/* One row at the end, after the personas, the first
             button the primary one and the rest secondary. Signed out (the hero has
-            no buttons for a stranger): "New here?" to
+            no buttons for a stranger): "Create an account" to
             the open door, primary, then the FAQ, then "Already have an account?"
             back to /login — the question and its answer, the way they were in the
             hero, now the whole of the page's doors. No "Ideas and bugs" for a
