@@ -1884,6 +1884,15 @@ figure[class*='Highlight-module_highlight'] {
   display: block;
 }
 
+/* Text links in the page's content take the theeeme's link colour (`--link-color`,
+   set by `useTheeeme`: `color_01` where it reads at 4.5:1 on white and on the page
+   background, else `color_04`). Not the hero's links (`--hero-text-color`), not
+   buttons-as-links, not the footer's. `:where` keeps the specificity at zero, so a
+   rule that colours one kind of link on purpose still wins. */
+:where(main a:not([class*='hds-button']):not(.form-hero a)) {
+  color: var(--link-color, LinkText);
+}
+
 /* The community-card owner attribution links to the member's profile. */
 .thing-card-owner-link {
   color: inherit;

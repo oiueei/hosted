@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { linkColorToken } from '../utils/linkColor';
 
 /**
  * Theeeme-derived inline styles, centralised from the ~21 pages/components that
@@ -51,7 +52,7 @@ export default function useTheeeme(overrideColors) {
   const overrideKey =
     overrideColors && Object.keys(overrideColors).length > 0 ? JSON.stringify(overrideColors) : '';
 
-  return useMemo(() => {
+  const result = useMemo(() => {
     let tc;
     if (overrideKey) {
       tc = JSON.parse(overrideKey);
@@ -121,4 +122,15 @@ export default function useTheeeme(overrideColors) {
       : {};
     return { tc, koro, btnStyle, btnSecondaryStyle, uploadStyle };
   }, [raw, koro, overrideKey]);
+
+  // The colour of the text links in the page's content (`App.css` reads it), on
+  // the root so every page gets it without passing it down.
+  const linkToken = linkColorToken(result.tc);
+  useEffect(() => {
+    const root = document.documentElement.style;
+    if (linkToken) root.setProperty('--link-color', `var(--color-${linkToken})`);
+    else root.removeProperty('--link-color');
+  }, [linkToken]);
+
+  return result;
 }

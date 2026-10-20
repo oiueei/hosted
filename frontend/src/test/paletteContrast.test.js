@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { renderHook } from '@testing-library/react';
 import { describe, test, expect } from 'vitest';
 import useTheeeme from '../hooks/useTheeeme';
+import { linkColorToken } from '../utils/linkColor';
+import COLOR_TOKENS from '../utils/colorTokens';
 
 // jsdom can't run axe's colour-contrast rule (it needs real layout/paint), so we
 // verify the curated theeeme palette here instead: for every theeeme, the text
@@ -367,5 +369,67 @@ describe('focus never recolours a button', () => {
     expect(style['--background-color-focus']).toBe(style['--background-color']);
     expect(style['--border-color-focus']).toBe(style['--border-color']);
     expect(style['--color-focus']).toBe(style['--color']);
+  });
+});
+
+// ── Links in the page's content ────────────────────────────────────────
+// A text link takes `color_01` (the primary button's fill) where that reads at
+// 4.5:1 on white (tables, cards) AND on the page background, else `color_04`.
+// The oracle here is this file's own formula, not the helper's.
+describe('the colour of a content link', () => {
+  const tokens = loadTokenHexMap();
+
+  test("the run-time token table is the package's", () => {
+    expect(COLOR_TOKENS).toEqual(tokens);
+  });
+
+  test.each(THEEEMES)('$name — the link colour meets AA on white and on color_02', (theeeme) => {
+    const token = linkColorToken(theeeme);
+    expect([theeeme.color_01, theeeme.color_04]).toContain(token);
+    for (const [surface, hex] of [
+      ['white', tokens.white],
+      [`color_02 (${theeeme.color_02})`, tokens[theeeme.color_02]],
+    ]) {
+      const ratio = contrastRatio(tokens[token], hex);
+      expect(
+        ratio,
+        `${theeeme.name} — ${token} on ${surface}: ${ratio.toFixed(2)}:1`
+      ).toBeGreaterThanOrEqual(AA_NORMAL);
+    }
+  });
+
+  test.each(THEEEMES)('$name — color_01 is kept exactly when it reads on both', (theeeme) => {
+    const reads = [tokens.white, tokens[theeeme.color_02]].every(
+      (hex) => contrastRatio(tokens[theeeme.color_01], hex) >= AA_NORMAL
+    );
+    expect(linkColorToken(theeeme)).toBe(reads ? theeeme.color_01 : theeeme.color_04);
+  });
+
+  test('useTheeeme puts the colour on the root as --link-color', () => {
+    const engel = THEEEMES.find((t) => t.name === 'Engel');
+    renderHook(() => useTheeeme(engel));
+    expect(document.documentElement.style.getPropertyValue('--link-color')).toBe(
+      `var(--color-${linkColorToken(engel)})`
+    );
+  });
+
+  test('the rule reaches a link in a table and not a ButtonLink, the hero or the footer', () => {
+    const css = readFileSync('src/App.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rule = /(:where\([^{]*\))\s*\{[^}]*var\(--link-color/.exec(css);
+    expect(rule, 'no rule paints content links with --link-color').not.toBeNull();
+    const selector = rule[1];
+    document.body.innerHTML = `
+      <main>
+        <div class="form-hero"><a id="hero" href="/x">hero</a></div>
+        <table><tbody><tr><td><a id="cell" href="/x">thing</a></td></tr></tbody></table>
+        <a id="button" class="hds-button hds-button--primary" href="/x">go</a>
+      </main>
+      <footer class="site-footer"><a id="foot" href="/x">legal</a></footer>`;
+    const hit = (id) => document.getElementById(id).matches(selector);
+    expect(hit('cell')).toBe(true);
+    expect(hit('button')).toBe(false);
+    expect(hit('hero')).toBe(false);
+    expect(hit('foot')).toBe(false);
+    document.body.innerHTML = '';
   });
 });
