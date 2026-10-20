@@ -3,7 +3,6 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
-  Dialog,
   Notification,
   StatusLabel,
   Tag,
@@ -11,6 +10,7 @@ import {
   IconCheck,
   IconCrossCircle,
 } from 'hds-react';
+import ThemedDialog from '../components/ThemedDialog';
 import { DATE_TYPES } from '../constants/things';
 import { apiFetch, codedErrorMessage } from '../services/api';
 import PageLayout from '../components/PageLayout';
@@ -67,7 +67,7 @@ const STATUS_TYPES = {
 export default function OwnerBookingsPage() {
   const { t } = useTranslation();
   const L = useLocalized();
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { btnStyle, btnSecondaryStyle, tableTheme } = useTheeeme();
   const [bookings, setBookings] = useState(null);
   const [next, setNext] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -459,9 +459,6 @@ export default function OwnerBookingsPage() {
   // it mixes verbs.
   const pendingRows = markMixedVerbs(rows.filter((r) => r._status === 'PENDING'));
   const otherRows = markMixedVerbs(rows.filter((r) => r._status !== 'PENDING'));
-  const tableTheme = tc.color_03
-    ? { '--header-background-color': `var(--color-${tc.color_03})` }
-    : undefined;
 
   return (
     <PageLayout title={t('ownerBookings.pageTitle')} backTo="/" backLabel={t('common.home')}>
@@ -541,15 +538,18 @@ export default function OwnerBookingsPage() {
       )}
 
       {transferRow && (
-        <Dialog
+        <ThemedDialog
           id="transfer-confirm"
           aria-labelledby="transfer-confirm-title"
           isOpen
           close={() => setTransferRow(null)}
           closeButtonLabelText={t('common.close')}
         >
-          <Dialog.Header id="transfer-confirm-title" title={t('thingCard.transferConfirmTitle')} />
-          <Dialog.Content>
+          <ThemedDialog.Header
+            id="transfer-confirm-title"
+            title={t('thingCard.transferConfirmTitle')}
+          />
+          <ThemedDialog.Content>
             <p>{t('thingCard.transferConfirmBody')}</p>
             <p style={{ marginBottom: 0 }}>
               <strong>{transferRow._thingHeadline}</strong>
@@ -557,8 +557,8 @@ export default function OwnerBookingsPage() {
                 name: transferRow._requesterName || t('common.aMember'),
               })}`}
             </p>
-          </Dialog.Content>
-          <Dialog.ActionButtons>
+          </ThemedDialog.Content>
+          <ThemedDialog.ActionButtons>
             <Button
               style={btnStyle}
               disabled={acting === transferRow._code}
@@ -577,8 +577,8 @@ export default function OwnerBookingsPage() {
             >
               {t('common.cancel')}
             </Button>
-          </Dialog.ActionButtons>
-        </Dialog>
+          </ThemedDialog.ActionButtons>
+        </ThemedDialog>
       )}
 
       {cancelRow && (

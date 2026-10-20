@@ -61,7 +61,13 @@ export default function UserPage() {
   // styles itself — via the shared hook, so the keyboard-focus pins ride along.
   // Own profile: the freshly-fetched colours; other profiles: the viewer's,
   // from localStorage (the hook's fallback).
-  const { tc, koro: koroType, btnStyle, btnSecondaryStyle } = useTheeeme(user?.theeeme_colors);
+  const {
+    tc,
+    koro: koroType,
+    btnStyle,
+    btnSecondaryStyle,
+    tableTheme,
+  } = useTheeeme(user?.theeeme_colors);
   useDocumentTitle(t('titles.user', { name: user?.name || t('common.profile') }));
 
   // The code `/auth/me/` answered with, when this page had none stored: that answer
@@ -284,11 +290,7 @@ export default function UserPage() {
               indexKey="_id"
               renderIndexCol={false}
               dense
-              theme={
-                tc.color_03
-                  ? { '--header-background-color': `var(--color-${tc.color_03})` }
-                  : undefined
-              }
+              theme={tableTheme}
             />
             <div className="spacer-l" />
           </>

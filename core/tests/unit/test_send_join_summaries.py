@@ -129,7 +129,7 @@ class TestWhoIsTold:
         join(group, "")
         run()
         body = to("lala@your-domain.test")[0].body
-        assert "A member" in body and "your-domain.test>" not in body
+        assert "New in The street: a member." in body and "your-domain.test>" not in body
         assert "@your-domain.test" not in body.split("\n\n", 1)[1]
 
     def test_the_button_goes_to_the_members_page(self, group):
@@ -173,7 +173,7 @@ class TestNamesAndLanguages:
             (
                 "en",
                 "2 new people in The street",
-                "Joined The street: Lili and Lolo.",
+                "New in The street: Lili and Lolo.",
                 None,
                 "See the members",
             ),

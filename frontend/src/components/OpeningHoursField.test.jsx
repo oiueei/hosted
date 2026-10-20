@@ -20,7 +20,7 @@ function renderField(over = {}) {
   return { ...utils, onChange };
 }
 
-const field = () => screen.getByLabelText('Weekly opening hours');
+const field = () => screen.getByLabelText(/Weekly opening hours/);
 
 describe('OpeningHoursField', () => {
   test('shows the stored value serialised as JSON', () => {

@@ -32,7 +32,7 @@ export default function MyBookingsPage() {
   const { t } = useTranslation();
   // Owner content (headlines, tags) may carry one text per language.
   const L = useLocalized();
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { btnStyle, btnSecondaryStyle, tableTheme } = useTheeeme();
   const [bookings, setBookings] = useState(null);
   const [next, setNext] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -285,11 +285,7 @@ export default function MyBookingsPage() {
                     indexKey="_id"
                     renderIndexCol={false}
                     dense
-                    theme={
-                      tc.color_03
-                        ? { '--header-background-color': `var(--color-${tc.color_03})` }
-                        : undefined
-                    }
+                    theme={tableTheme}
                   />
                 )}
                 {otherRows.length > 0 && (
@@ -304,11 +300,7 @@ export default function MyBookingsPage() {
                       indexKey="_id"
                       renderIndexCol={false}
                       dense
-                      theme={
-                        tc.color_03
-                          ? { '--header-background-color': `var(--color-${tc.color_03})` }
-                          : undefined
-                      }
+                      theme={tableTheme}
                     />
                   </>
                 )}

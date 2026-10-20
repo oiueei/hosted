@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import en from '../i18n/locales/en.json';
 import { settle, switchLanguage } from '../test/settle';
@@ -600,6 +600,70 @@ describe('CollectionPage — the member row: "Invite someone" and "Add thing"', 
     await screen.findByText('Things from the kitchen');
 
     expect(container.querySelector('.button-row-wide')).toBeNull();
+  });
+
+  // A demo collection is shared data nobody is invited into: the member's way out
+  // stands where "Invite someone" would be.
+  describe('in a demo collection', () => {
+    const DEMO = { ...MEMBER, is_onboarding: true };
+
+    const LeaveProbe = () => {
+      const location = useLocation();
+      return <p>left with {location.state?.headline}</p>;
+    };
+
+    test('"Leave the group" replaces "Invite someone" and leads to the leave page', async () => {
+      apiFetch.mockImplementation(() =>
+        Promise.resolve({ ok: true, status: 200, json: async () => DEMO })
+      );
+      render(
+        <MemoryRouter initialEntries={['/collections/COL001']}>
+          <Routes>
+            <Route path="/collections/:code" element={<CollectionPage />} />
+            <Route path="/collections/:code/leave" element={<LeaveProbe />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      const leave = await screen.findByRole('link', { name: 'Leave the group' });
+
+      expect(leave).toHaveAttribute('href', '/collections/COL001/leave');
+      expect(screen.queryByRole('button', { name: 'Invite someone' })).toBeNull();
+      expect(screen.queryByLabelText(/Their email/i)).toBeNull();
+      expect(rowOf(leave).map((el) => el.textContent.trim())).toEqual(['Leave the group']);
+
+      fireEvent.click(leave);
+      expect(await screen.findByText('left with Kitchen Collection')).toBeInTheDocument();
+    });
+
+    test('in a COMMUNITY demo it comes after "Add thing"', async () => {
+      renderAs({ ...DEMO, mode: 'COMMUNITY' });
+      const leave = await screen.findByRole('link', { name: 'Leave the group' });
+
+      expect(rowOf(leave).map((el) => el.textContent.trim())).toEqual([
+        'Add thing',
+        'Leave the group',
+      ]);
+    });
+
+    test('it shows even when the group takes no recommendations', async () => {
+      renderAs({ ...DEMO, allow_member_proposals: false });
+
+      expect(await screen.findByRole('link', { name: 'Leave the group' })).toBeInTheDocument();
+    });
+
+    test('a curator of a demo is untouched: no "Leave the group" in the hero', async () => {
+      renderAs({ ...DEMO, owner: 'ABC123', is_member: false, is_curator: true });
+      await screen.findByText('Things from the kitchen');
+
+      expect(screen.queryByRole('link', { name: 'Leave the group' })).toBeNull();
+    });
+
+    test('a collection that is not a demo keeps "Invite someone" and has no "Leave the group"', async () => {
+      renderAs({ ...MEMBER, is_onboarding: false });
+      await screen.findByRole('button', { name: 'Invite someone' });
+
+      expect(screen.queryByRole('link', { name: 'Leave the group' })).toBeNull();
+    });
   });
 
   test('a member of a group run by a team reads the curators in the form, not the founder', async () => {

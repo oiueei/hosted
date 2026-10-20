@@ -596,7 +596,7 @@ describe('EditCollectionPage — an unparseable opening-hours draft blocks Save'
   const patchCalls = () => apiFetch.mock.calls.filter((c) => c[1]?.method === 'PATCH');
 
   function typeOpeningHours(value) {
-    const field = screen.getByLabelText('Weekly opening hours');
+    const field = screen.getByLabelText(/Weekly opening hours/);
     fireEvent.change(field, { target: { value } });
     fireEvent.blur(field);
   }
@@ -619,6 +619,30 @@ describe('EditCollectionPage — an unparseable opening-hours draft blocks Save'
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  test('an hourly collection saved without a range is not sent, and the toast says where it goes', async () => {
+    // Collections that were hourly before the rule exist with no schedule: editing
+    // one means putting the hours in.
+    apiFetch.mockImplementation((url, opts) => {
+      if (opts?.method === 'PATCH')
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ ...HOURLY, opening_hours: {} }),
+      });
+    });
+    await openForm();
+    expect(screen.getByLabelText(/Weekly opening hours/)).toBeRequired();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(
+      await screen.findByText(/To book by the hour, add at least one time range/)
+    ).toBeVisible();
+    expect(patchCalls()).toHaveLength(0);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   test('folding "More options" away does not lift the refusal', async () => {
     // HDS keeps a closed Accordion's content mounted (display: none), so the
     // field's refusal survives the owner collapsing the section before Save.
@@ -628,7 +652,7 @@ describe('EditCollectionPage — an unparseable opening-hours draft blocks Save'
     await openForm();
     typeOpeningHours('{"0": [["10:00","14:00"]],}');
     await press(screen.getByRole('button', { name: 'More options' }));
-    expect(screen.getByLabelText('Weekly opening hours')).not.toBeVisible();
+    expect(screen.getByLabelText(/Weekly opening hours/)).not.toBeVisible();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -659,7 +683,7 @@ describe('EditCollectionPage — an unparseable opening-hours draft blocks Save'
     typeOpeningHours('not json');
     fireEvent.click(screen.getByRole('radio', { name: 'By day' }));
     fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
-    expect(screen.getByLabelText('Weekly opening hours')).toHaveValue(
+    expect(screen.getByLabelText(/Weekly opening hours/)).toHaveValue(
       JSON.stringify(HOURLY.opening_hours)
     );
 

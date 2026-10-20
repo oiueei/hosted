@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   TextInput,
   Button,
-  Dialog,
   Notification,
   Table,
   IconEnvelope,
@@ -12,6 +11,7 @@ import {
   IconStar,
   IconStarFill,
 } from 'hds-react';
+import ThemedDialog from '../components/ThemedDialog';
 import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -32,7 +32,7 @@ export default function ManageInvitesPage() {
   const { t } = useTranslation();
   // Owner content (headlines, tags) may carry one text per language.
   const L = useLocalized();
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { btnStyle, btnSecondaryStyle, tableTheme } = useTheeeme();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [invites, setInvites] = useState([]);
@@ -479,11 +479,7 @@ export default function ManageInvitesPage() {
                 rows={tableRows}
                 indexKey="_id"
                 renderIndexCol={false}
-                theme={
-                  tc.color_03
-                    ? { '--header-background-color': `var(--color-${tc.color_03})` }
-                    : undefined
-                }
+                theme={tableTheme}
               />
             </div>
           );
@@ -527,21 +523,21 @@ export default function ManageInvitesPage() {
       )}
 
       {promoteCandidate && (
-        <Dialog
+        <ThemedDialog
           id="promote-confirm"
           aria-labelledby="promote-confirm-title"
           isOpen
           close={() => setPromoteCandidate(null)}
           closeButtonLabelText={t('common.close')}
         >
-          <Dialog.Header
+          <ThemedDialog.Header
             id="promote-confirm-title"
             title={t('manageInvites.promoteConfirmTitle', { name: promoteCandidate._name })}
           />
-          <Dialog.Content>
+          <ThemedDialog.Content>
             <p style={{ marginBottom: 0 }}>{t('manageInvites.promoteConfirmBody')}</p>
-          </Dialog.Content>
-          <Dialog.ActionButtons>
+          </ThemedDialog.Content>
+          <ThemedDialog.ActionButtons>
             <Button
               style={btnStyle}
               onClick={() => {
@@ -559,8 +555,8 @@ export default function ManageInvitesPage() {
             >
               {t('common.cancel')}
             </Button>
-          </Dialog.ActionButtons>
-        </Dialog>
+          </ThemedDialog.ActionButtons>
+        </ThemedDialog>
       )}
 
       <Toast toast={toast} onClose={() => setToast(null)} />

@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { linkColorToken } from '../utils/linkColor';
 
 /**
  * Theeeme-derived inline styles, centralised from the ~21 pages/components that
@@ -26,6 +27,7 @@ import { useMemo } from 'react';
  * Both button styles pin the `*-focus` tokens to the resting colours, so keyboard
  * focus never recolours the button — the two-tone ring in `App.css` marks it.
  *
+ * - `tableTheme`: the `theme` of an HDS `Table` (header fill `color_03`, header text `color_05`).
  * - `uploadStyle`: the `--upload-*` CSS vars for the ImageUpload/GalleryUpload wrapper.
  */
 // Fallback palette for a viewer with no stored theeeme yet — e.g. an anonymous
@@ -51,7 +53,7 @@ export default function useTheeeme(overrideColors) {
   const overrideKey =
     overrideColors && Object.keys(overrideColors).length > 0 ? JSON.stringify(overrideColors) : '';
 
-  return useMemo(() => {
+  const result = useMemo(() => {
     let tc;
     if (overrideKey) {
       tc = JSON.parse(overrideKey);
@@ -119,6 +121,26 @@ export default function useTheeeme(overrideColors) {
             : 'var(--color-white)',
         }
       : {};
-    return { tc, koro, btnStyle, btnSecondaryStyle, uploadStyle };
+    // The header of an HDS Table: the hero's colour behind it and the hero's text
+    // on it (HDS paints that text white or near-black by its own theme, whatever
+    // the fill; `.table-wrap th` in App.css reads `--header-color`).
+    const tableTheme = tc.color_03
+      ? {
+          '--header-background-color': `var(--color-${tc.color_03})`,
+          ...(tc.color_05 ? { '--header-color': `var(--color-${tc.color_05})` } : {}),
+        }
+      : undefined;
+    return { tc, koro, btnStyle, btnSecondaryStyle, uploadStyle, tableTheme };
   }, [raw, koro, overrideKey]);
+
+  // The colour of the text links in the page's content (`App.css` reads it), on
+  // the root so every page gets it without passing it down.
+  const linkToken = linkColorToken(result.tc);
+  useEffect(() => {
+    const root = document.documentElement.style;
+    if (linkToken) root.setProperty('--link-color', `var(--color-${linkToken})`);
+    else root.removeProperty('--link-color');
+  }, [linkToken]);
+
+  return result;
 }

@@ -545,7 +545,8 @@ class TestSendRemindersCommand:
         html = to_borrower.alternatives[0][0]
         assert "lala13@your-domain.test" not in to_borrower.body
         assert "lala13@your-domain.test" not in html
-        assert "A member" in to_borrower.body
+        # In the middle of the sentence ("…to a member on…"), so lower case.
+        assert "a member" in to_borrower.body
 
     @pytest.mark.parametrize(
         "start_offset, end_offset, subject",

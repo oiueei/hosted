@@ -794,7 +794,7 @@ describe('CreateCollectionPage — a shed', () => {
     nameIt(container);
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
-    const field = screen.getByLabelText('Weekly opening hours');
+    const field = screen.getByLabelText(/Weekly opening hours/);
     fireEvent.change(field, { target: { value: '{"0": [["10:00","14:00"]],}' } });
     fireEvent.blur(field);
 
@@ -805,6 +805,49 @@ describe('CreateCollectionPage — a shed', () => {
     expect(screen.queryByTestId('navigated')).toBeNull();
   });
 
+  test('booking by the hour makes the opening hours required, and Create sends nothing without a range', async () => {
+    const { container } = await renderShed();
+    nameIt(container);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
+    expect(screen.getByLabelText(/Weekly opening hours/)).toBeRequired();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(
+      await screen.findByText(/To book by the hour, add at least one time range/)
+    ).toBeVisible();
+    expect(createBody()).toBeUndefined();
+    expect(screen.queryByTestId('navigated')).toBeNull();
+  });
+
+  test('a week of days with no ranges is no schedule either', async () => {
+    const { container } = await renderShed();
+    nameIt(container);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
+    const hours = screen.getByLabelText(/Weekly opening hours/);
+    fireEvent.change(hours, { target: { value: '{"0": [], "3": []}' } });
+    fireEvent.blur(hours);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(
+      await screen.findByText(/To book by the hour, add at least one time range/)
+    ).toBeVisible();
+    expect(createBody()).toBeUndefined();
+  });
+
+  test('by the day the opening hours are not asked for', async () => {
+    const { container } = await renderShed();
+    nameIt(container);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(createBody()).toBeTruthy());
+    expect(createBody().reservation_unit).toBe('DAY');
+  });
+
   test('a space booked by the hour is created with its schedule and its limits in minutes', async () => {
     // Nothing on the Create path sent an HOUR-unit collection before: the
     // owner's hours could have gone missing and the space opened with every
@@ -813,7 +856,7 @@ describe('CreateCollectionPage — a shed', () => {
     nameIt(container);
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     fireEvent.click(screen.getByRole('radio', { name: 'By hour' }));
-    const hours = screen.getByLabelText('Weekly opening hours');
+    const hours = screen.getByLabelText(/Weekly opening hours/);
     fireEvent.change(hours, {
       target: {
         value: '{"0": [["10:00", "14:00"], ["16:00", "20:00"]], "4": [["10:00", "14:00"]]}',

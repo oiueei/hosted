@@ -230,7 +230,7 @@ def _recipient(email, collection=None):
     return user, resolve_email_language(user=user, collection=collection)
 
 
-def _member_name(name, lang):
+def _member_name(name, lang, *, inline=False):
     """A person's name as somebody else may be told it — never their address.
 
     ``User.display_name`` falls back to the email when ``name`` is empty, which is
@@ -251,8 +251,25 @@ def _member_name(name, lang):
     mid-sentence, where the sentence needs *a* subject and the honest one is a
     noun rather than an address. It mirrors the frontend's ``common.aMember``,
     which ``ThingLinkbox`` has always used for the same reason.
+
+    ``inline=True`` is for a name that falls in the middle of a sentence or in a
+    list ("Message from a member", "Lala, a member and Lolo"): the stand-in is then
+    written in lower case. The default is for a name that opens its sentence.
     """
-    return name or _texts(lang)("a_member")
+    return name or _texts(lang)("a_member_inline" if inline else "a_member")
+
+
+def _template(T, key, lang, *, nameless, field):
+    """The template ``key``, ready to take the stand-in for a person with no name.
+
+    Catalan writes "d'un membre", not "de un membre": for a nameless person the
+    template's own "de {field}" becomes "d'{field}" before anything is put in it,
+    so what the user wrote (a message, a thing's headline) is never touched.
+    """
+    template = T(key)
+    if nameless and lang == "ca":
+        template = template.replace(f"de {{{field}}}", f"d'{{{field}}}")
+    return template
 
 
 def _muted_codes(collection):
@@ -2132,6 +2149,7 @@ def send_broadcast_email(
         T, L = _texts(lang), _local(lang)
         headline = L(collection_headline)
         owner = _member_name(owner_name, lang)
+        owner_inline = _member_name(owner_name, lang, inline=True)
         blocks, plain = _with_demo_note(
             collection,
             T,
@@ -2140,7 +2158,9 @@ def send_broadcast_email(
                 _para(message),
                 _cta(collection_url, T("broadcast_open_cta"), T("cta_fallback")),
             ],
-            T("broadcast_plain").format(owner=owner, message=message, url=collection_url),
+            _template(T, "broadcast_plain", lang, nameless=not owner_name, field="owner").format(
+                owner=owner_inline, message=message, url=collection_url
+            ),
         )
         return (
             T("broadcast_subject").format(collection=headline),
@@ -2211,7 +2231,7 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
-    owner_name = _member_name(owner_name, lang)
+    owner_name = _member_name(owner_name, lang, inline=True)
     headline = L(thing.headline)
     header = headline
     thing_url = _thing_url(thing, reader=user)
@@ -2245,14 +2265,20 @@ def send_pickup_due_email(owner_name, thing, start_date, requester_email):
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
-    owner_name = _member_name(owner_name, lang)
+    raw_owner_name = owner_name
+    owner_name = _member_name(owner_name, lang, inline=True)
     headline = L(thing.headline)
     header = headline
     thing_url = _thing_url(thing, reader=user)
     subject = T("pickup_due_subject").format(thing=headline)
     start = _fmt_date(start_date)
-    plain = T("pickup_due_plain").format(owner=owner_name, thing=headline, start=start)
-    body = T("pickup_due_body").format(owner=owner_name, thing=headline, start=start)
+    nameless = not raw_owner_name
+    plain = _template(T, "pickup_due_plain", lang, nameless=nameless, field="owner").format(
+        owner=owner_name, thing=headline, start=start
+    )
+    body = _template(T, "pickup_due_body", lang, nameless=nameless, field="owner").format(
+        owner=owner_name, thing=headline, start=start
+    )
     blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
     html = _render_email(blocks, lang=lang, header=header)
     _send(
@@ -2493,7 +2519,7 @@ def send_reservation_cancel_confirmation_email(
     headline = L(thing.headline)
     header = headline
     side = "self" if is_own_reservation else "other"
-    member = None if is_own_reservation else _member_name(member_name, lang)
+    member = None if is_own_reservation else _member_name(member_name, lang, inline=True)
 
     start, end = _fmt_when(booking)
     subject = T(f"reservation_cancel_confirmation_subject_{side}").format(thing=headline)
@@ -2503,8 +2529,13 @@ def send_reservation_cancel_confirmation_email(
         intro = T(intro_key)
         plain = T(plain_key).format(thing=headline, when=_phrase_for(T, start, end))
     else:
-        intro = T(intro_key).format(member=member)
-        plain = T(plain_key).format(member=member, thing=headline, when=_phrase_for(T, start, end))
+        nameless = not member_name
+        intro = _template(T, intro_key, lang, nameless=nameless, field="member").format(
+            member=member
+        )
+        plain = _template(T, plain_key, lang, nameless=nameless, field="member").format(
+            member=member, thing=headline, when=_phrase_for(T, start, end)
+        )
 
     html = _render_email(
         [
@@ -2654,7 +2685,7 @@ def send_join_summary_email(collection, curator, names):
     T, L = _texts(lang), _local(lang)
     group = L(collection.headline)
     count = len(names)
-    shown = [_member_name(n, lang) for n in names[:JOIN_SUMMARY_MAX_NAMES]]
+    shown = [_member_name(n, lang, inline=True) for n in names[:JOIN_SUMMARY_MAX_NAMES]]
     if count > JOIN_SUMMARY_MAX_NAMES:
         # "more" carries its own conjunction ("y 1 más"), so it closes the list
         # in the conjunction's place.

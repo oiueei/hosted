@@ -15,7 +15,9 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
  * collection is created, so it is chosen here, before the form, and the form
  * lives at `/{kind}/new`; the hero says so (`kinds.chooseIntro`), and each card says
  * what separates its kind from the others (a library's things go home with whoever
- * takes them, a shed is used where it stands).
+ * takes them, a shed is used where it stands). A card is a list item with its
+ * text in bold and one button named after the kind (`kinds.<K>.long`): no heading
+ * of its own, since the button already says what the card is.
  *
  * A deployment that does not hand a kind out to this account (`collection_kinds`
  * on `GET /auth/me/`, derived from the verbs its policy offers) still shows the
@@ -48,7 +50,6 @@ export default function NewCollectionPage() {
           const open = isOfferable(capabilities, 'collection_kinds', kind);
           return (
             <li key={kind} className="kind-card">
-              <h2 className="kind-card-title">{long}</h2>
               <p className="kind-card-what">{t(`kinds.${kind}.what`)}</p>
               {open ? (
                 <div className="button-row-wide">
@@ -57,7 +58,7 @@ export default function NewCollectionPage() {
                     state={location.state}
                     style={btnStyle}
                   >
-                    {t(`kinds.${kind}.create`)}
+                    {long}
                   </ButtonLink>
                 </div>
               ) : (
