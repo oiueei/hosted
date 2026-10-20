@@ -367,6 +367,39 @@ class TestTheOldAddressOfThePage:
         assert api_client.get(address, HTTP_ACCEPT_LANGUAGE="fr-FR,fr;q=0.9")["Location"] == ES
 
     @pytest.mark.parametrize("address", ADDRESSES)
+    @pytest.mark.parametrize(("lang", "expected"), [("ca", CA), ("en", EN), ("es", ES)])
+    def test_the_language_of_the_screen_beats_the_browsers(
+        self, api_client, address, lang, expected
+    ):
+        """The button on the app's page adds `lang`: the screen may be in Catalan for
+        a browser that asks for Spanish, and the form follows the screen."""
+        response = api_client.get(f"{address}?lang={lang}", HTTP_ACCEPT_LANGUAGE="es")
+
+        assert response["Location"] == expected
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    @pytest.mark.parametrize("query", ["?lang=xx", "?lang=", "?lang=CA", ""])
+    def test_a_missing_or_unknown_lang_falls_back_to_the_browser(self, api_client, address, query):
+        response = api_client.get(f"{address}{query}", HTTP_ACCEPT_LANGUAGE="ca")
+
+        assert response["Location"] == CA
+
+    @pytest.mark.parametrize("address", ADDRESSES)
+    def test_nothing_is_added_to_the_address_of_the_form(self, api_client, address):
+        location = api_client.get(f"{address}?lang=ca&for=shed")["Location"]
+
+        assert location == CA
+        assert "?" not in location
+
+    def test_lang_does_not_change_what_is_counted(self, api_client):
+        from hosted.models import AccessInterest
+
+        api_client.get("/request-access/?for=shed&lang=ca")
+
+        row = AccessInterest.objects.get(need="shed", metric=AccessInterest.ASKED)
+        assert row.count == 1
+
+    @pytest.mark.parametrize("address", ADDRESSES)
     def test_the_answer_depends_on_the_header_and_says_so(self, api_client, address):
         """Whatever sits in front of the app must not hand the Catalan form to a
         Spanish browser."""

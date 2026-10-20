@@ -21,16 +21,18 @@ const NEEDS = ['library', 'shed'];
  * shed too. When the address names one, the page goes to it, puts the focus on its
  * heading and reports — once, as a bare number and nothing about the reader — that the
  * section was opened. Each section has a "Request access" button of its own that goes
- * to the form with `?for=<need>`, so the count of presses can be told apart by need.
+ * to the form with `?for=<need>&lang=<the language on screen>`, so the count of presses can be told apart by need and the form comes in the reader's language.
  *
  * It belongs to this deployment: what is asked first, and where, is one operator's.
  */
 export default function AccessPage() {
   const { need } = useParams();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { btnStyle } = useTheeeme();
   const reported = useRef(false);
   const requested = NEEDS.includes(need) ? need : null;
+  // The form is opened in the language on screen, which is not always the browser's.
+  const language = i18n.resolvedLanguage || i18n.language;
 
   useDocumentTitle(t('access.docTitle'));
 
@@ -69,7 +71,7 @@ export default function AccessPage() {
             <p>{t(`access.${name}.body`)}</p>
             <div className="button-row-wide">
               <HdsLink
-                href={`/request-access/?for=${name}`}
+                href={`/request-access/?for=${name}&lang=${language}`}
                 useButtonStyles
                 style={btnStyle}
                 target="_blank"

@@ -39,7 +39,7 @@ from core.utils import get_client_ip, redact_email
 from core.views.auth import _join_collection, _send_magic_link, email_ratelimit_key
 
 from .models import AccessInterest
-from .tally import browser_language, contact_url, request_access_url
+from .tally import REQUEST_ACCESS, browser_language, contact_url, request_access_url
 
 security_logger = logging.getLogger("security")
 
@@ -142,7 +142,9 @@ class RequestAccessRedirect(RedirectView):
 
     **302, not 301**: the form it points at is a service's, in a language chosen from
     the browser, and neither should be cached as the permanent answer. The form is the
-    one of the browser's preferred language (``Accept-Language``), hence the ``Vary``.
+    one of the person's language, hence the ``Vary``: the ``?lang=`` of the link when it
+    names one the forms speak (the app's request-access page adds the language on screen,
+    which is not always the browser's) and the browser's ``Accept-Language`` otherwise.
     """
 
     permanent = False
@@ -157,7 +159,13 @@ class RequestAccessRedirect(RedirectView):
                 AccessInterest.bump(need, AccessInterest.ASKED)
             except Exception:  # noqa: BLE001 — a count never costs anyone the form.
                 logging.getLogger(__name__).warning("AccessInterest ASKED failed", exc_info=True)
-        return request_access_url(browser_language(self.request))
+        # `lang` is the language of the screen the button was pressed on. One that has
+        # no form here (or none at all) leaves the choice to the browser. Nothing of
+        # it is added to the address of the form.
+        language = self.request.GET.get("lang", "")
+        if language not in REQUEST_ACCESS:
+            language = browser_language(self.request)
+        return request_access_url(language)
 
 
 @method_decorator(vary_on_headers("Accept-Language"), name="dispatch")

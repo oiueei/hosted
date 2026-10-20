@@ -67,12 +67,26 @@ describe('the sections', () => {
     for (const need of NEEDS) {
       const section = document.getElementById(need).closest('section');
       const button = within(section).getByRole('link', { name: /Request access/ });
-      expect(button).toHaveAttribute('href', `/request-access/?for=${need}`);
+      expect(button).toHaveAttribute('href', `/request-access/?for=${need}&lang=en`);
       expect(button).toHaveAttribute('target', '_blank');
       expect(button).toHaveAttribute('rel', 'noopener noreferrer');
       expect(button).toHaveAccessibleName('Request access. Opens in a new tab.');
       expect(button.className).toMatch(/hds-button/);
       expect(within(section).getByText(/opens in a new tab\. We'll answer you by email/i));
+    }
+  });
+
+  test.each(['es', 'ca'])('the buttons carry the language on screen: %s', async (lang) => {
+    await switchLanguage(i18n, lang);
+    renderAt('/access');
+    await settle(fetch);
+
+    for (const need of NEEDS) {
+      const section = document.getElementById(need).closest('section');
+      expect(within(section).getByRole('link')).toHaveAttribute(
+        'href',
+        `/request-access/?for=${need}&lang=${lang}`
+      );
     }
   });
 
