@@ -890,13 +890,17 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
                 "reservation_max_minutes", instance.reservation_max_minutes if instance else 180
             ),
         )
-        _validate_hourly_opening_hours(
-            attrs.get(
-                "reservation_unit",
-                instance.reservation_unit if instance else Collection.ReservationUnit.DAY,
-            ),
-            attrs.get("opening_hours", instance.opening_hours if instance else {}),
-        )
+        # Only an edit that touches the unit or the hours is judged: a collection that
+        # was hourly with no hours before the rule can still be paused, resumed or
+        # renamed. The edit form sends both with HOUR, so saving it asks for hours.
+        if instance is None or "reservation_unit" in attrs or "opening_hours" in attrs:
+            _validate_hourly_opening_hours(
+                attrs.get(
+                    "reservation_unit",
+                    instance.reservation_unit if instance else Collection.ReservationUnit.DAY,
+                ),
+                attrs.get("opening_hours", instance.opening_hours if instance else {}),
+            )
         # Orphan check: narrowing the list must leave every thing of the collection's
         # own family a valid slot. A thing of the other family (a lend in a stall, kept
         # by design when a collection that held both was given a kind) is tolerated

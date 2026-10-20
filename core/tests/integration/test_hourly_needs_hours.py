@@ -125,15 +125,36 @@ def test_editing_something_else_of_an_hourly_collection_with_hours_is_accepted(
     assert resp.status_code == status.HTTP_200_OK
 
 
-def test_an_existing_hourly_collection_without_hours_must_get_them_to_save(authenticated_client):
+def test_an_existing_hourly_collection_without_hours_can_still_be_paused_and_resumed(
+    authenticated_client,
+):
     coll = _hourly("HRS005", {})
+    url = f"/api/v1/collections/{coll.code}/"
+
+    paused = authenticated_client.patch(url, {"pause_message": "Back soon"}, format="json")
+    resumed = authenticated_client.patch(url, {"pause_message": ""}, format="json")
+    renamed = authenticated_client.patch(url, {"headline": "Renamed"}, format="json")
+
+    assert paused.status_code == status.HTTP_200_OK
+    assert resumed.status_code == status.HTTP_200_OK
+    assert renamed.status_code == status.HTTP_200_OK
+
+
+def test_saving_the_edit_form_of_an_hourly_collection_without_hours_asks_for_them(
+    authenticated_client,
+):
+    """The form sends the unit and the hours with HOUR, so it is judged."""
+    coll = _hourly("HRS006", {})
+    url = f"/api/v1/collections/{coll.code}/"
 
     refused = authenticated_client.patch(
-        f"/api/v1/collections/{coll.code}/", {"headline": "Renamed"}, format="json"
+        url,
+        {"headline": "Renamed", "reservation_unit": "HOUR", "opening_hours": {}},
+        format="json",
     )
     saved = authenticated_client.patch(
-        f"/api/v1/collections/{coll.code}/",
-        {"headline": "Renamed", "opening_hours": ONE_BLOCK},
+        url,
+        {"headline": "Renamed", "reservation_unit": "HOUR", "opening_hours": ONE_BLOCK},
         format="json",
     )
 
