@@ -14,7 +14,7 @@ import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter, localizedHelper } from '../utils/localized';
-import { closedDatesToDisplay } from '../utils/rental';
+import { closedDatesToDisplay, hasOpeningHours } from '../utils/rental';
 import hdsLang from '../utils/hdsLang';
 import EmailNoteTest from '../components/EmailNoteTest';
 import { useCollectionBase } from '../hooks/useCollectionBase';
@@ -237,6 +237,12 @@ export default function EditCollectionPage() {
     // out of sight would be the silent failure this guards against.
     if (isReservations && reservationUnit === 'HOUR' && !openingHoursValid) {
       setToast({ type: 'error', message: t('openingHours.invalidOnSave') });
+      return;
+    }
+    // An hourly space with no time range can never be booked; the server refuses
+    // it too (`opening_hours_required`).
+    if (isReservations && reservationUnit === 'HOUR' && !hasOpeningHours(openingHours)) {
+      setToast({ type: 'error', message: t('openingHours.requiredOnSave') });
       return;
     }
     setSubmitting(true);

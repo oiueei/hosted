@@ -114,6 +114,8 @@ export default function CollectionHero({
   // the corner — the welcome document, the summary switch when
   // the group sends one, and "Leave the group".
   const isMember = isAuthenticated && !!collection.is_member && !isCurator;
+  const isDemo = !!collection.is_onboarding;
+  const showInvite = !!collection.allow_member_proposals && !isDemo;
   const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
   // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
   // this group" and "Sign in" — whatever the mode and whether it holds things or not.
@@ -345,6 +347,10 @@ export default function CollectionHero({
               collection, which is how the dead-end button got here. */}
           {isAuthenticated && !isOwner && collection.is_member && (
             <>
+              {/* In a demo collection "Invite someone" makes no sense (nobody is
+                invited into shared demo data), so the member's way out stands in
+                its place: "Leave the group", after "Add thing" where the group
+                gives it. A curator and every other collection are untouched. */}
               {/* One row, each button on its own condition:
                 "Invite someone" first and primary — it opens the recommend form
                 below the row, and stays on screen while the form is open so the
@@ -355,9 +361,9 @@ export default function CollectionHero({
                 uploaded to the bucket and all — to collect a 403 at the end.
                 They get the join button above instead, which is the thing that
                 actually unlocks it. */}
-              {(collection.allow_member_proposals || collection.mode === 'COMMUNITY') && (
+              {(showInvite || collection.mode === 'COMMUNITY' || isDemo) && (
                 <div className="button-row-wide">
-                  {collection.allow_member_proposals && (
+                  {showInvite && (
                     <Button
                       ref={recommendButtonRef}
                       style={btnStyle}
@@ -373,9 +379,14 @@ export default function CollectionHero({
                       {t('collectionPage.addThing')}
                     </ButtonLink>
                   )}
+                  {isDemo && (
+                    <ButtonLink to={`${base}/leave`} state={{ headline }} style={btnSecondaryStyle}>
+                      {t('collectionPage.leaveGroup')}
+                    </ButtonLink>
+                  )}
                 </div>
               )}
-              {collection.allow_member_proposals && recommendOpen && (
+              {showInvite && recommendOpen && (
                 <RecommendGuest
                   id={RECOMMEND_BOX_ID}
                   collectionCode={code}

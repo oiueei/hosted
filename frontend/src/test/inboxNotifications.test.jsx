@@ -168,7 +168,7 @@ describe('InboxNotifications — every type says something', () => {
         created: '2026-08-06T10:00:00Z',
       },
       says: [/Lulu/, /Toy library/],
-      links: '/collections/COL001',
+      links: '/collections/COL001/invites',
     },
     {
       what: 'a member joined: names them and the group, and links to the group',
@@ -183,7 +183,7 @@ describe('InboxNotifications — every type says something', () => {
         created: '2026-10-19T10:00:00Z',
       },
       says: [/Someone joined/, /Lulu joined Toy library\./],
-      links: '/collections/COL001',
+      links: '/collections/COL001/invites',
     },
     {
       what: 'a member who set no name is "a member", never an address',
@@ -194,7 +194,7 @@ describe('InboxNotifications — every type says something', () => {
         created: '2026-10-19T10:00:00Z',
       },
       says: [/A member joined Toy library\./i],
-      links: '/collections/COL001',
+      links: '/collections/COL001/invites',
     },
     {
       what: 'a pending recommendation names the member, the guest and whose call it is',
@@ -413,7 +413,7 @@ describe('InboxNotifications — every type says something', () => {
     expect(container.textContent).not.toMatch(/\s—\s*Toy library\s*$/);
     expect(container.textContent).not.toMatch(/\{\{\w+\}\}/);
     expect(
-      screen.getByRole('link', { name: linkName || /decide now|open the group/i })
+      screen.getByRole('link', { name: linkName || /decide now|open the group|see the members/i })
     ).toHaveAttribute('href', links);
     if (rejects) expect(container.textContent).not.toMatch(rejects);
   });
@@ -1035,5 +1035,80 @@ describe('InboxNotifications — a member leaving says how many of their things 
 
     expect(await screen.findByText('Lulu has left “Toy library”.')).toBeInTheDocument();
     expect(screen.queryByText(/deleted with them/)).not.toBeInTheDocument();
+  });
+});
+
+// A notice about the group's own page must not link to the page it is on, and a
+// roster change opens the roster.
+describe('InboxNotifications — where a notice links', () => {
+  const notice = (type, payload = {}) => ({
+    code: `NOT_${type}`,
+    type,
+    payload: {
+      collection_headline: 'Toy library',
+      collection_code: 'COL001',
+      collection_kind: 'LIBRARY',
+      member_name: 'Lulu',
+      owner_name: 'Lili',
+      message: 'Shut on Monday',
+      ...payload,
+    },
+    created: '2026-10-20T10:00:00Z',
+  });
+
+  const renderInbox = (notifications, collection) => {
+    apiFetch.mockImplementation((url) => {
+      if (url.startsWith('/api/v1/inbox/')) return ok(notifications);
+      return ok([]);
+    });
+    return render(
+      <MemoryRouter>
+        <InboxNotifications collection={collection} />
+      </MemoryRouter>
+    );
+  };
+
+  test.each(['MEMBER_JOINED', 'MEMBER_LEFT'])(
+    '%s links to the members, on Home and inside the collection',
+    async (type) => {
+      const { unmount } = renderInbox([notice(type)]);
+      const home = await screen.findByRole('link', { name: 'See the members' });
+      expect(home).toHaveAttribute('href', '/library/COL001/invites');
+      unmount();
+
+      renderInbox([notice(type)], 'COL001');
+      const inside = await screen.findByRole('link', { name: 'See the members' });
+      expect(inside).toHaveAttribute('href', '/library/COL001/invites');
+    }
+  );
+
+  test.each(['BROADCAST', 'PROMOTED_CO_OWNER'])(
+    'inside the collection a %s has no link to its own page; on Home it has',
+    async (type) => {
+      const { unmount } = renderInbox([notice(type)], 'COL001');
+      await screen.findByText(/Toy library/);
+      expect(screen.queryByRole('link', { name: 'Open the group' })).not.toBeInTheDocument();
+      // The X stays.
+      expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
+      unmount();
+
+      renderInbox([notice(type)]);
+      expect(await screen.findByRole('link', { name: 'Open the group' })).toHaveAttribute(
+        'href',
+        '/library/COL001'
+      );
+    }
+  );
+
+  test('inside the collection a notice about a thing still links to it', async () => {
+    renderInbox(
+      [notice('FAQ_QUESTION', { thing_code: 'THG001', thing_headline: 'The drill' })],
+      'COL001'
+    );
+
+    expect(await screen.findByRole('link', { name: /view/i })).toHaveAttribute(
+      'href',
+      '/library/COL001/things/THG001'
+    );
   });
 });

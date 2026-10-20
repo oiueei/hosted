@@ -1884,6 +1884,23 @@ figure[class*='Highlight-module_highlight'] {
   display: block;
 }
 
+/* Text links in the page's content take the theeeme's link colour (`--link-color`,
+   set by `useTheeeme`: `color_01` where it reads at 4.5:1 on white and on the page
+   background, else `color_04`). Not the hero's links (`--hero-text-color`), not
+   buttons-as-links, not the footer's. `:where` keeps the specificity at zero, so a
+   rule that colours one kind of link on purpose still wins. */
+:where(main a:not([class*='hds-button']):not(.form-hero a)) {
+  color: var(--link-color, LinkText);
+}
+
+/* The text of a table's header is the hero's text colour (`--header-color`, from
+   `useTheeeme().tableTheme`), as the fill behind it is the hero's. HDS paints it
+   white (its dark theme) whatever the fill, which a yellow `color_03` cannot
+   carry. The extra attribute selector lifts this above HDS's `.table.dark th`. */
+.table-wrap table[class] th {
+  color: var(--header-color, var(--color-white));
+}
+
 /* The community-card owner attribution links to the member's profile. */
 .thing-card-owner-link {
   color: inherit;
@@ -2337,8 +2354,8 @@ caption:has(.sr-only:only-child) {
    `collections-grid`). White with a thin border, like the table cards.
    Deliberately not HDS `Card`: it paints a `role="region"` with no name — the
    defect already recorded for `Linkbox` — and three anonymous regions in a list
-   of three options are noise for a screen reader, where a `<ul>` of `<li>` with
-   an `<h2>` says what this is; and its default 2px black border and padding
+   of three options are noise for a screen reader, where a `<ul>` of `<li>`, each
+   with its text and a button named after the kind, says what this is; and its default 2px black border and padding
    clash with the table cards this one imitates. */
 .kind-cards {
   list-style: none;
@@ -2359,15 +2376,10 @@ caption:has(.sr-only:only-child) {
   padding: var(--spacing-s);
 }
 
-.kind-card-title {
-  margin: 0;
-  font-size: var(--fontsize-heading-s);
-  line-height: var(--lineheight-m);
-}
-
 .kind-card-what {
   margin: 0;
   flex-grow: 1;
+  font-weight: 700;
 }
 
 @media (min-width: 992px) {

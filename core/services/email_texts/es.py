@@ -17,6 +17,8 @@ TEXTS = {
     # Cómo se nombra a alguien que nunca puso nombre, allí donde quien lee no
     # tiene derecho a su dirección. Ver "a_member" en en.py y `_member_name`.
     "a_member": "Un miembro",
+    # The same stand-in in the middle of a sentence or a list (`_member_name(inline=True)`).
+    "a_member_inline": "un miembro",
     "view_collection_cta": "Ver la colección",
     # Sustantivos de acción por tipo para los correos de reserva — calcan el
     # vocabulario del frontend (thingCard.action / types): una solicitud SELL

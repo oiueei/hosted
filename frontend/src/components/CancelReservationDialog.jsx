@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Button, Dialog } from 'hds-react';
+import { Button } from 'hds-react';
+import ThemedDialog from './ThemedDialog';
 
 /**
  * The confirm step before a confirmed reservation is cancelled — from either
@@ -35,33 +36,33 @@ export default function CancelReservationDialog({
 }) {
   const { t } = useTranslation();
   return (
-    <Dialog
+    <ThemedDialog
       id="cancel-reservation-confirm"
       aria-labelledby="cancel-reservation-confirm-title"
       isOpen
       close={onClose}
       closeButtonLabelText={t('common.close')}
     >
-      <Dialog.Header
+      <ThemedDialog.Header
         id="cancel-reservation-confirm-title"
         title={t('reservation.cancelConfirmTitle')}
       />
-      <Dialog.Content>
+      <ThemedDialog.Content>
         <p>{body}</p>
         <p style={{ marginBottom: 0 }}>
           <strong>{row._thingHeadline}</strong>
           {row._when && ` — ${row._when}`}
         </p>
         {who && <p style={{ margin: 'var(--spacing-2-xs) 0 0' }}>{who}</p>}
-      </Dialog.Content>
-      <Dialog.ActionButtons>
+      </ThemedDialog.Content>
+      <ThemedDialog.ActionButtons>
         <Button style={btnStyle} disabled={busy} onClick={onConfirm}>
           {confirmLabel}
         </Button>
         <Button variant="secondary" style={btnSecondaryStyle} onClick={onClose}>
           {t('common.back')}
         </Button>
-      </Dialog.ActionButtons>
-    </Dialog>
+      </ThemedDialog.ActionButtons>
+    </ThemedDialog>
   );
 }

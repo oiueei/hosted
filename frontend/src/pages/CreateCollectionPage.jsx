@@ -17,6 +17,7 @@ import ApprovalNotice from '../components/ApprovalNotice';
 import { collectionPath, kindOfPrefix } from '../utils/collectionPath';
 import { allowedVerbsFor } from '../utils/collectionKind';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import { hasOpeningHours } from '../utils/rental';
 
 /**
  * `/stall/new`, `/library/new` and `/shed/new`: the form for the kind named by the
@@ -165,6 +166,12 @@ function CreateCollectionForm({ kind }) {
     // out of sight would be the silent failure this guards against.
     if (isReservations && reservationUnit === 'HOUR' && !openingHoursValid) {
       setToast({ type: 'error', message: t('openingHours.invalidOnSave') });
+      return;
+    }
+    // An hourly space with no time range can never be booked; the server refuses
+    // it too (`opening_hours_required`).
+    if (isReservations && reservationUnit === 'HOUR' && !hasOpeningHours(openingHours)) {
+      setToast({ type: 'error', message: t('openingHours.requiredOnSave') });
       return;
     }
     setSubmitting(true);

@@ -284,7 +284,7 @@ describe('ReservationRulesFields — an hourly space with no opening hours', () 
 
   test('while the JSON cannot be read, the field’s own error speaks and this one does not', () => {
     renderFields({ reservationUnit: 'HOUR', openingHours: {} });
-    const field = screen.getByLabelText('Weekly opening hours');
+    const field = screen.getByLabelText(/Weekly opening hours/);
 
     fireEvent.change(field, { target: { value: '{"0": [' } });
     fireEvent.blur(field);

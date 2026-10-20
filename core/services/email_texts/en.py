@@ -22,6 +22,8 @@ TEXTS = {
     # link and never filled in their profile — so the fallback is the *default*
     # state of a new member, not an edge case. See `_member_name`.
     "a_member": "A member",
+    # The same stand-in in the middle of a sentence or a list (`_member_name(inline=True)`).
+    "a_member_inline": "a member",
     "view_collection_cta": "View collection",
     # Per-type action nouns for the booking emails — mirror the frontend's
     # thingCard.action / types vocabulary so a SELL request reads "purchase
@@ -343,8 +345,8 @@ TEXTS = {
     "digest_new_members_other": "And {count} new people joined the group.",
     "join_summary_subject_one": "Someone new in {group}",
     "join_summary_subject_other": "{count} new people in {group}",
-    "join_summary_intro_one": "Joined {group}: {names}.",
-    "join_summary_intro_other": "Joined {group}: {names}.",
+    "join_summary_intro_one": "New in {group}: {names}.",
+    "join_summary_intro_other": "New in {group}: {names}.",
     "join_summary_more": "and {count} more",
     "join_summary_cta": "See the members",
     "join_summary_and": "and",
