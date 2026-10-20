@@ -2,7 +2,6 @@ import { lazy, Suspense, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
-  Dialog,
   IconArrowRedo,
   IconCamera,
   IconCopy,
@@ -12,6 +11,7 @@ import {
   IconWhatsapp,
   LoadingSpinner,
 } from 'hds-react';
+import ThemedDialog from './ThemedDialog';
 import useTheeeme from '../hooks/useTheeeme';
 import useDismissable from '../hooks/useDismissable';
 import { apiFetch } from '../services/api';
@@ -254,15 +254,15 @@ export default function ShareCollectionMenu({
         )}
       </span>
       {qrUrl && (
-        <Dialog
+        <ThemedDialog
           id={`share-qr-${collectionCode}`}
           aria-labelledby={titleId}
           isOpen
           close={() => setQrUrl(null)}
           closeButtonLabelText={t('shareMenu.qrClose')}
         >
-          <Dialog.Header id={titleId} title={qrTitle} />
-          <Dialog.Content>
+          <ThemedDialog.Header id={titleId} title={qrTitle} />
+          <ThemedDialog.Content>
             <p>{t('shareMenu.qrHelper')}</p>
             <div className="share-qr-code">
               <Suspense
@@ -286,8 +286,8 @@ export default function ShareCollectionMenu({
               </Suspense>
             </div>
             <p className="share-qr-url">{qrUrl}</p>
-          </Dialog.Content>
-          <Dialog.ActionButtons>
+          </ThemedDialog.Content>
+          <ThemedDialog.ActionButtons>
             <Button onClick={() => setQrUrl(null)} style={btnStyle}>
               {t('shareMenu.qrClose')}
             </Button>
@@ -299,22 +299,22 @@ export default function ShareCollectionMenu({
             >
               {t('shareMenu.copy')}
             </Button>
-          </Dialog.ActionButtons>
-        </Dialog>
+          </ThemedDialog.ActionButtons>
+        </ThemedDialog>
       )}
       {confirmAction && (
-        <Dialog
+        <ThemedDialog
           id={`share-confirm-${collectionCode}`}
           aria-labelledby={confirmTitleId}
           isOpen
           close={() => setConfirmAction(null)}
           closeButtonLabelText={t('shareMenu.confirmCancel')}
         >
-          <Dialog.Header id={confirmTitleId} title={t(`shareMenu.${confirmAction}Title`)} />
-          <Dialog.Content>
+          <ThemedDialog.Header id={confirmTitleId} title={t(`shareMenu.${confirmAction}Title`)} />
+          <ThemedDialog.Content>
             <p>{t(`shareMenu.${confirmAction}Body`)}</p>
-          </Dialog.Content>
-          <Dialog.ActionButtons>
+          </ThemedDialog.Content>
+          <ThemedDialog.ActionButtons>
             <Button onClick={confirmAction === 'rotate' ? doRotate : doRevoke} style={btnStyle}>
               {t(`shareMenu.${confirmAction}Confirm`)}
             </Button>
@@ -325,8 +325,8 @@ export default function ShareCollectionMenu({
             >
               {t('shareMenu.confirmCancel')}
             </Button>
-          </Dialog.ActionButtons>
-        </Dialog>
+          </ThemedDialog.ActionButtons>
+        </ThemedDialog>
       )}
       {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
     </>
