@@ -67,7 +67,7 @@ const STATUS_TYPES = {
 export default function OwnerBookingsPage() {
   const { t } = useTranslation();
   const L = useLocalized();
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { btnStyle, btnSecondaryStyle, tableTheme } = useTheeeme();
   const [bookings, setBookings] = useState(null);
   const [next, setNext] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -459,9 +459,6 @@ export default function OwnerBookingsPage() {
   // it mixes verbs.
   const pendingRows = markMixedVerbs(rows.filter((r) => r._status === 'PENDING'));
   const otherRows = markMixedVerbs(rows.filter((r) => r._status !== 'PENDING'));
-  const tableTheme = tc.color_03
-    ? { '--header-background-color': `var(--color-${tc.color_03})` }
-    : undefined;
 
   return (
     <PageLayout title={t('ownerBookings.pageTitle')} backTo="/" backLabel={t('common.home')}>

@@ -1893,6 +1893,14 @@ figure[class*='Highlight-module_highlight'] {
   color: var(--link-color, LinkText);
 }
 
+/* The text of a table's header is the hero's text colour (`--header-color`, from
+   `useTheeeme().tableTheme`), as the fill behind it is the hero's. HDS paints it
+   white (its dark theme) whatever the fill, which a yellow `color_03` cannot
+   carry. The extra attribute selector lifts this above HDS's `.table.dark th`. */
+.table-wrap table[class] th {
+  color: var(--header-color, var(--color-white));
+}
+
 /* The community-card owner attribution links to the member's profile. */
 .thing-card-owner-link {
   color: inherit;

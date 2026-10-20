@@ -433,3 +433,43 @@ describe('the colour of a content link', () => {
     document.body.innerHTML = '';
   });
 });
+
+// ── The header of a table ──────────────────────────────────────────────
+// HDS paints a table header's text white (its dark theme) behind whatever fill
+// the page gives it. The pages fill it with `color_03` and now write the hero's
+// text colour (`color_05`, already judged on `color_03` above) over it.
+describe('the header of a table reads on the hero colour', () => {
+  const tokens = loadTokenHexMap();
+  const withTheme = (theeeme) => renderHook(() => useTheeeme(theeeme)).result.current.tableTheme;
+
+  test.each(THEEEMES)('$name — header text is color_05 on color_03, and meets AA', (theeeme) => {
+    const theme = withTheme(theeeme);
+    expect(theme['--header-background-color']).toBe(`var(--color-${theeeme.color_03})`);
+    expect(theme['--header-color']).toBe(`var(--color-${theeeme.color_05})`);
+    const ratio = contrastRatio(tokens[theeeme.color_05], tokens[theeeme.color_03]);
+    expect(ratio, `${theeeme.name}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+
+  test('the old white header failed on some palettes (the reason for the change)', () => {
+    const failing = THEEEMES.filter(
+      (t) => contrastRatio(tokens.white, tokens[t.color_03]) < AA_NORMAL
+    ).map((t) => t.name);
+    expect(failing.length).toBeGreaterThan(0);
+  });
+
+  test("App.css lets the page override HDS's header text colour", () => {
+    const css = readFileSync('src/App.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rule = /([^{}]*\bth)\s*\{[^}]*color:\s*var\(--header-color/.exec(css);
+    expect(rule, 'no rule paints th with --header-color').not.toBeNull();
+    // HDS's is `.table.dark th` (two classes and a type): this must outweigh it.
+    expect(rule[1]).toMatch(/\.table-wrap\s+table\[class\]\s+th/);
+  });
+
+  test("every page hands its tables the hook's theme, none builds its own", () => {
+    for (const page of ['ManageInvitesPage', 'MyBookingsPage', 'OwnerBookingsPage', 'UserPage']) {
+      const src = readFileSync(`src/pages/${page}.jsx`, 'utf8');
+      expect(src, page).toContain('theme={tableTheme}');
+      expect(src, page).not.toContain('--header-background-color');
+    }
+  });
+});

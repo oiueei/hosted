@@ -97,6 +97,8 @@ form-page
 | `color_05` | Koros text (title, description, back-link) via `--hero-text-color` |
 | `color_06` | Primary button text |
 
+**The text of a table header** is `color_05` (the hero's text, judged on `color_03` above) — `useTheeeme().tableTheme` is the `theme` of every HDS `Table` (`--header-background-color` and `--header-color`) and `.table-wrap table[class] th` in `App.css` applies it over HDS's own white. Nine of the twelve palettes failed with HDS's white on `color_03`.
+
 **Text links in the page's content** (a table's, a card's, a notice's; not the hero's, a button-as-link's or the footer's) take `--link-color`, set on the root by `useTheeeme` from `utils/linkColor.js`: `color_01` where it reaches 4.5:1 on white and on `color_02`, else `color_04` (of the twelve palettes only Bussi keeps `color_01`). The rule in `App.css` is `:where(…)`, so a rule that colours one kind of link on purpose (`color: inherit` on a card title, Markdown links) still wins. `utils/colorTokens.js` is the run-time copy of the HDS colour table (CSS cannot be imported as text under the test setup); `test/paletteContrast.test.js` fails if it drifts from the package. Pinned there: the choice for all twelve palettes against the suite's own contrast formula, and which links the rule reaches.
 
 All buttons use theeeme colors (`btnStyle` for primary, `btnSecondaryStyle` for secondary). Secondary buttons always have a white background; `color_01` drives the border and `color_04` the text.
