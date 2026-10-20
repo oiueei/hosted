@@ -259,10 +259,17 @@ def _member_name(name, lang, *, inline=False):
     return name or _texts(lang)("a_member_inline" if inline else "a_member")
 
 
-def _elide(text, lang):
-    """Catalan writes "d'un membre", not "de un membre": the inline stand-in after
-    "de" is joined up. Other languages are returned as they are."""
-    return text.replace("de un membre", "d'un membre") if lang == "ca" else text
+def _template(T, key, lang, *, nameless, field):
+    """The template ``key``, ready to take the stand-in for a person with no name.
+
+    Catalan writes "d'un membre", not "de un membre": for a nameless person the
+    template's own "de {field}" becomes "d'{field}" before anything is put in it,
+    so what the user wrote (a message, a thing's headline) is never touched.
+    """
+    template = T(key)
+    if nameless and lang == "ca":
+        template = template.replace(f"de {{{field}}}", f"d'{{{field}}}")
+    return template
 
 
 def _muted_codes(collection):
@@ -2151,11 +2158,8 @@ def send_broadcast_email(
                 _para(message),
                 _cta(collection_url, T("broadcast_open_cta"), T("cta_fallback")),
             ],
-            _elide(
-                T("broadcast_plain").format(
-                    owner=owner_inline, message=message, url=collection_url
-                ),
-                lang,
+            _template(T, "broadcast_plain", lang, nameless=not owner_name, field="owner").format(
+                owner=owner_inline, message=message, url=collection_url
             ),
         )
         return (
@@ -2261,16 +2265,20 @@ def send_pickup_due_email(owner_name, thing, start_date, requester_email):
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
+    raw_owner_name = owner_name
     owner_name = _member_name(owner_name, lang, inline=True)
     headline = L(thing.headline)
     header = headline
     thing_url = _thing_url(thing, reader=user)
     subject = T("pickup_due_subject").format(thing=headline)
     start = _fmt_date(start_date)
-    plain = _elide(
-        T("pickup_due_plain").format(owner=owner_name, thing=headline, start=start), lang
+    nameless = not raw_owner_name
+    plain = _template(T, "pickup_due_plain", lang, nameless=nameless, field="owner").format(
+        owner=owner_name, thing=headline, start=start
     )
-    body = _elide(T("pickup_due_body").format(owner=owner_name, thing=headline, start=start), lang)
+    body = _template(T, "pickup_due_body", lang, nameless=nameless, field="owner").format(
+        owner=owner_name, thing=headline, start=start
+    )
     blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
     html = _render_email(blocks, lang=lang, header=header)
     _send(
@@ -2521,10 +2529,12 @@ def send_reservation_cancel_confirmation_email(
         intro = T(intro_key)
         plain = T(plain_key).format(thing=headline, when=_phrase_for(T, start, end))
     else:
-        intro = _elide(T(intro_key).format(member=member), lang)
-        plain = _elide(
-            T(plain_key).format(member=member, thing=headline, when=_phrase_for(T, start, end)),
-            lang,
+        nameless = not member_name
+        intro = _template(T, intro_key, lang, nameless=nameless, field="member").format(
+            member=member
+        )
+        plain = _template(T, plain_key, lang, nameless=nameless, field="member").format(
+            member=member, thing=headline, when=_phrase_for(T, start, end)
         )
 
     html = _render_email(

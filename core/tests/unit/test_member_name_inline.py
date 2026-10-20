@@ -166,3 +166,54 @@ def test_a_name_that_opens_its_sentence_keeps_the_capital(thing, user2, send):
     with override_settings(EMAIL_LANGUAGE="en"):
         send(email_service, thing, user2.email)
     assert "A member has" in _body_of_first_mail()
+
+
+# ── Catalan joins "de un membre" into "d'un membre" — in the sentence, never in
+# what the user wrote.
+class TestElisionLeavesUsersTextAlone:
+    def test_a_catalan_broadcast_keeps_a_message_that_says_de_un_membre(self, collection, user2):
+        message = "Parlem de un membre nou i de un altre."
+        with override_settings(EMAIL_LANGUAGE="ca"):
+            email_service.send_broadcast_email(
+                "", "owner@your-domain.test", "Group", collection.code, message, [user2.email]
+            )
+        body = _body_of_first_mail()
+        assert message in body
+        assert "Missatge d'un membre:" in body
+
+    def test_a_named_owner_keeps_the_plain_de(self, collection, user2):
+        with override_settings(EMAIL_LANGUAGE="ca"):
+            email_service.send_broadcast_email(
+                "Lala", "owner@your-domain.test", "Group", collection.code, "Hola", [user2.email]
+            )
+        assert "Missatge de Lala:" in _body_of_first_mail()
+
+    def test_a_catalan_pickup_reminder_keeps_a_headline_that_says_de_un_membre(self, thing, user2):
+        thing.headline = "Cadira de un membre"
+        thing.save(update_fields=["headline"])
+        with override_settings(EMAIL_LANGUAGE="ca"):
+            email_service.send_pickup_due_email("", thing, date(2026, 10, 6), user2.email)
+        body = _body_of_first_mail()
+        # The headline inside the sentence is as typed; the stand-in is elided.
+        assert "reculls 'Cadira de un membre' d'un membre el" in body
+
+    def test_a_catalan_cancel_confirmation_keeps_a_headline_that_says_de_un_membre(
+        self, thing, user, user2
+    ):
+        thing.headline = "Taula de un membre"
+        thing.save(update_fields=["headline"])
+        booking = _booking(thing, user, user2)
+        with override_settings(EMAIL_LANGUAGE="ca"):
+            email_service.send_reservation_cancel_confirmation_email(
+                user.email, thing, booking, is_own_reservation=False, member_name=""
+            )
+        body = _body_of_first_mail()
+        assert "la reserva d'un membre de 'Taula de un membre'" in body
+
+    def test_a_named_member_in_a_catalan_cancel_confirmation_keeps_de(self, thing, user, user2):
+        booking = _booking(thing, user, user2)
+        with override_settings(EMAIL_LANGUAGE="ca"):
+            email_service.send_reservation_cancel_confirmation_email(
+                user.email, thing, booking, is_own_reservation=False, member_name="Lele"
+            )
+        assert "la reserva de Lele" in _body_of_first_mail()
