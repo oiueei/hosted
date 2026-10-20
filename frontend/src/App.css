@@ -2354,8 +2354,8 @@ caption:has(.sr-only:only-child) {
    `collections-grid`). White with a thin border, like the table cards.
    Deliberately not HDS `Card`: it paints a `role="region"` with no name — the
    defect already recorded for `Linkbox` — and three anonymous regions in a list
-   of three options are noise for a screen reader, where a `<ul>` of `<li>` with
-   an `<h2>` says what this is; and its default 2px black border and padding
+   of three options are noise for a screen reader, where a `<ul>` of `<li>`, each
+   with its text and a button named after the kind, says what this is; and its default 2px black border and padding
    clash with the table cards this one imitates. */
 .kind-cards {
   list-style: none;
@@ -2376,15 +2376,10 @@ caption:has(.sr-only:only-child) {
   padding: var(--spacing-s);
 }
 
-.kind-card-title {
-  margin: 0;
-  font-size: var(--fontsize-heading-s);
-  line-height: var(--lineheight-m);
-}
-
 .kind-card-what {
   margin: 0;
   flex-grow: 1;
+  font-weight: 700;
 }
 
 @media (min-width: 992px) {

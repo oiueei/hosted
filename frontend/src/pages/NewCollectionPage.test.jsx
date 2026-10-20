@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
@@ -58,13 +59,34 @@ describe('the three cards', () => {
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
 
     expect(cards()).toHaveLength(3);
-    const names = cards().map(
-      (card) => within(card).getByRole('heading', { level: 2 }).textContent
-    );
+    const names = cards().map((card) => within(card).getByRole('link').textContent);
     expect(names).toEqual([en.kinds.STALL.long, en.kinds.LIBRARY.long, en.kinds.SHED.long]);
     expect(within(cards()[0]).getByText(en.kinds.STALL.what)).toBeInTheDocument();
     expect(within(cards()[1]).getByText(en.kinds.LIBRARY.what)).toBeInTheDocument();
     expect(within(cards()[2]).getByText(en.kinds.SHED.what)).toBeInTheDocument();
+  });
+
+  test('a card has no heading of its own: its text and a button named after the kind', async () => {
+    renderPage();
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull();
+    expect(document.querySelector('.kind-card-title')).toBeNull();
+    for (const [index, kind] of ['STALL', 'LIBRARY', 'SHED'].entries()) {
+      const card = cards()[index];
+      expect(within(card).getByText(en.kinds[kind].what)).toHaveClass('kind-card-what');
+      expect(within(card).getByRole('link', { name: en.kinds[kind].long })).toHaveAttribute(
+        'href',
+        `/${kind.toLowerCase()}/new`
+      );
+    }
+  });
+
+  test('the text of a card is bold and the title rule is gone from the stylesheet', () => {
+    const css = readFileSync('src/App.css', 'utf8');
+    const what = /\.kind-card-what\s*\{([^}]*)\}/.exec(css);
+    expect(what?.[1]).toMatch(/font-weight:\s*700/);
+    expect(css).not.toContain('.kind-card-title');
   });
 
   test('the page is titled "Create collection" and the tab says so', async () => {
@@ -86,9 +108,9 @@ describe('the three cards', () => {
       return [links[0].textContent, links[0].getAttribute('href')];
     });
     expect(hrefs).toEqual([
-      [en.kinds.STALL.create, '/stall/new'],
-      [en.kinds.LIBRARY.create, '/library/new'],
-      [en.kinds.SHED.create, '/shed/new'],
+      [en.kinds.STALL.long, '/stall/new'],
+      [en.kinds.LIBRARY.long, '/library/new'],
+      [en.kinds.SHED.long, '/shed/new'],
     ]);
   });
 
@@ -121,7 +143,7 @@ describe('the kind is for good, and the page says so', () => {
     await settle(globalThis.fetch);
 
     expect(screen.getByText(en.kinds.chooseIntro)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: en.kinds.LIBRARY.create })).toBeNull();
+    expect(screen.queryByRole('link', { name: en.kinds.LIBRARY.long })).toBeNull();
   });
 });
 
@@ -168,15 +190,15 @@ describe('a deployment that gives out only some kinds', () => {
     renderPage();
 
     await waitFor(() =>
-      expect(within(cards()[1]).queryByRole('link', { name: en.kinds.LIBRARY.create })).toBeNull()
+      expect(within(cards()[1]).queryByRole('link', { name: en.kinds.LIBRARY.long })).toBeNull()
     );
-    expect(within(cards()[0]).getByRole('link', { name: en.kinds.STALL.create })).toHaveAttribute(
+    expect(within(cards()[0]).getByRole('link', { name: en.kinds.STALL.long })).toHaveAttribute(
       'href',
       '/stall/new'
     );
     for (const index of [1, 2]) {
       const card = cards()[index];
-      expect(within(card).getByRole('heading', { level: 2 })).toBeInTheDocument();
+      expect(within(card).getByText(en.kinds[index === 1 ? 'LIBRARY' : 'SHED'].what)).toBeVisible();
       const ask = await within(card).findByRole('link', { name: /request access/i });
       expect(ask).toHaveAttribute('href', 'https://example.test/ask/');
       expect(card).toHaveTextContent(/need approval/i);
