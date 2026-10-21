@@ -135,6 +135,31 @@ class TestAMemberWhoLeaves:
         )
         assert notice.payload["things_deleted"] == how_many
 
+    def test_a_member_with_no_name_who_leaves_reaches_the_founder_by_their_address(
+        self, group, founder, member
+    ):
+        User.objects.filter(pk=member.pk).update(name="")
+
+        client_for(member).post(LEAVE.format(code=group.code), format="json")
+
+        payload = InAppNotification.objects.get(
+            user=founder, type=InAppNotification.Type.MEMBER_LEFT
+        ).payload
+        assert payload["member_name"] == ""
+        assert payload["member_email"] == member.email
+
+    def test_a_named_member_who_leaves_keeps_their_address_out_of_the_notice(
+        self, group, founder, member
+    ):
+        client_for(member).post(LEAVE.format(code=group.code), format="json")
+
+        payload = InAppNotification.objects.get(
+            user=founder, type=InAppNotification.Type.MEMBER_LEFT
+        ).payload
+        assert payload["member_name"] == member.name
+        assert "member_email" not in payload
+        assert member.email not in str(payload)
+
     def test_each_removed_thing_is_logged_with_the_member_as_actor(self, group, member):
         make_thing(group, member, "MINE01")
 
@@ -312,10 +337,22 @@ class TestTheFounderIsToldWhenACoCuratorRemovesSomeone:
         assert notice.payload == {
             "collection_headline": group.headline,
             "collection_code": group.code,
-            "member_name": member.display_name,
+            "member_name": member.name,
             "things_deleted": 2,
             "removed_by_name": curator.name,
         }
+
+    def test_a_removed_member_with_no_name_reaches_the_founder_by_their_address(
+        self, group, founder, member, curator
+    ):
+        User.objects.filter(pk=member.pk).update(name="")
+
+        self._remove(curator, group, member)
+
+        payload = self._left_notices(founder).get().payload
+        assert payload["member_name"] == ""
+        assert payload["member_email"] == member.email
+        assert payload["removed_by_name"] == curator.name
 
     def test_nobody_else_is_given_that_notice(self, group, founder, member, curator):
         self._remove(curator, group, member)

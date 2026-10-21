@@ -141,15 +141,35 @@ class TestTheTeamIsTold:
 
         assert _joined(group).filter(user=group.owner).count() == 1
 
-    def test_a_member_with_no_name_travels_as_an_empty_name_never_an_address(self, group, newcomer):
+    def test_a_member_with_no_name_reaches_the_team_by_their_address(
+        self, group, newcomer, founder, co_curator
+    ):
         newcomer.name = ""
         newcomer.save(update_fields=["name"])
 
         _by_public_group(group, newcomer)
 
+        for curator in (founder, co_curator):
+            payload = _joined(group).get(user=curator).payload
+            assert payload["member_name"] == ""
+            assert payload["member_email"] == newcomer.email
+
+    def test_a_named_member_travels_by_name_and_the_address_stays_home(self, group, newcomer):
+        _by_public_group(group, newcomer)
+
         payload = _joined(group).get(user=group.owner).payload
-        assert payload["member_name"] == ""
+        assert payload["member_name"] == "Lolo"
+        assert "member_email" not in payload
         assert newcomer.email not in str(payload)
+
+    def test_no_other_member_is_given_a_nameless_members_address(self, group, newcomer, member):
+        newcomer.name = ""
+        newcomer.save(update_fields=["name"])
+
+        _by_public_group(group, newcomer)
+
+        for notice in InAppNotification.objects.filter(user=member):
+            assert newcomer.email not in str(notice.payload)
 
     def test_it_only_informs(self):
         assert Type.MEMBER_JOINED not in InAppNotification.ACTION_NOTICE_TYPES

@@ -130,8 +130,10 @@ def _tell_the_team_of_a_join(collection, user):
 
     Joining is never blocked or approved, in any mode and through any door; whoever
     runs the group just hears of it. The one joining is left out when they are on
-    the team. ``member_name`` is the bare ``name``: the address never travels, and
-    the inbox words an empty one as "a member".
+    the team. ``member_name`` is the bare ``name``. Someone who joined by a public
+    link has given only an address, so the notice then carries it as ``member_email``
+    and names them by it: the team already reads every member's address in the
+    members list, and nobody else is ever sent this notice.
     """
     for curator in [collection.owner, *collection.co_owners.all()]:
         if curator.code == user.code:
@@ -143,6 +145,7 @@ def _tell_the_team_of_a_join(collection, user):
                 "collection_code": collection.code,
                 "collection_headline": collection.headline,
                 "member_name": user.name,
+                **({} if user.name else {"member_email": user.email}),
             },
         )
 

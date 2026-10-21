@@ -186,7 +186,56 @@ describe('InboxNotifications — every type says something', () => {
       links: '/collections/COL001/invites',
     },
     {
-      what: 'a member who set no name is "a member", never an address',
+      what: 'a member who joined with only an address is named by it',
+      notification: {
+        code: 'NOTJ03',
+        type: 'MEMBER_JOINED',
+        payload: {
+          collection_headline: 'Toy library',
+          member_name: '',
+          member_email: 'lulu@your-domain.test',
+          collection_code: 'COL001',
+        },
+        created: '2026-10-19T10:00:00Z',
+      },
+      says: [/lulu@your-domain\.test joined Toy library\./],
+      links: '/collections/COL001/invites',
+    },
+    {
+      what: 'a member who left with only an address is named by it',
+      notification: {
+        code: 'NOTL03',
+        type: 'MEMBER_LEFT',
+        payload: {
+          collection_headline: 'Toy library',
+          member_name: '',
+          member_email: 'lulu@your-domain.test',
+          collection_code: 'COL001',
+        },
+        created: '2026-10-19T10:00:00Z',
+      },
+      says: [/lulu@your-domain\.test/, /Toy library/],
+      links: '/collections/COL001/invites',
+    },
+    {
+      what: 'a member who was removed with only an address is named by it',
+      notification: {
+        code: 'NOTL04',
+        type: 'MEMBER_LEFT',
+        payload: {
+          collection_headline: 'Toy library',
+          member_name: '',
+          member_email: 'lulu@your-domain.test',
+          removed_by_name: 'Lele',
+          collection_code: 'COL001',
+        },
+        created: '2026-10-19T10:00:00Z',
+      },
+      says: [/Lele removed lulu@your-domain\.test from “Toy library”/],
+      links: '/collections/COL001/invites',
+    },
+    {
+      what: 'a member who set no name and gave no address is "a member"',
       notification: {
         code: 'NOTJ02',
         type: 'MEMBER_JOINED',

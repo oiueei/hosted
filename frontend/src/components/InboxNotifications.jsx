@@ -218,7 +218,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     questioner_name: named(payload.questioner_name),
     requester_name: named(payload.requester_name),
     invitee_name: named(payload.invitee_name),
-    member_name: named(payload.member_name),
+    // A member who joined by a public link has given only an address: the team
+    // (the only readers of these two notices) reads it in the members list, so it
+    // names them in the place of a name.
+    member_name: payload.member_name || payload.member_email || t('common.aMember'),
     removed_by_name: named(payload.removed_by_name),
     proposer_name: named(payload.proposer_name),
     other_name: named(payload.other_name),

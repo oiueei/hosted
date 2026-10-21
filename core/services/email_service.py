@@ -2675,8 +2675,10 @@ JOIN_SUMMARY_MAX_NAMES = 10
 
 
 def send_join_summary_email(collection, curator, names):
-    """Tell one curator who joined their group: ``names`` are the members' bare
-    ``name`` values (empty for someone who never set one, written as "a member").
+    """Tell one curator who joined their group: ``names`` are the members' ``name``
+    values, each replaced by the member's address when they never set one (the
+    caller does it: this email goes only to the team, who read every member's
+    address in the members list). An empty entry still reads as "a member".
 
     At most ``JOIN_SUMMARY_MAX_NAMES`` are named, then "and N more". Activity mail,
     so whoever silenced activity gets nothing.

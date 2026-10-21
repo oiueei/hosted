@@ -407,7 +407,9 @@ class CollectionInviteView(APIView):
 
             # A co-curator's removal is told to the founder, who did not do it
             # (the same notice a member's own leaving writes, plus who removed them,
-            # by bare name). The founder removing someone is told nothing.
+            # by bare name). The founder removing someone is told nothing. A removed
+            # member with no name is named to the founder by their address
+            # (``member_email``): the members list already shows it to them.
             if request.user.code != collection.owner_id:
                 InAppNotification.objects.create(
                     user=collection.owner,
@@ -415,7 +417,8 @@ class CollectionInviteView(APIView):
                     payload={
                         "collection_headline": collection.headline,
                         "collection_code": collection.code,
-                        "member_name": invited_user.display_name,
+                        "member_name": invited_user.name,
+                        **({} if invited_user.name else {"member_email": invited_user.email}),
                         "things_deleted": things_deleted,
                         "removed_by_name": request.user.name,
                     },
@@ -668,7 +671,8 @@ class CollectionLeaveView(APIView):
             type=InAppNotification.Type.MEMBER_LEFT,
             payload={
                 "collection_headline": collection.headline,
-                "member_name": request.user.display_name,
+                "member_name": request.user.name,
+                **({} if request.user.name else {"member_email": request.user.email}),
                 "collection_code": collection.code,
                 "things_deleted": things_deleted,
             },

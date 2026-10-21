@@ -108,8 +108,10 @@ class Command(BaseCommand):
         sent = 0
         failed = False
         for curator in dict.fromkeys([collection.owner, *collection.co_owners.all()]):
-            # A curator who joined is not told about themselves.
-            names = [u.name for u in joined if u.code != curator.code]
+            # A curator who joined is not told about themselves. Someone who never
+            # set a name is named by their address: it goes only to the team, who
+            # already read it in the members list.
+            names = [u.name or u.email for u in joined if u.code != curator.code]
             if not names:
                 continue
             try:

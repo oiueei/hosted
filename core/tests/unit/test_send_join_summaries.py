@@ -126,12 +126,29 @@ class TestWhoIsTold:
         group.refresh_from_db()
         assert group.join_summary_sent_on == timezone.localdate() - timedelta(days=1)
 
-    def test_a_nameless_member_is_not_replaced_by_the_address(self, group):
-        join(group, "")
+    def test_a_nameless_member_is_named_to_the_team_by_their_address(self, group):
+        person = join(group, "")
+        join(group, "Lili")
         run()
-        body = to("lala@your-domain.test")[0].body
-        assert "New in The street: a member." in body and "your-domain.test>" not in body
-        assert "@your-domain.test" not in body.split("\n\n", 1)[1]
+        for curator in ("lala@your-domain.test", "lele@your-domain.test"):
+            message = to(curator)[0]
+            assert f"{person.email} and Lili" in message.body
+            assert "a member" not in message.body
+            assert person.email in html.unescape(message.alternatives[0][0])
+
+    def test_a_named_member_does_not_bring_their_address_along(self, group):
+        person = join(group, "Lili")
+        run()
+        message = to("lala@your-domain.test")[0]
+        assert person.email not in message.body
+        assert person.email not in html.unescape(message.alternatives[0][0])
+
+    def test_a_nameless_address_is_escaped_in_the_html(self, group):
+        join(group, "")
+        User.objects.filter(email="p2@your-domain.test").update(email="a&b<x>@your-domain.test")
+        run()
+        page = to("lala@your-domain.test")[0].alternatives[0][0]
+        assert "a&amp;b&lt;x&gt;@your-domain.test" in page and "<x>" not in page
 
     def test_the_plain_text_names_the_group_once_at_the_top(self, group):
         join(group, "Lili")
