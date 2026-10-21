@@ -346,7 +346,7 @@ describe('InboxNotifications — every type says something', () => {
       says: [/You confirmed Lulu's request/i, /A mitre saw/],
       label: /Request confirmed/i,
       links: '/collections/COL001/things/THG009',
-      linkName: /view listing/i,
+      linkName: /view thing/i,
     },
     {
       // The other two corners of the by_you × accepted square: the bodies are
@@ -373,7 +373,7 @@ describe('InboxNotifications — every type says something', () => {
       says: [/You declined Lulu's request/i, /A mitre saw/],
       label: /Request declined/i,
       links: '/collections/COL001/things/THG011',
-      linkName: /view listing/i,
+      linkName: /view thing/i,
     },
     {
       what: "a teammate's acceptance names them, and says it was a yes",
@@ -395,7 +395,7 @@ describe('InboxNotifications — every type says something', () => {
       says: [/Lala confirmed Lolo's request/i, /A board game/],
       label: /Request confirmed/i,
       links: '/collections/COL001/things/THG012',
-      linkName: /view listing/i,
+      linkName: /view thing/i,
     },
     {
       what: "a teammate's decision names them, and whether it was a yes",
@@ -417,7 +417,7 @@ describe('InboxNotifications — every type says something', () => {
       says: [/Lala declined Lolo's request/i, /A board game/],
       label: /Request declined/i,
       links: '/collections/COL001/things/THG010',
-      linkName: /view listing/i,
+      linkName: /view thing/i,
     },
     {
       // Its link read "I can help!" — the retired WISH_THING call-for-help CTA —

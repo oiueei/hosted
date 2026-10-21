@@ -265,16 +265,16 @@ TEXTS = {
     ),
     "faq_hidden_team_intro": "{hider} ha amagat una pregunta sobre:",
     # Listing reported (to owner, anonymous)
-    "reported_subject": "Algú ha denunciat un dels teus anuncis",
+    "reported_subject": "Algú ha denunciat una de les teves coses",
     "reported_plain": (
-        "Algú ha denunciat el teu anunci '{thing}'. "
+        "Algú ha denunciat la teva cosa '{thing}'. "
         "No compartim qui l'ha denunciat. Dona-hi un cop d'ull: {url}"
     ),
-    "reported_intro": "Algú ha denunciat un dels teus anuncis:",
+    "reported_intro": "Algú ha denunciat una de les teves coses:",
     "reported_outro": (
         "No compartim qui l'ha denunciat. Dona-hi un cop d'ull i assegura't que tot està en ordre."
     ),
-    "reported_review_cta": "Revisar l'anunci",
+    "reported_review_cta": "Revisar la cosa",
     # Broadcast (owner → invitees)
     "email_note_test_subject": "La teva nota del correu, tal com la veuran — {collection}",
     "email_note_test_intro": (
