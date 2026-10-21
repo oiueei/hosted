@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
 import InlineConfirm from './InlineConfirm';
+import useTheeeme from '../hooks/useTheeeme';
 import { curatorGuidePath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 import { formatBookingWhen, formatDateTime } from '../utils/rental';
@@ -92,6 +93,7 @@ const notificationType = (type) => {
  */
 export default function InboxNotifications({ collection, reloadKey = 0, onNetworkError }) {
   const { t, i18n } = useTranslation();
+  const { btnStyle } = useTheeeme();
   // Owner content in a payload (headlines) may carry one text per language.
   const L = useLocalized();
   const [notifications, setNotifications] = useState([]);
@@ -509,6 +511,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
             body={t('inbox.info.dismissConfirmBody')}
             confirmLabel={t('inbox.info.dismissAll')}
             onConfirm={dismissInfo}
+            confirmProps={{ size: 'small', style: btnStyle }}
           />
         </Notification>
       )}

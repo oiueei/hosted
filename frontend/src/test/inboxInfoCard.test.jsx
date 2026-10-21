@@ -60,6 +60,7 @@ beforeEach(() => {
 afterEach(async () => {
   await switchLanguage(i18n, 'en');
   localStorage.removeItem('i18nextLng');
+  localStorage.removeItem('theeemeColors');
 });
 
 describe('five updates and one question', () => {
@@ -114,6 +115,25 @@ describe('five updates and one question', () => {
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/inbox/?group=info', { method: 'DELETE' });
     expect(deletes()).toHaveLength(1);
     expect(screen.getByText(/A ladder/)).toBeInTheDocument();
+  });
+
+  test('the confirm button is the primary of the reader’s theeeme', async () => {
+    localStorage.setItem(
+      'theeemeColors',
+      JSON.stringify({
+        color_01: 'metro',
+        color_02: 'white',
+        color_03: 'fog',
+        color_04: 'black',
+        color_06: 'white',
+      })
+    );
+    setApi([question, ...FIVE]);
+    renderInbox();
+    const panel = await openConfirm();
+
+    const confirm = panel.getByRole('button', { name: 'Dismiss all' });
+    expect(confirm.style.getPropertyValue('--background-color')).toBe('var(--color-metro)');
   });
 
   test('cancelling leaves every update where it was', async () => {
