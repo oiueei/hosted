@@ -133,6 +133,16 @@ body {
   }
 }
 
+/* The request page's title is the size of the thing page's (`.page-title`), at
+   every width. Two classes outrank the `.form-hero-title` rule in the 768px query
+   above, so no media query repeats it. */
+.form-hero--request .form-hero-title {
+  font-size: var(--fontsize-heading-l);
+  font-weight: 600;
+  line-height: var(--lineheight-m);
+  letter-spacing: -0.4px;
+}
+
 .form-hero-text {
   font-size: var(--fontsize-body-l);
   font-weight: 500;

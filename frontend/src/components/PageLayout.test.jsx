@@ -149,6 +149,46 @@ describe('PageLayout — offerSignIn', () => {
   });
 });
 
+describe('PageLayout — heroClassName', () => {
+  test('is added to the hero next to form-hero', () => {
+    const { container } = renderLayout({ heroClassName: 'form-hero--request' });
+
+    expect(container.querySelector('.form-hero')).toHaveClass('form-hero', 'form-hero--request');
+  });
+
+  test('without one the hero is the plain form-hero, with no stray class', () => {
+    const { container } = renderLayout({});
+
+    expect(container.querySelector('.form-hero').className).toBe('form-hero');
+  });
+});
+
+describe('the request hero title stylesheet', () => {
+  const REQUEST_TITLE = '.form-hero--request .form-hero-title';
+
+  test('is the thing page title: same size, weight, line height and tracking', () => {
+    for (const property of ['font-size', 'font-weight', 'line-height', 'letter-spacing']) {
+      expect(declarations(REQUEST_TITLE, property)).toEqual(declarations('.page-title', property));
+    }
+  });
+
+  test('wins over the larger title of 768px and up: no media query sets it, and it has the higher specificity', () => {
+    // Nothing in a media query touches this selector, so it can only lose to a rule with
+    // more specificity than two classes; the desktop rule has one.
+    expect(declarationsInMedia('(min-width: 768px)', REQUEST_TITLE, 'font-size')).toEqual([]);
+    expect(declarationsInMedia('(min-width: 768px)', '.form-hero-title', 'font-size')).toEqual([
+      'var(--fontsize-heading-xl)',
+    ]);
+    expect(REQUEST_TITLE.split('.').length - 1).toBeGreaterThan(
+      '.form-hero-title'.split('.').length - 1
+    );
+  });
+
+  test('does not touch the hero colour', () => {
+    expect(declarations(REQUEST_TITLE, 'color')).toEqual([]);
+  });
+});
+
 describe('the hero actions stylesheet', () => {
   const DESKTOP = '(min-width: 768px)';
 

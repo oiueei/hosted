@@ -42,6 +42,8 @@ import useTheeeme from '../hooks/useTheeeme';
  *   its own `offerSignIn` through, so a door that leaves the
  *   "already have an account?" button out leaves the icon out too. Nothing changes for
  *   a signed-in reader.
+ * - `heroClassName`: optional extra class for the `.form-hero`, for a page whose hero
+ *   needs a rule of its own (the request page's smaller title: `form-hero--request`).
  * - `children`: page-container content.
  */
 export default function PageLayout({
@@ -52,6 +54,7 @@ export default function PageLayout({
   heroActions,
   collectionMenu,
   offerSignIn = true,
+  heroClassName,
   children,
 }) {
   const { tc, koro } = useTheeeme();
@@ -61,7 +64,7 @@ export default function PageLayout({
       style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
     >
       <div
-        className="form-hero"
+        className={heroClassName ? `form-hero ${heroClassName}` : 'form-hero'}
         style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
       >
         <div
