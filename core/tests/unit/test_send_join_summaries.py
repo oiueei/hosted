@@ -412,6 +412,27 @@ class TestOncePerDay:
         cmd.Command()._summarise(stale, yesterday, yesterday - timedelta(days=6))
         assert mail.outbox == []
 
+    def test_a_partial_failure_keeps_the_claim_so_nobody_is_told_twice(self, group, monkeypatch):
+        join(group, "Lili")
+        from core.management.commands import send_join_summaries as cmd
+
+        real = cmd.send_join_summary_email
+
+        def fails_for_the_co_curator(collection, curator, names):
+            if curator.code == "JSO002":
+                raise RuntimeError("smtp down")
+            real(collection, curator, names)
+
+        monkeypatch.setattr(cmd, "send_join_summary_email", fails_for_the_co_curator)
+        run()
+        assert [m.to for m in mail.outbox] == [["lala@your-domain.test"]]
+        group.refresh_from_db()
+        assert group.join_summary_sent_on == timezone.localdate() - timedelta(days=1)
+
+        monkeypatch.undo()
+        run()
+        assert len(mail.outbox) == 1, "a retry must not tell the founder again"
+
     def test_a_failure_gives_the_claim_back(self, group, monkeypatch):
         join(group, "Lili")
         before = timezone.localdate() - timedelta(days=2)
