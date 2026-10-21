@@ -560,7 +560,7 @@ The owner's or a co-owner's in-app answer; the email links reach the same two de
 
 A member — or the founder — silences (or un-silences) this one group's digest: `{"muted": true|false}` → `Collection.digest_muted`. The digest goes to the whole team (`invites`, which holds the co-curators, and the founder), so each of them has the switch; anyone else gets **400**. Idempotent (`add`/`remove`), so a double POST is harmless.
 
-This is the control that lets `User.notify_news` default to `True` without it being a pre-ticked opt-in (DESIGN §6): leaving one group's summaries costs the member none of their Cat. 2 activity email. Read back as `is_digest_muted` on `CollectionSerializer`. **No page calls this endpoint any more** (2026-09-21): the switch left `CollectionPage`'s hero, so a member's way to silence one group is the one-click link in every digest's footer (`DigestMuteByTokenView`, below). The endpoint and `is_digest_muted` are kept dormant on purpose — the frontend just no longer reads either.
+This is the control that lets `User.notify_news` default to `True` without it being a pre-ticked opt-in (DESIGN §6): leaving one group's summaries costs the member none of their Cat. 2 activity email. Read back as `is_digest_muted` on `CollectionSerializer`. **Two ways out, both one click**: the "Mute the summary" / "Get the summary again" entry of the collection menu (for a member and for whoever runs the group; `useDigestPreference` in the frontend posts here and reads `is_digest_muted` back to word the entry), and the link in every digest's footer (`DigestMuteByTokenView`, below). The hero itself carries no switch any more (2026-09-21).
 
 ### InvitedCollectionsView
 
