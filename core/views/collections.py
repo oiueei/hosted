@@ -847,7 +847,7 @@ class CollectionProposeInviteView(APIView):
 
         create_proposal(collection, request.user, email, note)
         return Response(
-            {"message": "Suggestion sent to the owner"},
+            {"message": "Suggestion sent to whoever runs the group"},
             status=status.HTTP_200_OK,
         )
 
