@@ -11,6 +11,14 @@ run the same day (or two at once) finds nothing to do. The window runs from the
 day after that one to yesterday, never more than ``MAX_DAYS`` back, so a day the
 Scheduler skipped loses no sign-ups. Only people still in the group are named; a
 person who joined and left in the window is not.
+
+``join_summary_sent_on`` is NULL only for a collection this command has never
+looked at: its first summary names just yesterday, so switching the command on
+never dumps a backlog. The command writes a date only for collections with
+sign-ups, so every pass also dates yesterday on the ones still NULL (they had
+nothing to tell). Otherwise a group quiet for weeks would stay NULL, and its
+first sign-up on a day the Scheduler skipped would be read as a "first summary"
+and lost.
 """
 
 from datetime import timedelta
@@ -28,6 +36,11 @@ MAX_DAYS = 7
 
 class Command(BaseCommand):
     help = "Email each group's curators the people who joined it since the last summary"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Collections whose claim a failed send handed back: still to be told.
+        self._given_back = set()
 
     def handle(self, *args, **options):
         yesterday = timezone.localdate() - timedelta(days=1)
@@ -51,6 +64,13 @@ class Command(BaseCommand):
         total = 0
         for collection in collections:
             total += self._summarise(collection, yesterday, earliest)
+
+        # After the loop, so a group with sign-ups keeps its claim for itself; the
+        # isnull filter leaves every date already written alone. A group whose
+        # sends all failed went back to NULL on purpose, to be retried.
+        Collection.objects.filter(join_summary_sent_on__isnull=True).exclude(
+            code__in=self._given_back
+        ).update(join_summary_sent_on=yesterday)
 
         self.stdout.write(self.style.SUCCESS(f"Sent {total} join summary emails"))
 
@@ -111,4 +131,5 @@ class Command(BaseCommand):
             Collection.objects.filter(code=collection.code, join_summary_sent_on=yesterday).update(
                 join_summary_sent_on=previous
             )
+            self._given_back.add(collection.code)
         return sent

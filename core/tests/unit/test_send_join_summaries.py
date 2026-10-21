@@ -5,6 +5,7 @@ from datetime import datetime, time, timedelta
 from io import StringIO
 
 import pytest
+import time_machine
 from django.core import mail
 from django.core.management import call_command
 from django.utils import timezone
@@ -266,6 +267,44 @@ class TestOncePerDay:
         run()
         body = to("lala@your-domain.test")[0].body
         assert "Fresh" in body and "Earlier" not in body
+
+    def test_a_pass_dates_the_groups_with_nothing_to_tell_and_leaves_older_dates_alone(self, group):
+        older = timezone.localdate() - timedelta(days=5)
+        other = Collection.objects.create(
+            code="JSC002", owner=group.owner, headline="Other", join_summary_sent_on=older
+        )
+        run()
+        yesterday = timezone.localdate() - timedelta(days=1)
+        group.refresh_from_db()
+        other.refresh_from_db()
+        assert group.join_summary_sent_on == yesterday
+        assert other.join_summary_sent_on == older
+
+    def test_a_sign_up_on_a_day_the_scheduler_skipped_is_not_lost_in_a_quiet_group(self, group):
+        """A group with no sign-ups for weeks has no date yet. If its first one
+        lands on a skipped day, it must not be read as a "first summary" (which
+        names only yesterday)."""
+        assert group.join_summary_sent_on is None
+        now = timezone.now()
+        with time_machine.travel(now - timedelta(days=2), tick=False):
+            run()  # nothing to tell; it still looks at the group
+        join(group, "Late", days_ago=2)
+        # The scheduler does not run the next day; two days after the sign-up it does.
+        run()
+        assert "Late" in to("lala@your-domain.test")[0].body
+
+    def test_a_group_whose_sends_all_failed_is_still_to_be_told(self, group, monkeypatch):
+        join(group, "Lili")
+
+        def boom(*a, **k):
+            raise RuntimeError("smtp down")
+
+        monkeypatch.setattr(
+            "core.management.commands.send_join_summaries.send_join_summary_email", boom
+        )
+        run()
+        group.refresh_from_db()
+        assert group.join_summary_sent_on is None, "handed back, not dated as looked at"
 
     def test_the_claim_is_taken_before_sending(self, group, monkeypatch):
         join(group, "Lili")
