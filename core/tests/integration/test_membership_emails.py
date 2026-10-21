@@ -7,9 +7,11 @@ leak the address of the member or the curator, and none of it is sent if the tra
 rolls back.
 """
 
+import time
 from datetime import date, timedelta
 
 import pytest
+import time_machine
 from django.core import mail
 from django.db import transaction
 from rest_framework.test import APIClient
@@ -145,6 +147,37 @@ class TestRequestersAreTold:
         leave(group)
 
         assert "return it to them" not in mail.outbox[0].body
+
+    def test_a_loan_starting_today_by_the_deployments_day_is_held(
+        self, group, member, borrower, leave, settings, monkeypatch
+    ):
+        """23:30 UTC on the 21st is already the 22nd in Madrid: a loan that starts
+        on the 22nd is in the borrower's hands by the deployment's calendar.
+
+        Django points the process clock at TIME_ZONE, so ``date.today()`` and
+        ``timezone.localdate()`` agree in a running app; the process zone is
+        forced back to UTC here to stand in for any clock that differs from the
+        deployment's day, which only the latter may judge by."""
+        settings.TIME_ZONE = "Europe/Madrid"
+        monkeypatch.setenv("TZ", "UTC")
+        time.tzset()
+        ladder = make_thing(group, member, "LADD01", "Ladder", type="LEND_THING")
+        book(
+            ladder,
+            borrower,
+            BookingPeriod.Status.ACCEPTED,
+            start_date=date(2026, 10, 22),
+            end_date=date(2026, 10, 25),
+        )
+
+        try:
+            with time_machine.travel("2026-10-21 23:30:00+00:00", tick=False):
+                leave(group)
+        finally:
+            monkeypatch.undo()
+            time.tzset()
+
+        assert "return it to them as you agreed" in mail.outbox[0].body
 
     def test_nobody_is_told_about_a_finished_or_rejected_request(
         self, group, member, asker, borrower, leave

@@ -7,9 +7,8 @@ whatever its status, in both modes (their contributions in a COMMUNITY collectio
 co-curator's catalogue entries in a PROPRIETARY one).
 """
 
-from datetime import date
-
 from django.db import transaction
+from django.utils import timezone
 
 from core.models import BookingPeriod, Thing
 from core.models.booking import RETURNABLE_TYPES
@@ -28,7 +27,7 @@ def _people_to_tell(leaving, user):
     takes the bookings with it. ``holding`` is true when they have the thing now — an
     accepted loan or rental that has already started. The leaving member's own bookings
     are not announced to them."""
-    today = date.today()
+    today = timezone.localdate()
     told = {}
     bookings = BookingPeriod.objects.filter(
         BookingPeriod.blocking_filter(), thing_code__in=leaving
