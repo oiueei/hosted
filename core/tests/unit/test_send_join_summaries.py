@@ -132,6 +132,16 @@ class TestWhoIsTold:
         assert "New in The street: a member." in body and "your-domain.test>" not in body
         assert "@your-domain.test" not in body.split("\n\n", 1)[1]
 
+    def test_the_plain_text_names_the_group_once_at_the_top(self, group):
+        join(group, "Lili")
+        run()
+        body = to("lala@your-domain.test")[0].body
+        # `_send` puts the header on the first line; the summary must not add a
+        # second copy of it before its own intro.
+        first, second = body.split("\n\n")[:2]
+        assert first == "The street"
+        assert second != "The street"
+
     def test_the_button_goes_to_the_members_page(self, group):
         join(group, "Lili")
         run()

@@ -2704,7 +2704,7 @@ def send_join_summary_email(collection, curator, names):
     )
     url = f"{_frontend_base_url()}{_collection_path(collection.code, collection)}/invites"
     cta = T("join_summary_cta")
-    plain = _headline_prefix(group, f"{intro}\n\n{cta}: {url}")
+    plain = f"{intro}\n\n{cta}: {url}"
     html = _render_email([_para(intro), _cta(url, cta, T("cta_fallback"))], lang=lang, header=group)
     _send(
         curator.email,
