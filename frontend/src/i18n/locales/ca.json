@@ -1156,6 +1156,7 @@
     "already_owner": "Ja ets qui dirigeix aquesta col·lecció.",
     "co_owner_cannot_leave": "Un co-dinamitzador no pot abandonar el grup: demana a qui el va fundar que et tregui de l'equip primer.",
     "owner_cannot_leave": "Qui va fundar el grup no el pot abandonar.",
+    "owner_cannot_be_removed": "Qui va fundar el grup no pot ser expulsat del seu propi grup.",
     "not_a_member_target": "Només es pot ascendir o descendir un membre existent.",
     "not_invited": "Aquesta persona no està convidada a aquesta col·lecció.",
     "already_invited": "Aquesta persona ja està convidada a aquesta col·lecció.",

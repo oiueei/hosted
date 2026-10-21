@@ -1156,6 +1156,7 @@
     "already_owner": "You already own this collection.",
     "co_owner_cannot_leave": "A co-owner can't leave — ask the owner to demote you first.",
     "owner_cannot_leave": "The owner can't leave their own collection.",
+    "owner_cannot_be_removed": "The owner can't be removed from their own collection.",
     "not_a_member_target": "Only an existing member can be promoted or demoted.",
     "not_invited": "This person is not invited to this collection.",
     "already_invited": "This person is already invited to this collection.",

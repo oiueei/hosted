@@ -119,7 +119,9 @@ def deliver_invitation(collection, email, inviter_name, quota_user_code=None, pr
     if created:
         Event.log(Event.Kind.USER_JOINED, actor=invited_user)
 
-    if collection.is_invited(invited_user.code):
+    # The founder counts as already inside: they are an FK, never an ``invites`` row,
+    # so no invitation (RSVP, email, quota) is ever minted for them.
+    if collection.is_owner(invited_user.code) or collection.is_invited(invited_user.code):
         return invited_user, True
 
     # Resend-safe: a fresh pair replaces any pending one for this user+collection.

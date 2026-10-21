@@ -378,6 +378,17 @@ class CollectionInviteView(APIView):
 
         user_code = serializer.validated_data["user_code"]
 
+        # The founder is an FK, never an ``invites`` row: refused before ``invites`` is
+        # read, so a stray row can't turn this into the founder's own removal.
+        if user_code == collection.owner_id:
+            return Response(
+                refusal_body(
+                    "The owner can't be removed from their own collection.",
+                    code="owner_cannot_be_removed",
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Check if user is a confirmed invite
         try:
             invited_user = collection.invites.get(code=user_code)
@@ -830,7 +841,10 @@ class CollectionProposeInviteView(APIView):
         # endpoint handed the same fact back one guess at a time. Answering with
         # both possibilities keeps the proposer's real question answered ("do I
         # need to do anything? no") while confirming neither branch.
-        already_member = collection.invites.filter(email=email).exists()
+        already_member = (
+            collection.invites.filter(email=email).exists()
+            or collection.owner.email.lower() == email
+        )
         already_proposed = InvitationProposal.objects.filter(
             collection=collection, email=email, status=InvitationProposal.Status.PENDING
         ).exists()
@@ -1117,6 +1131,7 @@ class CollectionBulkInviteView(APIView):
             already = set(
                 collection.invites.filter(email__in=emails).values_list("email", flat=True)
             )
+            already.add(collection.owner.email.lower())
             full = collection.capacity_violation(
                 "invites", adding=sum(1 for email in emails if email not in already)
             )
@@ -1141,7 +1156,9 @@ class CollectionBulkInviteView(APIView):
                 if created:
                     Event.log(Event.Kind.USER_JOINED, actor=invited_user)
 
-                if collection.is_invited(invited_user.code):
+                if collection.is_owner(invited_user.code) or collection.is_invited(
+                    invited_user.code
+                ):
                     skipped.append({"email": email, "reason": "already_member"})
                     continue
                 if RSVP.objects.filter(

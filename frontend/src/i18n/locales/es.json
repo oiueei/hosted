@@ -1156,6 +1156,7 @@
     "already_owner": "Ya eres quien dirige esta colección.",
     "co_owner_cannot_leave": "Un co-dinamizador no puede abandonar el grupo: pide a quien lo fundó que te quite del equipo primero.",
     "owner_cannot_leave": "Quien fundó el grupo no puede abandonarlo.",
+    "owner_cannot_be_removed": "Quien fundó el grupo no puede ser expulsado de su propio grupo.",
     "not_a_member_target": "Solo se puede ascender o descender a un miembro existente.",
     "not_invited": "Esta persona no está invitada a esta colección.",
     "already_invited": "Esta persona ya está invitada a esta colección.",

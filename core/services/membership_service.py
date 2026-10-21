@@ -54,7 +54,12 @@ def end_membership(collection, user, *, actor):
     each ``THING_REMOVED`` event names them. Whoever had a live request or reservation on
     one of those things is emailed once the transaction commits, and never if it rolls
     back. Returns how many things were deleted.
+
+    The founder is not a member (an FK, never an ``invites`` row): ending theirs would
+    delete things nobody else may delete, so it raises before touching anything.
     """
+    if collection.is_owner(user.code):
+        raise ValueError("The owner can't be removed from their own collection.")
     with transaction.atomic(), deleting_as(actor):
         leaving = list(things_leaving_with(collection, user))
         to_tell = _people_to_tell(leaving, user)

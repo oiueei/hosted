@@ -174,8 +174,10 @@ class TestProposing:
         inside = client_for(member).post(url, {"email": member.email}, format="json")
         queued = client_for(member).post(url, {"email": "lili@your-domain.test"}, format="json")
 
-        assert inside.status_code == queued.status_code == 400
-        assert inside.data == queued.data
+        founder = client_for(member).post(url, {"email": group.owner.email}, format="json")
+
+        assert inside.status_code == queued.status_code == founder.status_code == 400
+        assert inside.data == queued.data == founder.data
         # And a stranger nobody has mentioned still gets a *different* answer —
         # otherwise this test would pass on an endpoint that refused everything.
         fresh = client_for(member).post(url, {"email": "lolo1@your-domain.test"}, format="json")

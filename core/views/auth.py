@@ -170,7 +170,13 @@ def _join_collection(collection, user, source=""):
     Event log can answer "which of these actually brings people in?" — the
     question that decides whether any of them earns its place. Every caller
     passes one; a blank means a row written before this existed.
+
+    The founder is an FK, never an ``invites`` row: when ``user`` is the owner this
+    is a no-op (no membership, no event, no counter, no document), and the caller
+    still lands them on the collection, which the owner can always read.
     """
+    if collection.is_owner(user.code):
+        return
     already_member = collection.invites.filter(code=user.code).exists()
     collection.invites.add(user)
     if already_member:
