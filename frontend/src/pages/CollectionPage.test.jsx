@@ -1509,6 +1509,26 @@ describe('the ways a collection fails to load', () => {
     expect(await screen.findByText(/your access may have changed/i)).toBeInTheDocument();
   });
 
+  test('access you no longer have is a notice titled for the reader, not an "Error"', async () => {
+    renderAfter(refused(403));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: "You can't see this group" })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Notice')).toBeInTheDocument();
+    expect(screen.queryByText('Error')).not.toBeInTheDocument();
+    // The tab keeps saying what page it is.
+    expect(document.title).toBe('Collection — OIUEEI');
+  });
+
+  test.each([[404], [500]])('a %i is still an "Error"', async (status) => {
+    renderAfter(refused(status));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Error' })).toBeInTheDocument();
+    expect(screen.getByText('Error', { selector: 'h2, h3, div, span' })).toBeInTheDocument();
+    expect(screen.queryByText("You can't see this group")).not.toBeInTheDocument();
+  });
+
   describe('a refusal leaves a way out', () => {
     const THEEEME = {
       color_01: 'bus',

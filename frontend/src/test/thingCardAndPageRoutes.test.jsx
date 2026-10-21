@@ -296,6 +296,30 @@ describe('ThingPage — how it fails to load', () => {
     expect(screen.getAllByRole('link', { name: en.common.home })[0]).toHaveAttribute('href', '/');
   });
 
+  test('a 403 is a notice titled for the reader, not an "Error"', async () => {
+    setApi({ thing: {}, thingStatus: 403 });
+
+    renderPage();
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: "You can't see this thing" })
+    ).toBeInTheDocument();
+    expect(screen.getByText(en.common.notice)).toBeInTheDocument();
+    expect(screen.queryByText(en.common.error)).not.toBeInTheDocument();
+    expect(document.title).toBe(en.titles.thingDefault);
+  });
+
+  test.each([404, 500])('a %i is still an "Error"', async (status) => {
+    setApi({ thing: {}, thingStatus: status });
+
+    renderPage();
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: en.common.error })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("You can't see this thing")).not.toBeInTheDocument();
+  });
+
   describe('a refusal leaves a way out', () => {
     const THEEEME = {
       color_01: 'bus',

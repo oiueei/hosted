@@ -182,12 +182,22 @@ export default function ThingPage() {
   }, [userCode, thingCode, code, navigate]);
 
   if (error) {
+    // Not being allowed in is a fact about the reader's access, not a fault: it
+    // says so in the title and is announced as a notice rather than as an error.
+    const noAccess = error === 'thingPage.noPermission';
     return (
-      <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">
+      <PageLayout
+        title={noAccess ? t('thingPage.noAccessTitle') : t('common.error')}
+        backTo="/"
+        backLabel={t('common.home')}
+      >
+        <Notification
+          label={noAccess ? t('common.notice') : t('common.error')}
+          type={noAccess ? 'info' : 'error'}
+        >
           {t(error)}
         </Notification>
-        {error === 'thingPage.noPermission' && <RefusalWayOut />}
+        {noAccess && <RefusalWayOut />}
       </PageLayout>
     );
   }
