@@ -899,6 +899,48 @@ describe('the collection menu for a member', () => {
     expect(within(panel()).getByRole('button', { name: MUTE })).toBeInTheDocument();
   });
 
+  // The team's switch is in the same menu, but `is_member` is false for it, so the
+  // member's block (and its status zone) is not rendered: the answer has its own
+  // place under the team's row.
+  const FOUNDER = { ...COLLECTION, digest_frequency: 'WEEKLY', is_digest_muted: false };
+  const CO_CURATOR = {
+    ...FOUNDER,
+    owner: 'OTHER1',
+    owner_name: 'Owner',
+    co_owners: [{ code: 'ABC123', name: 'Me' }],
+  };
+
+  test.each([
+    ['the founder', FOUNDER],
+    ['a co-curator', CO_CURATOR],
+  ])('%s who mutes the summary is told it worked', async (_who, view) => {
+    renderMember(view);
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: MUTE }));
+
+    expect(
+      await screen.findByText("Done: you won't get this group's summary any more.")
+    ).toBeInTheDocument();
+    expect(JSON.parse(digestPosts()[0][1].body)).toEqual({ muted: true });
+  });
+
+  test.each([
+    ['the founder', FOUNDER],
+    ['a co-curator', CO_CURATOR],
+  ])('%s whose mute fails is told it did not', async (_who, view) => {
+    renderMember(view, {
+      digest: () => ({ ok: false, status: 500, json: () => Promise.resolve({}) }),
+    });
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: MUTE }));
+
+    expect(
+      await screen.findByText("We couldn't change that. Please try again.")
+    ).toBeInTheDocument();
+  });
+
   test.each([
     [
       'the server refuses',

@@ -338,6 +338,9 @@ export default function CollectionHero({
                 </ButtonLink>
               </div>
               <CollectionDownloadsStatus downloads={downloads} />
+              {/* Whoever runs the group has the summary switch in the menu too
+                  (`is_member` is false for the team), so its outcome shows here. */}
+              <CollectionDigestStatus digest={digestPref} />
             </>
           )}
           {/* Everything in here is a rank-and-file member's control —
@@ -400,7 +403,7 @@ export default function CollectionHero({
               )}
               {/* The outcome of "Mute the summary" / "Get the summary again" from the
                 collection menu: a short message in a live region, as the downloads'.
-                Only a member has the switch. */}
+                Members only: the team's own zone is under its row. */}
               <CollectionDigestStatus digest={digestPref} />
               {/* "Leave the group" used to sit here, third in a stack of
                 unlabelled text links under the description — and the only

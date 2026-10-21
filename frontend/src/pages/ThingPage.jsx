@@ -295,14 +295,10 @@ export default function ThingPage() {
       heroActions={decisionActions}
       collectionMenu={collectionMenu}
     >
-      {/* The outcome of a download (a curator's) or of the summary switch (a member's)
+      {/* The outcome of a download (a curator's) and of the summary switch
           from the corner menu: a live region right under the hero. */}
-      {menu &&
-        (menu.is_curator ? (
-          <CollectionDownloadsStatus downloads={downloads} />
-        ) : (
-          <CollectionDigestStatus digest={digestPref} />
-        ))}
+      {menu && menu.is_curator && <CollectionDownloadsStatus downloads={downloads} />}
+      {menu && <CollectionDigestStatus digest={digestPref} />}
       <div className="form-grid">
         {thing.collection_is_onboarding && <DemoNotice />}
         {(() => {

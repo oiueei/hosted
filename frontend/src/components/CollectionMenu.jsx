@@ -273,9 +273,9 @@ export function CollectionDownloadsStatus({ downloads }) {
 }
 
 /**
- * The outcome zone for a member's "Mute the summary" / "Get the summary again":
- * one short message, success or failure, under the hero's member row — the
- * downloads' own zone for a curator. Always rendered, so the live region pre-dates
+ * The outcome zone for "Mute the summary" / "Get the summary again", a member's
+ * or whoever runs the group's: one short message, success or failure, under the
+ * hero's row of buttons (the member's, or the team's beside the downloads' zone). Always rendered, so the live region pre-dates
  * its content and a screen reader announces it. `digest` is `useDigestPreference`'s
  * answer; the message is an i18n key translated here.
  */

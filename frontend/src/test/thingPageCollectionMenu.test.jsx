@@ -380,6 +380,36 @@ describe('the thing page — what the menu does from here', () => {
     ).toBeInTheDocument();
   });
 
+  test('a curator who mutes the summary is told it worked', async () => {
+    setApi({ menu: CURATOR_MENU });
+    renderThing();
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Mute the summary' }));
+
+    expect(
+      await screen.findByText("Done: you won't get this group's summary any more.")
+    ).toBeInTheDocument();
+  });
+
+  test('a curator whose mute fails is told it did not', async () => {
+    setApi({ menu: CURATOR_MENU });
+    const base = apiFetch.getMockImplementation();
+    apiFetch.mockImplementation((url, options) =>
+      url === '/api/v1/collections/COL001/digest/'
+        ? Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+        : base(url, options)
+    );
+    renderThing();
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Mute the summary' }));
+
+    expect(
+      await screen.findByText("We couldn't change that. Please try again.")
+    ).toBeInTheDocument();
+  });
+
   test('a curator has the summary switch too, and only where the group sends one', async () => {
     setApi({ menu: { ...CURATOR_MENU, digest_frequency: 'NONE' } });
     renderThing();
