@@ -140,6 +140,35 @@ describe('five updates and one question', () => {
     );
   });
 
+  test('Hide names the notices it folds away: every id it controls is an informative notice', async () => {
+    setApi([question, ...FIVE]);
+    const { container } = renderInbox();
+    fireEvent.click(await screen.findByRole('button', { name: 'Show' }));
+
+    const ids = screen
+      .getByRole('button', { name: 'Hide' })
+      .getAttribute('aria-controls')
+      .split(' ');
+    expect(ids).toHaveLength(5);
+    for (const id of ids) {
+      const notice = container.querySelector(`#${id}`);
+      expect(notice, id).not.toBeNull();
+      expect(notice).toHaveTextContent(/News \d/);
+    }
+    // The question is not folded, so it is not among them.
+    expect(ids).not.toContain('inbox-notice-FAQ001');
+    expect(container.querySelector('#inbox-notice-FAQ001')).not.toBeNull();
+  });
+
+  test('closed, Show controls nothing: its notices are not in the page to point at', async () => {
+    setApi([question, ...FIVE]);
+    renderInbox();
+
+    expect(await screen.findByRole('button', { name: 'Show' })).not.toHaveAttribute(
+      'aria-controls'
+    );
+  });
+
   test('has no accessibility violation with the card open', async () => {
     setApi(FIVE);
     const { container } = renderInbox();

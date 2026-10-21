@@ -104,6 +104,11 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
   const infoCount = notifications.filter(isInformativeNotice).length;
   const infoFolded = infoCount > GROUP_THRESHOLD;
   const [infoOpen, setInfoOpen] = useState(false);
+  // The notices the Show / Hide button opens, by id, for `aria-controls`.
+  const infoNoticeIds = notifications
+    .filter(isInformativeNotice)
+    .map((n) => `inbox-notice-${n.code}`)
+    .join(' ');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -492,6 +497,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
             variant="supplementary"
             size="small"
             aria-expanded={infoOpen}
+            aria-controls={infoOpen ? infoNoticeIds : undefined}
             onClick={() => setInfoOpen((open) => !open)}
           >
             {infoOpen ? t('inbox.info.hide') : t('inbox.info.show')}
@@ -535,6 +541,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           return (
             <Notification
               key={n.code}
+              id={`inbox-notice-${n.code}`}
               type={notificationType(n.type)}
               label={notificationLabel(n)}
               // Each notice is a landmark; the number keeps two of one kind apart.
