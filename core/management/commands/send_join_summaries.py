@@ -37,12 +37,10 @@ MAX_DAYS = 7
 class Command(BaseCommand):
     help = "Email each group's curators the people who joined it since the last summary"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Collections whose claim a failed send handed back: still to be told.
-        self._given_back = set()
-
     def handle(self, *args, **options):
+        # Collections whose claim a failed send handed back: still to be told.
+        # Per pass, so a reused instance does not carry them into the next one.
+        self._given_back = set()
         yesterday = timezone.localdate() - timedelta(days=1)
         earliest = yesterday - timedelta(days=MAX_DAYS - 1)
 
