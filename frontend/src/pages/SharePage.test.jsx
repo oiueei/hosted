@@ -160,6 +160,18 @@ describe('SharePage — a reader who is already signed in', () => {
     expect(await screen.findByText(detail)).toBeInTheDocument();
   });
 
+  test('a refusal with no useful body says the join did not work, and keeps the button', async () => {
+    serve(() =>
+      Promise.resolve({ ok: false, status: 400, json: () => Promise.reject(new Error('no body')) })
+    );
+    renderShare();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Join The Tool Library' }));
+
+    expect(await screen.findByText(en.joinToAct.error)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join The Tool Library' })).toBeEnabled();
+  });
+
   test('a dropped connection is said, and the button is usable again', async () => {
     serve(() => Promise.reject(new TypeError('Failed to fetch')));
     renderShare();
