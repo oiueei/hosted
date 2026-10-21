@@ -1230,7 +1230,7 @@ describe('InboxNotifications — "a member" in the middle of a sentence', () => 
       says: {
         en: "You confirmed a member's request for The drill.",
         es: 'Has confirmado la solicitud de un miembro de The drill.',
-        ca: 'Has confirmat la sol·licitud de un membre de The drill.',
+        ca: 'Has confirmat la sol·licitud de The drill feta per un membre.',
       },
     },
     {
@@ -1245,7 +1245,7 @@ describe('InboxNotifications — "a member" in the middle of a sentence', () => 
       says: {
         en: "A member declined a member's request for The drill.",
         es: 'Un miembro ha rechazado la solicitud de un miembro de The drill.',
-        ca: 'Un membre ha rebutjat la sol·licitud de un membre de The drill.',
+        ca: 'Un membre ha rebutjat la sol·licitud de The drill feta per un membre.',
       },
     },
     {
@@ -1265,7 +1265,7 @@ describe('InboxNotifications — "a member" in the middle of a sentence', () => 
       says: {
         en: "You cancelled a member's reservation of The room.",
         es: 'Has cancelado la reserva de un miembro de The room.',
-        ca: 'Has cancel·lat la reserva de un membre de The room.',
+        ca: 'Has cancel·lat la reserva de The room feta per un membre.',
       },
     },
   ];
@@ -1296,6 +1296,59 @@ describe('InboxNotifications — "a member" in the middle of a sentence', () => 
       const phrase = new RegExp(says[lang].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
       expect(await screen.findByText(phrase)).toBeInTheDocument();
     });
+  });
+
+  test.each([
+    ['accepted by you', { by_you: true, accepted: true }],
+    ['rejected by you', { by_you: true, accepted: false }],
+    ['accepted by a teammate', { decider_name: '', accepted: true }],
+    ['rejected by a teammate', { decider_name: '', accepted: false }],
+  ])(
+    'in Catalan a decision %s names the requester after "per", never "de un membre"',
+    async (_what, extra) => {
+      await switchLanguage(i18n, 'ca');
+      apiFetch.mockImplementation((url) =>
+        url.startsWith('/api/v1/inbox/')
+          ? ok([
+              {
+                code: 'NOTX03',
+                type: 'BOOKING_DECIDED',
+                payload: { thing_headline: 'El trepant', requester_name: '', ...extra },
+                created: '2026-10-20T10:00:00Z',
+              },
+            ])
+          : ok([])
+      );
+
+      renderInbox();
+
+      expect(
+        await screen.findByText(/sol·licitud de El trepant feta per un membre\./)
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/de un membre/)).not.toBeInTheDocument();
+    }
+  );
+
+  test('in Catalan a name after "per" needs no elision, whichever letter it starts with', async () => {
+    await switchLanguage(i18n, 'ca');
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? ok([
+            {
+              code: 'NOTX04',
+              type: 'RESERVATION_CANCELLED',
+              payload: { thing_headline: 'La sala', by_you: true, member_name: 'Anna' },
+              created: '2026-10-20T10:00:00Z',
+            },
+          ])
+        : ok([])
+    );
+
+    renderInbox();
+
+    expect(
+      await screen.findByText('Has cancel·lat la reserva de La sala feta per Anna.')
+    ).toBeInTheDocument();
   });
 
   test('a name that opens the sentence keeps its capital', async () => {
