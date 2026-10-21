@@ -37,6 +37,7 @@ from core.services.email_service import (
     send_magic_link_email,
 )
 from core.services.invitation_service import (
+    ProposalAlreadyDecided,
     approve_proposal,
     proposal_approval_blocked,
     reject_proposal,
@@ -895,11 +896,18 @@ class VerifyLinkView(APIView):
                 # "invalid or expired link", telling the owner to stop clicking
                 # a link that was still good.
                 return Response({**refusal_body(reason), "retryable": True}, status=code)
-            approve_proposal(proposal)
-            message = "Invitation sent"
+            decide, message = approve_proposal, "Invitation sent"
         else:
-            reject_proposal(proposal)
-            message = "Suggestion declined"
+            decide, message = reject_proposal, "Suggestion declined"
+        try:
+            decide(proposal)
+        except ProposalAlreadyDecided:
+            # Another curator settled it between the check above and now.
+            rsvp.delete()
+            return Response(
+                refusal_body("This suggestion is no longer pending", code="proposal_not_pending"),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Every curator's links and notices went with the decision
         # (``clear_proposal_traces``, called by approve/reject).

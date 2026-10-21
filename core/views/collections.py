@@ -57,6 +57,7 @@ from core.services.email_service import (
 from core.services.export_service import collection_stats_rows
 from core.services.invitation_service import (
     _INVITE_QUOTA_MESSAGE,
+    ProposalAlreadyDecided,
     _consume_invite_quota,
     _invite_quota_left,
     approve_proposal,
@@ -862,6 +863,17 @@ class CollectionProposalActionView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def _not_pending():
+        return Response(
+            refusal_body(
+                "This suggestion is no longer pending.",
+                code="proposal_not_pending",
+                key="detail",
+            ),
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     def post(self, request, proposal_code, action):
         proposal = get_object_or_404(InvitationProposal, code=proposal_code)
 
@@ -874,14 +886,7 @@ class CollectionProposalActionView(APIView):
             return denied
 
         if not proposal.is_valid():
-            return Response(
-                refusal_body(
-                    "This suggestion is no longer pending.",
-                    code="proposal_not_pending",
-                    key="detail",
-                ),
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return self._not_pending()
 
         if action == "approve":
             # The ceiling and the quota are the owner's, and are checked for the
@@ -895,10 +900,16 @@ class CollectionProposalActionView(APIView):
                 # ``VerifyLinkView._handle_proposal_action``): the suggestion
                 # stays pending and the owner may answer later.
                 return Response({**refusal_body(reason), "retryable": True}, status=code)
-            approve_proposal(proposal)
+            try:
+                approve_proposal(proposal)
+            except ProposalAlreadyDecided:
+                return self._not_pending()
             return Response({"message": "Invitation sent"}, status=status.HTTP_200_OK)
 
-        reject_proposal(proposal)
+        try:
+            reject_proposal(proposal)
+        except ProposalAlreadyDecided:
+            return self._not_pending()
         return Response({"message": "Suggestion declined"}, status=status.HTTP_200_OK)
 
 
