@@ -219,6 +219,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
     requester_name: named(payload.requester_name),
     invitee_name: named(payload.invitee_name),
     member_name: named(payload.member_name),
+    removed_by_name: named(payload.removed_by_name),
     proposer_name: named(payload.proposer_name),
     other_name: named(payload.other_name),
     decider_name: named(payload.decider_name),
@@ -333,10 +334,19 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           member_name: p.member_name,
         });
       case 'MEMBER_LEFT': {
-        const left = t('home.memberLeftBody', {
-          collection_headline: p.collection_headline,
-          member_name: p.member_name,
-        });
+        // A co-curator's removal of someone is told to the founder with who did
+        // it; a member's own leaving carries no `removed_by_name`.
+        const left =
+          'removed_by_name' in n.payload
+            ? t('home.memberRemovedBody', {
+                removed_by: p.removed_by_name,
+                collection_headline: p.collection_headline,
+                member_name: p.member_name,
+              })
+            : t('home.memberLeftBody', {
+                collection_headline: p.collection_headline,
+                member_name: p.member_name,
+              });
         // A notice written before the count existed has no `things_deleted`: 0.
         const things = p.things_deleted || 0;
         return things > 0 ? `${left} ${t('home.memberLeftThings', { count: things })}` : left;

@@ -282,6 +282,7 @@
     "memberLeftBody": "{{member_name}} ha deixat “{{collection_headline}}”.",
     "memberLeftThings_one": "La seva cosa s'ha esborrat amb la seva sortida.",
     "memberLeftThings_other": "Les seves {{count}} coses s'han esborrat amb la seva sortida.",
+    "memberRemovedBody": "{{removed_by}} ha tret {{member_name}} de “{{collection_headline}}”.",
     "proposedLabel": "Et recomanen algú",
     "proposedBody": "{{proposer_name}} proposa convidar {{email}} a “{{collection_headline}}”. No s'ha contactat amb ningú: la decisió és teva.",
     "proposalApprovedLabel": "La teva recomanació ha tirat endavant",

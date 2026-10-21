@@ -405,6 +405,22 @@ class CollectionInviteView(APIView):
                 drop_team_notices_of(invited_user, collection)
             Event.log(Event.Kind.MEMBER_LEFT, actor=invited_user, collection=collection)
 
+            # A co-curator's removal is told to the founder, who did not do it
+            # (the same notice a member's own leaving writes, plus who removed them,
+            # by bare name). The founder removing someone is told nothing.
+            if request.user.code != collection.owner_id:
+                InAppNotification.objects.create(
+                    user=collection.owner,
+                    type=InAppNotification.Type.MEMBER_LEFT,
+                    payload={
+                        "collection_headline": collection.headline,
+                        "collection_code": collection.code,
+                        "member_name": invited_user.display_name,
+                        "things_deleted": things_deleted,
+                        "removed_by_name": request.user.name,
+                    },
+                )
+
             # Notify the removed user — invited_user is already in hand (fetched
             # above), so there's no need to re-query and no DoesNotExist to guard.
             # Bare name — the person being removed is the last reader who

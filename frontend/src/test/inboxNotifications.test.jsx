@@ -1036,6 +1036,25 @@ describe('InboxNotifications — a member leaving says how many of their things 
     expect(await screen.findByText('Lulu has left “Toy library”.')).toBeInTheDocument();
     expect(screen.queryByText(/deleted with them/)).not.toBeInTheDocument();
   });
+
+  test('a removal says who removed whom, and keeps the count of things', async () => {
+    renderInbox([left({ removed_by_name: 'Lele', things_deleted: 2 })]);
+
+    expect(
+      await screen.findByText(
+        'Lele removed Lulu from “Toy library”. Their 2 things in it were deleted with them.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/has left/)).not.toBeInTheDocument();
+  });
+
+  test('a removal by someone with no name says "A member" and is still a removal', async () => {
+    renderInbox([left({ removed_by_name: '', things_deleted: 0 })]);
+
+    expect(
+      await screen.findByText('A member removed Lulu from “Toy library”.')
+    ).toBeInTheDocument();
+  });
 });
 
 // A notice about the group's own page must not link to the page it is on, and a

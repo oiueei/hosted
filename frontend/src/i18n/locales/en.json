@@ -288,6 +288,7 @@
     "memberLeftBody": "{{member_name}} has left “{{collection_headline}}”.",
     "memberLeftThings_one": "Their thing in it was deleted with them.",
     "memberLeftThings_other": "Their {{count}} things in it were deleted with them.",
+    "memberRemovedBody": "{{removed_by}} removed {{member_name}} from “{{collection_headline}}”.",
     "proposedLabel": "A guest has been recommended",
     "proposedBody": "{{proposer_name}} suggests inviting {{email}} to “{{collection_headline}}”. Nobody has been contacted — it's your call.",
     "proposalApprovedLabel": "Your recommendation went through",
