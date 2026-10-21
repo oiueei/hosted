@@ -88,10 +88,10 @@
   },
   "collectionMenu": {
     "label": "Opciones de la colección",
-    "muteDigest": "Silenciar el resumen",
-    "unmuteDigest": "Volver a recibir el resumen",
-    "digestMuted": "Hecho: ya no recibirás el resumen de este grupo.",
-    "digestUnmuted": "Hecho: volverás a recibir el resumen de este grupo.",
+    "muteDigest": "Silenciar los resúmenes",
+    "unmuteDigest": "Volver a recibir los resúmenes",
+    "digestMuted": "Hecho: ya no recibirás los resúmenes de este grupo.",
+    "digestUnmuted": "Hecho: volverás a recibir los resúmenes de este grupo.",
     "digestError": "No hemos podido cambiarlo. Inténtalo de nuevo."
   },
   "common": {
@@ -342,7 +342,7 @@
     "doneLabel": "Hecho",
     "done": "Ya no recibirás los resúmenes de este grupo.",
     "doneNamed": "Ya no recibirás los resúmenes de “{{collection}}”.",
-    "stillGet": "Seguirás sabiendo de tus solicitudes, reservas, preguntas y respuestas: sólo hemos parado el resumen de este grupo. Puedes volver a activarlo desde la página de la colección cuando quieras.",
+    "stillGet": "Seguirás sabiendo de tus solicitudes, reservas, preguntas y respuestas: solo hemos parado los resúmenes de este grupo. Puedes volver a activarlos desde la página de la colección cuando quieras.",
     "error": "Este enlace no es válido o ha caducado. Puedes cambiarlo desde la página de la colección."
   },
   "thingPage": {

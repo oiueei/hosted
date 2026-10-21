@@ -283,7 +283,7 @@ export default function ThingPage() {
       downloads={downloads}
       welcomeDocUrl={menu.welcome_doc_url || ''}
       digest={
-        (menu.is_member || menu.is_curator) && menu.digest_frequency !== 'NONE' ? digestPref : null
+        menu.is_curator || (menu.is_member && menu.digest_frequency !== 'NONE') ? digestPref : null
       }
     />
   ) : undefined;

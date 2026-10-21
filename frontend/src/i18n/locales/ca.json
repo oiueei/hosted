@@ -88,10 +88,10 @@
   },
   "collectionMenu": {
     "label": "Opcions de la col·lecció",
-    "muteDigest": "Silenciar el resum",
-    "unmuteDigest": "Tornar a rebre el resum",
-    "digestMuted": "Fet: ja no rebràs el resum d'aquest grup.",
-    "digestUnmuted": "Fet: tornaràs a rebre el resum d'aquest grup.",
+    "muteDigest": "Silenciar els resums",
+    "unmuteDigest": "Tornar a rebre els resums",
+    "digestMuted": "Fet: ja no rebràs els resums d'aquest grup.",
+    "digestUnmuted": "Fet: tornaràs a rebre els resums d'aquest grup.",
     "digestError": "No hem pogut canviar-ho. Torna-ho a provar."
   },
   "common": {
@@ -342,7 +342,7 @@
     "doneLabel": "Fet",
     "done": "Ja no rebràs els resums d'aquest grup.",
     "doneNamed": "Ja no rebràs els resums de “{{collection}}”.",
-    "stillGet": "Continuaràs sabent de les teves sol·licituds, reserves, preguntes i respostes: només hem aturat el resum d'aquest grup. El pots tornar a activar des de la pàgina de la col·lecció quan vulguis.",
+    "stillGet": "Continuaràs sabent de les teves sol·licituds, reserves, preguntes i respostes: només hem aturat els resums d'aquest grup. Els pots tornar a activar des de la pàgina de la col·lecció quan vulguis.",
     "error": "Aquest enllaç no és vàlid o ha caducat. El pots canviar des de la pàgina de la col·lecció."
   },
   "thingPage": {

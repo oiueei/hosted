@@ -94,10 +94,10 @@
   },
   "collectionMenu": {
     "label": "Collection options",
-    "muteDigest": "Mute the summary",
-    "unmuteDigest": "Get the summary again",
-    "digestMuted": "Done: you won't get this group's summary any more.",
-    "digestUnmuted": "Done: you'll get this group's summary again.",
+    "muteDigest": "Mute the summaries",
+    "unmuteDigest": "Get the summaries again",
+    "digestMuted": "Done: you won't get this group's summaries any more.",
+    "digestUnmuted": "Done: you'll get this group's summaries again.",
     "digestError": "We couldn't change that. Please try again."
   },
   "common": {
@@ -348,7 +348,7 @@
     "doneLabel": "Done",
     "done": "You won't get summaries from this group any more.",
     "doneNamed": "You won't get summaries from “{{collection}}” any more.",
-    "stillGet": "You'll still hear about your own requests, reservations, questions and replies — only this group's round-up has stopped. You can turn it back on from the collection page whenever you like.",
+    "stillGet": "You'll still hear about your own requests, reservations, questions and replies — only this group's summaries have stopped. You can turn them back on from the collection page whenever you like.",
     "error": "This link is invalid or has expired. You can change this from the collection page instead."
   },
   "thingPage": {

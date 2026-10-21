@@ -10,7 +10,8 @@ and is claimed with a conditional UPDATE **before** anything is sent, so a secon
 run the same day (or two at once) finds nothing to do. The window runs from the
 day after that one to yesterday, never more than ``MAX_DAYS`` back, so a day the
 Scheduler skipped loses no sign-ups. Only people still in the group are named; a
-person who joined and left in the window is not.
+person who joined and left in the window is not. A curator who silenced the group's
+summaries (``Collection.digest_muted``) is not sent this one either.
 
 ``join_summary_sent_on`` is NULL only for a collection this command has never
 looked at: its first summary names just yesterday, so switching the command on
@@ -56,7 +57,7 @@ class Command(BaseCommand):
         collections = (
             Collection.objects.filter(code__in=busy, status=Collection.Status.ACTIVE)
             .select_related("owner")
-            .prefetch_related("co_owners", "invites")
+            .prefetch_related("co_owners", "invites", "digest_muted")
         )
 
         total = 0
@@ -105,9 +106,13 @@ class Command(BaseCommand):
         )
         joined = [members[c] for c in codes if c in members]
 
+        silenced = {u.code for u in collection.digest_muted.all()}
         sent = 0
         failed = False
         for curator in dict.fromkeys([collection.owner, *collection.co_owners.all()]):
+            # Silencing a group's summaries covers this one too.
+            if curator.code in silenced:
+                continue
             # A curator who joined is not told about themselves. Someone who never
             # set a name is named by their address: it goes only to the team, who
             # already read it in the members list.

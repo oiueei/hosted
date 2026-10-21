@@ -1,6 +1,7 @@
 """``send_join_summaries``: each curator is told, once, who joined their group."""
 
 import html
+import re
 from datetime import datetime, time, timedelta
 from io import StringIO
 
@@ -111,6 +112,69 @@ class TestWhoIsTold:
         run()
         assert to("lele@your-domain.test") == []
         assert len(to("lala@your-domain.test")) == 1
+
+    def test_a_curator_who_silenced_the_group_gets_no_sign_up_summary(self, group):
+        join(group, "Lili")
+        lele = User.objects.get(email="lele@your-domain.test")
+        group.digest_muted.add(lele)
+        run()
+        assert to("lele@your-domain.test") == []
+        assert len(to("lala@your-domain.test")) == 1
+
+    def test_the_founder_can_silence_it_too(self, group):
+        join(group, "Lili")
+        group.digest_muted.add(group.owner)
+        run()
+        assert to("lala@your-domain.test") == []
+        assert len(to("lele@your-domain.test")) == 1
+
+    def test_silencing_another_group_changes_nothing_here(self, group):
+        join(group, "Lili")
+        other = Collection.objects.create(code="JSC002", owner=group.owner, headline="Other")
+        other.digest_muted.add(group.owner)
+        run()
+        assert len(to("lala@your-domain.test")) == 1
+
+    def test_a_silenced_day_is_still_claimed(self, group):
+        join(group, "Lili")
+        group.digest_muted.add(group.owner, *group.co_owners.all())
+        run()
+        group.refresh_from_db()
+        assert mail.outbox == []
+        assert group.join_summary_sent_on == timezone.localdate() - timedelta(days=1)
+
+    def test_the_email_carries_the_footer_link_that_silences_the_group(self, group):
+        from django.test import Client
+
+        join(group, "Lili")
+        run()
+        lele = User.objects.get(email="lele@your-domain.test")
+        message = to("lele@your-domain.test")[0]
+        page = html.unescape(message.alternatives[0][0])
+        match = re.search(r"/digest/mute/([\w:.\-]+)", message.body)
+        assert match, message.body
+        assert match.group(0) in page
+        assert "Stop the summaries from this group" in message.body
+
+        response = Client().post(f"/api/v1/digest/mute/{match.group(1)}/")
+
+        assert response.status_code == 200
+        assert group.digest_muted.filter(pk=lele.pk).exists()
+        assert not group.digest_muted.filter(pk=group.owner.pk).exists()
+        mail.outbox.clear()
+        Collection.objects.filter(pk=group.pk).update(join_summary_sent_on=None)
+        run()
+        assert to("lele@your-domain.test") == []
+        assert len(to("lala@your-domain.test")) == 1
+
+    def test_each_curator_gets_their_own_link(self, group):
+        join(group, "Lili")
+        run()
+        tokens = {
+            re.search(r"/digest/mute/([\w:.\-]+)", to(a)[0].body).group(1)
+            for a in ("lala@your-domain.test", "lele@your-domain.test")
+        }
+        assert len(tokens) == 2
 
     def test_someone_who_left_is_not_named(self, group):
         join(group, "Lili")

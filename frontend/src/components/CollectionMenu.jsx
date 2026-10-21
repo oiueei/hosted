@@ -49,7 +49,7 @@ const PANEL_ID = 'collection-menu-panel';
  * and with the same trigger, panel and dismissal — `isCurator={false}`. What a
  * member holds is theirs, not the group's: the welcome document (when there is
  * one: a link that opens in a new tab and says so, as "Ideas and bugs" does),
- * "Mute the summary" / "Get the summary again" (only when the group sends one,
+ * "Mute the summaries" / "Get the summaries again" (only when the group sends one,
  * `digest`: a button that makes the POST and leaves its outcome in a status zone,
  * like the downloads), and, under a divider, "Leave the group". The welcome
  * document is the first entry of a curator's menu too: it no longer sits as a
@@ -273,7 +273,7 @@ export function CollectionDownloadsStatus({ downloads }) {
 }
 
 /**
- * The outcome zone for "Mute the summary" / "Get the summary again", a member's
+ * The outcome zone for "Mute the summaries" / "Get the summaries again", a member's
  * or whoever runs the group's: one short message, success or failure, under the
  * hero's row of buttons (the member's, or the team's beside the downloads' zone). Always rendered, so the live region pre-dates
  * its content and a screen reader announces it. `digest` is `useDigestPreference`'s

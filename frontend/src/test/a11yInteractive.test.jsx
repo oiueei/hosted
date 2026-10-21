@@ -241,7 +241,7 @@ describe('CollectionPage (owner, populated) — interactive a11y', () => {
     await screen.findByText('Test Thing');
 
     fireEvent.click(screen.getByRole('button', { name: 'Collection options' }));
-    await screen.findByRole('button', { name: 'Mute the summary' });
+    await screen.findByRole('button', { name: 'Mute the summaries' });
 
     await settle(apiFetch);
     expect(await axe(container, NO_REGION)).toHaveNoViolations();
