@@ -209,19 +209,28 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
   // name therefore arrives as `''`, and every one of these strings interpolates
   // the name mid-sentence — so without this the body reads " has replied to your
   // question about:". One funnel, so a builder cannot forget.
+  //
+  // The stand-in is written with a capital where the name opens its sentence
+  // ("A member joined…") and in lower case where it falls in the middle of one
+  // ("…cancelled the reservation of a member"): `<key>_inline` is the second form,
+  // and each builder takes the one its own sentence needs in every language.
   const named = (value) => value || t('common.aMember');
+  const namedInline = (value) => value || t('common.aMemberInline');
   const localizedPayload = (payload) => ({
     ...payload,
     collection_headline: L(payload.collection_headline),
     thing_headline: L(payload.thing_headline),
     owner_name: named(payload.owner_name),
+    owner_name_inline: namedInline(payload.owner_name),
     questioner_name: named(payload.questioner_name),
     requester_name: named(payload.requester_name),
+    requester_name_inline: namedInline(payload.requester_name),
     invitee_name: named(payload.invitee_name),
     // A member who joined by a public link has given only an address: the team
     // (the only readers of these two notices) reads it in the members list, so it
     // names them in the place of a name.
     member_name: payload.member_name || payload.member_email || t('common.aMember'),
+    member_name_inline: payload.member_name || payload.member_email || t('common.aMemberInline'),
     removed_by_name: named(payload.removed_by_name),
     proposer_name: named(payload.proposer_name),
     other_name: named(payload.other_name),
@@ -287,12 +296,14 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'COLLECTION_DELETED':
         return t('home.collectionDeletedBody', {
           collection_headline: p.collection_headline,
-          owner_name: p.owner_name,
+          owner_name: p.owner_name_inline,
         });
       case 'COLLECTION_REVOKED':
+        // The name opens the sentence in Spanish and Catalan and follows "by" in English.
         return t('home.collectionRevokedBody', {
           collection_headline: p.collection_headline,
           owner_name: p.owner_name,
+          owner_name_inline: p.owner_name_inline,
         });
       case 'BOOKING_ACCEPTED':
         return t('home.bookingAcceptedBody', {
@@ -344,7 +355,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
             ? t('home.memberRemovedBody', {
                 removed_by: p.removed_by_name,
                 collection_headline: p.collection_headline,
-                member_name: p.member_name,
+                member_name: p.member_name_inline,
               })
             : t('home.memberLeftBody', {
                 collection_headline: p.collection_headline,
@@ -382,13 +393,13 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
             p.accepted
               ? 'home.bookingDecidedAcceptedByYouBody'
               : 'home.bookingDecidedRejectedByYouBody',
-            { requester_name: p.requester_name, thing_headline: p.thing_headline }
+            { requester_name: p.requester_name_inline, thing_headline: p.thing_headline }
           );
         return t(
           p.accepted ? 'home.bookingDecidedAcceptedBody' : 'home.bookingDecidedRejectedBody',
           {
             decider_name: p.decider_name,
-            requester_name: p.requester_name,
+            requester_name: p.requester_name_inline,
             thing_headline: p.thing_headline,
           }
         );
@@ -408,7 +419,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
             'member_name' in (n.payload || {})
               ? 'home.reservationCancelledByYouOtherBody'
               : 'home.reservationCancelledByYouOwnBody',
-            { member_name: p.member_name, thing_headline: p.thing_headline }
+            { member_name: p.member_name_inline, thing_headline: p.thing_headline }
           );
         return t('home.reservationCancelledBody', {
           other_name: p.other_name,

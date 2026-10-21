@@ -133,6 +133,7 @@
     "back": "Back",
     "formerMember": "Former member",
     "aMember": "A member",
+    "aMemberInline": "a member",
     "closeThisTab": "You can close this tab now — the link is on its way to your inbox.",
     "alphaNotice": "OIUEEI is in alpha: nothing is finished and you will find rough edges.",
     "colActions": "Actions"
@@ -260,7 +261,7 @@
     "collectionDeletedLabel": "Collection deleted",
     "collectionDeletedBody": "\"{{collection_headline}}\" has been deleted by {{owner_name}}.",
     "collectionRevokedLabel": "Removed from the group",
-    "collectionRevokedBody": "You have been removed from \"{{collection_headline}}\" by {{owner_name}}.",
+    "collectionRevokedBody": "You have been removed from \"{{collection_headline}}\" by {{owner_name_inline}}.",
     "bookingAcceptedLabel": "Request confirmed",
     "bookingAcceptedBody": "{{owner_name}} confirmed your request for {{thing_headline}}.",
     "bookingDecidedAcceptedByYouBody": "You confirmed {{requester_name}}'s request for {{thing_headline}}.",

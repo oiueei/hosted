@@ -1,6 +1,6 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 window.scrollTo = vi.fn();
 
@@ -11,6 +11,8 @@ vi.mock('../services/api', () => ({
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
+import i18n from '../i18n';
+import { switchLanguage } from './settle';
 import { apiFetch } from '../services/api';
 import CollectionPage from '../pages/CollectionPage';
 import HomePage from '../pages/HomePage';
@@ -1024,7 +1026,7 @@ describe('InboxNotifications — whoever cancelled keeps their own record', () =
     ]);
 
     expect(
-      await screen.findByText(/You cancelled A member's reservation of The meeting room/)
+      await screen.findByText(/You cancelled a member's reservation of The meeting room/)
     ).toBeInTheDocument();
     expect(screen.queryByText(/your reservation/)).not.toBeInTheDocument();
   });
@@ -1178,5 +1180,131 @@ describe('InboxNotifications — where a notice links', () => {
       'href',
       '/library/COL001/things/THG001'
     );
+  });
+});
+
+/**
+ * The stand-in for a person with no name is written in lower case where the name
+ * falls in the middle of a sentence ("…the reservation of a member") and with a
+ * capital where it opens one ("A member joined…"). Which one a key needs depends on
+ * the language's own word order, so each row says where the name falls in the three.
+ */
+describe('InboxNotifications — "a member" in the middle of a sentence', () => {
+  const base = { collection_headline: 'Toy library', collection_code: 'COL001' };
+  const CASES = [
+    {
+      what: 'COLLECTION_DELETED (the owner follows "by")',
+      type: 'COLLECTION_DELETED',
+      payload: { ...base, owner_name: '' },
+      says: {
+        en: 'has been deleted by a member.',
+        es: 'ha sido eliminada por un miembro.',
+        ca: 'ha estat eliminada per un membre.',
+      },
+    },
+    {
+      what: 'COLLECTION_REVOKED (follows "by" in English, opens the sentence in es/ca)',
+      type: 'COLLECTION_REVOKED',
+      payload: { ...base, owner_name: '' },
+      says: {
+        en: 'by a member.',
+        es: 'Un miembro te ha eliminado de',
+        ca: "Un membre t'ha eliminat de",
+      },
+    },
+    {
+      what: 'BOOKING_DECIDED, mine (the requester is the object)',
+      type: 'BOOKING_DECIDED',
+      payload: { thing_headline: 'The drill', requester_name: '', by_you: true, accepted: true },
+      says: {
+        en: "You confirmed a member's request for The drill.",
+        es: 'Has confirmado la solicitud de un miembro de The drill.',
+        ca: 'Has confirmat la sol·licitud de un membre de The drill.',
+      },
+    },
+    {
+      what: "BOOKING_DECIDED, a teammate's (the decider opens, the requester follows)",
+      type: 'BOOKING_DECIDED',
+      payload: {
+        thing_headline: 'The drill',
+        requester_name: '',
+        decider_name: '',
+        accepted: false,
+      },
+      says: {
+        en: "A member declined a member's request for The drill.",
+        es: 'Un miembro ha rechazado la solicitud de un miembro de The drill.',
+        ca: 'Un membre ha rebutjat la sol·licitud de un membre de The drill.',
+      },
+    },
+    {
+      what: 'MEMBER_LEFT after a removal (the remover opens, the removed follows)',
+      type: 'MEMBER_LEFT',
+      payload: { ...base, member_name: '', removed_by_name: '' },
+      says: {
+        en: 'A member removed a member from “Toy library”.',
+        es: 'Un miembro ha sacado a un miembro de “Toy library”.',
+        ca: 'Un membre ha tret un membre de “Toy library”.',
+      },
+    },
+    {
+      what: 'RESERVATION_CANCELLED by you, somebody else’s (the member is the object)',
+      type: 'RESERVATION_CANCELLED',
+      payload: { thing_headline: 'The room', by_you: true, member_name: '' },
+      says: {
+        en: "You cancelled a member's reservation of The room.",
+        es: 'Has cancelado la reserva de un miembro de The room.',
+        ca: 'Has cancel·lat la reserva de un membre de The room.',
+      },
+    },
+  ];
+
+  const renderInbox = () =>
+    render(
+      <MemoryRouter>
+        <InboxNotifications />
+      </MemoryRouter>
+    );
+
+  afterEach(async () => {
+    await switchLanguage(i18n, 'en');
+  });
+
+  describe.each(['en', 'es', 'ca'])('in %s', (lang) => {
+    test.each(CASES)('$what', async ({ type, payload, says }) => {
+      await switchLanguage(i18n, lang);
+      apiFetch.mockImplementation((url) =>
+        url.startsWith('/api/v1/inbox/')
+          ? ok([{ code: 'NOTX01', type, payload, created: '2026-10-20T10:00:00Z' }])
+          : ok([])
+      );
+
+      renderInbox();
+
+      // A regex, not `exact: false`: that one ignores case, which is the point here.
+      const phrase = new RegExp(says[lang].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      expect(await screen.findByText(phrase)).toBeInTheDocument();
+    });
+  });
+
+  test('a name that opens the sentence keeps its capital', async () => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? ok([
+            {
+              code: 'NOTX02',
+              type: 'FAQ_ANSWERED',
+              payload: { thing_headline: 'The drill', owner_name: '' },
+              created: '2026-10-20T10:00:00Z',
+            },
+          ])
+        : ok([])
+    );
+
+    renderInbox();
+
+    expect(
+      await screen.findByText('A member answered your question about The drill.')
+    ).toBeInTheDocument();
   });
 });
