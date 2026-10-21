@@ -286,6 +286,7 @@
     "memberJoinedLabel": "Someone joined",
     "memberJoinedBody": "{{member_name}} joined {{collection_headline}}.",
     "memberLeftLabel": "Someone left the group",
+    "memberRemovedLabel": "Someone was removed from the group",
     "memberLeftBody": "{{member_name}} has left “{{collection_headline}}”.",
     "memberLeftThings_one": "Their thing in it was deleted with them.",
     "memberLeftThings_other": "Their {{count}} things in it were deleted with them.",

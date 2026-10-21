@@ -265,7 +265,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'THING_REPORTED':
         return t('home.reportedLabel');
       case 'MEMBER_LEFT':
-        return t('home.memberLeftLabel');
+        // A co-curator's removal of someone carries who did it.
+        return t(
+          'removed_by_name' in n.payload ? 'home.memberRemovedLabel' : 'home.memberLeftLabel'
+        );
       case 'MEMBER_JOINED':
         return t('home.memberJoinedLabel');
       case 'INVITE_PROPOSAL_APPROVED':

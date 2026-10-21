@@ -280,6 +280,7 @@
     "memberJoinedLabel": "Alguien se ha unido",
     "memberJoinedBody": "{{member_name}} se ha unido a {{collection_headline}}.",
     "memberLeftLabel": "Alguien ha dejado el grupo",
+    "memberRemovedLabel": "Han sacado a alguien del grupo",
     "memberLeftBody": "{{member_name}} ha dejado “{{collection_headline}}”.",
     "memberLeftThings_one": "Su cosa en él se ha borrado con su salida.",
     "memberLeftThings_other": "Sus {{count}} cosas en él se han borrado con su salida.",

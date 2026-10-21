@@ -1099,6 +1099,17 @@ describe('InboxNotifications — a member leaving says how many of their things 
     expect(screen.queryByText(/has left/)).not.toBeInTheDocument();
   });
 
+  test('a removal is labelled as one, and a member leaving of their own accord is not', async () => {
+    const { unmount } = renderInbox([left({ removed_by_name: 'Lele' })]);
+    expect(await screen.findByText('Someone was removed from the group')).toBeInTheDocument();
+    expect(screen.queryByText('Someone left the group')).not.toBeInTheDocument();
+    unmount();
+
+    renderInbox([left()]);
+    expect(await screen.findByText('Someone left the group')).toBeInTheDocument();
+    expect(screen.queryByText('Someone was removed from the group')).not.toBeInTheDocument();
+  });
+
   test('a removal by someone with no name says "A member" and is still a removal', async () => {
     renderInbox([left({ removed_by_name: '', things_deleted: 0 })]);
 

@@ -280,6 +280,7 @@
     "memberJoinedLabel": "Algú s'hi ha unit",
     "memberJoinedBody": "{{member_name}} s'ha unit a {{collection_headline}}.",
     "memberLeftLabel": "Algú ha deixat el grup",
+    "memberRemovedLabel": "Han tret algú del grup",
     "memberLeftBody": "{{member_name}} ha deixat “{{collection_headline}}”.",
     "memberLeftThings_one": "La seva cosa s'ha esborrat amb la seva sortida.",
     "memberLeftThings_other": "Les seves {{count}} coses s'han esborrat amb la seva sortida.",
