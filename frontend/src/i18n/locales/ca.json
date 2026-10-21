@@ -228,6 +228,9 @@
       "summary_other": "{{count}} novetats",
       "show": "Veure",
       "hide": "Amagar",
+      "dismissConfirmTitle_one": "Descarta aquesta?",
+      "dismissConfirmTitle_other": "Descarta les {{count}}?",
+      "dismissConfirmBody": "Desapareixen d'aquí i no es poden recuperar. No esborra res del grup.",
       "dismissAll": "Descarta-les totes"
     }
   },

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { axe, toHaveNoViolations } from 'jest-axe';
@@ -86,21 +86,52 @@ describe('five updates and one question', () => {
     expect(screen.queryByText(/News 1/)).not.toBeInTheDocument();
   });
 
-  test('Dismiss all takes the updates in one call and leaves the question', async () => {
+  const deletes = () => apiFetch.mock.calls.filter(([, o]) => o?.method === 'DELETE');
+  // The trigger and, once the panel is open, the confirm button share the label;
+  // the confirm is the one inside the panel.
+  const openConfirm = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: 'Dismiss all' }));
+    return within(screen.getByText('Dismiss all 5?').closest('.thing-report-confirm'));
+  };
+
+  test('one press on Dismiss all deletes nothing: it asks first, and says what happens', async () => {
     setApi([question, ...FIVE]);
     renderInbox();
-    fireEvent.click(await screen.findByRole('button', { name: 'Dismiss all' }));
+    const panel = await openConfirm();
+
+    expect(panel.getByText(/can't be brought back/)).toBeInTheDocument();
+    expect(deletes()).toHaveLength(0);
+    expect(screen.getByText('5 updates')).toBeInTheDocument();
+  });
+
+  test('confirming takes the updates in one call and leaves the question', async () => {
+    setApi([question, ...FIVE]);
+    renderInbox();
+    const panel = await openConfirm();
+    fireEvent.click(panel.getByRole('button', { name: 'Dismiss all' }));
 
     await waitFor(() => expect(screen.queryByText('5 updates')).not.toBeInTheDocument());
     expect(apiFetch).toHaveBeenCalledWith('/api/v1/inbox/?group=info', { method: 'DELETE' });
-    expect(apiFetch.mock.calls.filter(([, o]) => o?.method === 'DELETE')).toHaveLength(1);
+    expect(deletes()).toHaveLength(1);
     expect(screen.getByText(/A ladder/)).toBeInTheDocument();
+  });
+
+  test('cancelling leaves every update where it was', async () => {
+    setApi([question, ...FIVE]);
+    renderInbox();
+    const panel = await openConfirm();
+    fireEvent.click(panel.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByText('Dismiss all 5?')).not.toBeInTheDocument();
+    expect(deletes()).toHaveLength(0);
+    expect(screen.getByText('5 updates')).toBeInTheDocument();
   });
 
   test('on a collection’s page it asks for that collection only', async () => {
     setApi(FIVE);
     renderInbox({ collection: 'COL001' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Dismiss all' }));
+    const panel = await openConfirm();
+    fireEvent.click(panel.getByRole('button', { name: 'Dismiss all' }));
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith('/api/v1/inbox/?group=info&collection=COL001', {

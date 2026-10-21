@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
+import InlineConfirm from './InlineConfirm';
 import { curatorGuidePath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 import { formatBookingWhen, formatDateTime } from '../utils/rental';
@@ -495,9 +496,14 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           >
             {infoOpen ? t('inbox.info.hide') : t('inbox.info.show')}
           </Button>{' '}
-          <Button variant="supplementary" size="small" onClick={dismissInfo}>
-            {t('inbox.info.dismissAll')}
-          </Button>
+          <InlineConfirm
+            triggerLabel={t('inbox.info.dismissAll')}
+            triggerProps={{ variant: 'supplementary', size: 'small' }}
+            title={t('inbox.info.dismissConfirmTitle', { count: infoCount })}
+            body={t('inbox.info.dismissConfirmBody')}
+            confirmLabel={t('inbox.info.dismissAll')}
+            onConfirm={dismissInfo}
+          />
         </Notification>
       )}
       {notifications

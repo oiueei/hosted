@@ -234,6 +234,9 @@
       "summary_other": "{{count}} updates",
       "show": "Show",
       "hide": "Hide",
+      "dismissConfirmTitle_one": "Dismiss this one?",
+      "dismissConfirmTitle_other": "Dismiss all {{count}}?",
+      "dismissConfirmBody": "They disappear from here and can't be brought back. Nothing in the group is deleted.",
       "dismissAll": "Dismiss all"
     }
   },

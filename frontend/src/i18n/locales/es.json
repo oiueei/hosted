@@ -228,6 +228,9 @@
       "summary_other": "{{count}} novedades",
       "show": "Ver",
       "hide": "Ocultar",
+      "dismissConfirmTitle_one": "¿Descartar esta?",
+      "dismissConfirmTitle_other": "¿Descartar las {{count}}?",
+      "dismissConfirmBody": "Desaparecen de aquí y no se pueden recuperar. No borra nada del grupo.",
       "dismissAll": "Descartar todas"
     }
   },
