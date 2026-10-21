@@ -401,7 +401,9 @@ class TestOncePerDay:
         run()
         assert seen and set(seen) == {timezone.localdate() - timedelta(days=1)}
 
-    def test_a_lost_race_sends_nothing(self, group, monkeypatch):
+    def test_a_lost_race_sends_nothing(self, group):
+        """Calls ``_summarise`` directly: a lost race cannot be staged through
+        ``handle()`` on SQLite, so the stale read is built by hand."""
         join(group, "Lili")
         yesterday = timezone.localdate() - timedelta(days=1)
         # Another run claims the day between this one's read and its claim.
@@ -410,8 +412,13 @@ class TestOncePerDay:
 
         stale = Collection.objects.get(pk=group.pk)
         stale.join_summary_sent_on = None
-        cmd.Command()._summarise(stale, yesterday, yesterday - timedelta(days=6))
+        command = cmd.Command()
+        command._given_back = set()  # what handle() prepares before the loop
+        sent = command._summarise(stale, yesterday, yesterday - timedelta(days=6))
+        assert sent == 0
         assert mail.outbox == []
+        assert Collection.objects.get(pk=group.pk).join_summary_sent_on == yesterday
+        assert group.code not in command._given_back
 
     def test_a_partial_failure_keeps_the_claim_so_nobody_is_told_twice(self, group, monkeypatch):
         join(group, "Lili")
