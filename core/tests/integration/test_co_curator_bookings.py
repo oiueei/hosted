@@ -175,9 +175,16 @@ class TestACoCuratorRunsTheBookings:
 
     def test_a_co_curator_cannot_ask_a_question_about_a_thing_they_run(self, space, co_curator):
         res = client_for(co_curator).post(
-            f"/api/v1/things/{space['thing'].code}/faq/", {"question": "?"}, format="json"
+            f"/api/v1/things/{space['thing'].code}/faq/",
+            {"question": "Is there wifi?"},
+            format="json",
         )
         assert res.status_code == 400
+        assert res.data["code"] == "manager_cannot_ask"
+        assert not FAQ.objects.filter(thing=space["thing"].code).exists()
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.FAQ_QUESTION
+        ).exists()
 
     def test_a_new_faq_question_notifies_every_curator(self, space, member, owner, co_curator):
         mail.outbox.clear()
