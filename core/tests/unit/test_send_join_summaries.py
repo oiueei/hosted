@@ -4,6 +4,7 @@ import html
 import re
 from datetime import datetime, time, timedelta
 from io import StringIO
+from unittest.mock import patch
 
 import pytest
 import time_machine
@@ -432,6 +433,28 @@ class TestOncePerDay:
         monkeypatch.undo()
         run()
         assert len(mail.outbox) == 1, "a retry must not tell the founder again"
+
+    def test_a_reused_command_does_not_carry_given_back_groups_into_its_next_pass(self, group):
+        """A group handed back in one pass is dated by a later pass of the same
+        instance, or its next sign-up on a skipped day would read as a first summary."""
+        from core.management.commands import send_join_summaries as cmd
+
+        command = cmd.Command(stdout=StringIO(), stderr=StringIO())
+        join(group, "Lili")
+
+        def boom(*a, **k):
+            raise RuntimeError("smtp down")
+
+        with patch.object(cmd, "send_join_summary_email", boom):
+            command.handle()
+        group.refresh_from_db()
+        assert group.join_summary_sent_on is None
+
+        later = timezone.now() + timedelta(days=10)
+        with time_machine.travel(later, tick=False):
+            command.handle()
+            group.refresh_from_db()
+            assert group.join_summary_sent_on == timezone.localdate() - timedelta(days=1)
 
     def test_a_failure_gives_the_claim_back(self, group, monkeypatch):
         join(group, "Lili")
