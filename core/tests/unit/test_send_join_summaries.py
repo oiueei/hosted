@@ -481,3 +481,154 @@ class TestOncePerDay:
         monkeypatch.undo()
         run()
         assert len(mail.outbox) == 2
+
+
+def _second_group(name="Other street", code="JSC002"):
+    owner = User.objects.create(code=f"{code[:3]}O{code[-2:]}", email=f"o{code}@your-domain.test")
+    other = Collection.objects.create(code=code, owner=owner, headline=name)
+    return other
+
+
+class TestWhatTheRunTellsAndWhoIsReached:
+    def test_the_run_counts_the_emails_it_sent(self, group):
+        join(group, "Lili")
+
+        out, _ = run()
+
+        assert "Sent 2 join summary emails" in out
+
+    def test_a_second_run_the_same_day_counts_none(self, group):
+        join(group, "Lili")
+        run()
+
+        out, _ = run()
+
+        assert "Sent 0 join summary emails" in out
+        assert len(mail.outbox) == 2
+
+    def test_two_groups_with_sign_ups_are_each_told_and_counted(self, group):
+        other = _second_group()
+        join(group, "Lili")
+        join(other, "Lulu")
+
+        out, _ = run()
+
+        assert "Sent 3 join summary emails" in out
+        assert to(other.owner.email) and to("lala@your-domain.test")
+        assert "Lulu" in to(other.owner.email)[0].body
+
+    def test_a_summary_names_only_its_own_groups_joiners(self, group):
+        other = _second_group()
+        stray = join(other, "Stray")
+        group.invites.add(stray)  # in this group too, but joined the other one
+        join(group, "Lili")
+
+        run()
+
+        body = to("lala@your-domain.test")[0].body
+        assert "Lili" in body and "Stray" not in body
+
+    def test_only_sign_ups_are_named_not_other_events_of_a_member(self, group):
+        person = join(group, "Lili")
+        left = User.objects.create(code="JSL001", email="left@your-domain.test", name="Leaver")
+        group.invites.add(left)
+        Event.log(Event.Kind.MEMBER_LEFT, actor=left, collection=group, created=_noon(1))
+        Event.log(Event.Kind.USER_JOINED, actor=left, collection=group, created=_noon(1))
+
+        run()
+
+        body = to("lala@your-domain.test")[0].body
+        assert person.name in body and "Leaver" not in body
+
+    def test_somebody_who_joined_today_waits_for_tomorrows_summary(self, group):
+        join(group, "Lili")
+        join(group, "Today", days_ago=0)
+
+        run()
+
+        body = to("lala@your-domain.test")[0].body
+        assert "Lili" in body and "Today" not in body
+
+    def test_a_silenced_curator_does_not_stop_the_others_being_told(self, group):
+        join(group, "Lili")
+        group.digest_muted.add(group.owner)
+
+        run()
+
+        assert to("lala@your-domain.test") == []
+        assert len(to("lele@your-domain.test")) == 1
+
+    def test_a_curator_who_joined_is_not_told_about_themselves_and_the_others_still_are(
+        self, group
+    ):
+        # The co-curator is the only one who joined: the founder hears about them,
+        # and the co-curator (nothing to tell them) must not cut the loop short for
+        # a second co-curator behind them.
+        third = User.objects.create(code="JSO003", email="lolo@your-domain.test", name="Lolo")
+        group.co_owners.add(third)
+        group.invites.add(third)
+        Event.log(
+            Event.Kind.MEMBER_JOINED,
+            actor=group.co_owners.get(code="JSO002"),
+            collection=group,
+            created=_noon(1),
+        )
+
+        run()
+
+        assert to("lele@your-domain.test") == []
+        assert "Lele" in to("lala@your-domain.test")[0].body
+        assert "Lele" in to("lolo@your-domain.test")[0].body
+
+    def test_a_failed_send_to_the_founder_does_not_stop_the_co_curator_being_told(
+        self, group, monkeypatch
+    ):
+        join(group, "Lili")
+        from core.management.commands import send_join_summaries as cmd
+
+        real = cmd.send_join_summary_email
+
+        def fails_for_the_founder(collection, curator, names):
+            if curator.code == "JSO001":
+                raise RuntimeError("smtp down")
+            real(collection, curator, names)
+
+        monkeypatch.setattr(cmd, "send_join_summary_email", fails_for_the_founder)
+        _, err = run()
+
+        assert "Join summary failed" in err
+        assert [m.to for m in mail.outbox] == [["lele@your-domain.test"]]
+
+    @pytest.mark.parametrize("failing", ["JSC001", "JSC002"])
+    def test_a_group_handed_back_does_not_undo_the_claim_of_another(self, group, failing):
+        other = _second_group()
+        yesterday = timezone.localdate() - timedelta(days=1)
+        Collection.objects.filter(pk=group.pk).update(
+            join_summary_sent_on=timezone.localdate() - timedelta(days=2)
+        )
+        Collection.objects.filter(pk=other.pk).update(
+            join_summary_sent_on=timezone.localdate() - timedelta(days=4)
+        )
+        join(group, "Lili", days_ago=1)
+        join(other, "Lulu", days_ago=1)
+        from core.management.commands import send_join_summaries as cmd
+
+        real = cmd.send_join_summary_email
+
+        def fails_for_one(collection, curator, names):
+            if collection.code == failing:
+                raise RuntimeError("smtp down")
+            real(collection, curator, names)
+
+        with patch.object(cmd, "send_join_summary_email", fails_for_one):
+            run()
+
+        group.refresh_from_db()
+        other.refresh_from_db()
+        dates = {"JSC001": group.join_summary_sent_on, "JSC002": other.join_summary_sent_on}
+        before = {
+            "JSC001": timezone.localdate() - timedelta(days=2),
+            "JSC002": timezone.localdate() - timedelta(days=4),
+        }
+        for code, date in dates.items():
+            assert date == (before[code] if code == failing else yesterday), code
