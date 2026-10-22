@@ -81,12 +81,22 @@ class TestTheOpenDoor:
         assert User.objects.filter(email="lele@your-domain.test").exists()
         assert len(mail.outbox) == 1
 
-    def test_an_existing_account_is_not_duplicated(self, api_client, user, onboarding):
+    def test_an_existing_account_is_not_duplicated(self, api_client, user2, onboarding):
+        response = api_client.post(POP_IN_URL, {"email": user2.email}, format="json")
+
+        assert response.status_code == 200
+        assert User.objects.filter(email=user2.email).count() == 1
+        assert onboarding.invites.filter(code=user2.code).exists()
+
+    def test_the_founder_of_a_demo_collection_gets_their_link_and_is_not_made_a_member(
+        self, api_client, user, onboarding
+    ):
+        """The founder is an FK, never an `invites` row: `_join_collection` is a no-op for them."""
         response = api_client.post(POP_IN_URL, {"email": user.email}, format="json")
 
         assert response.status_code == 200
-        assert User.objects.filter(email=user.email).count() == 1
-        assert onboarding.invites.filter(code=user.code).exists()
+        assert len(mail.outbox) == 1
+        assert not onboarding.invites.filter(code=user.code).exists()
 
     def test_a_returning_visitor_is_counted_once(self, api_client, onboarding):
         """Three visits, one member — the join side effects are the product's.
