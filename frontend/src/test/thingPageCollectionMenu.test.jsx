@@ -169,7 +169,7 @@ describe('the thing page — who has the collection menu', () => {
       'Download the calendar (ICS)',
       'Download the stats (CSV)',
       'Download the whole collection (JSON)',
-      'Mute the summary',
+      'Mute the summaries',
     ]);
     expect(within(panel()).getByRole('link', { name: 'Add thing' })).toHaveAttribute(
       'href',
@@ -193,7 +193,7 @@ describe('the thing page — who has the collection menu', () => {
 
     expect(entries()).toEqual([
       "The group's welcome document (PDF)",
-      'Mute the summary',
+      'Mute the summaries',
       'Leave the group',
     ]);
   });
@@ -364,10 +364,10 @@ describe('the thing page — what the menu does from here', () => {
     renderThing();
     await openMenu();
 
-    fireEvent.click(within(panel()).getByRole('button', { name: 'Mute the summary' }));
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Mute the summaries' }));
 
     expect(
-      await screen.findByText("Done: you won't get this group's summary any more.")
+      await screen.findByText("Done: you won't get this group's summaries any more.")
     ).toBeInTheDocument();
     const posts = apiFetch.mock.calls.filter(
       ([url, o]) => url === '/api/v1/collections/COL001/digest/' && o?.method === 'POST'
@@ -376,16 +376,47 @@ describe('the thing page — what the menu does from here', () => {
     expect(JSON.parse(posts[0][1].body)).toEqual({ muted: true });
     await openMenu();
     expect(
-      within(panel()).getByRole('button', { name: 'Get the summary again' })
+      within(panel()).getByRole('button', { name: 'Get the summaries again' })
     ).toBeInTheDocument();
   });
 
-  test('a curator has the summary switch too, and only where the group sends one', async () => {
+  test('a curator who mutes the summary is told it worked', async () => {
+    setApi({ menu: CURATOR_MENU });
+    renderThing();
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Mute the summaries' }));
+
+    expect(
+      await screen.findByText("Done: you won't get this group's summaries any more.")
+    ).toBeInTheDocument();
+  });
+
+  test('a curator whose mute fails is told it did not', async () => {
+    setApi({ menu: CURATOR_MENU });
+    const base = apiFetch.getMockImplementation();
+    apiFetch.mockImplementation((url, options) =>
+      url === '/api/v1/collections/COL001/digest/'
+        ? Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+        : base(url, options)
+    );
+    renderThing();
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Mute the summaries' }));
+
+    expect(
+      await screen.findByText("We couldn't change that. Please try again.")
+    ).toBeInTheDocument();
+  });
+
+  test('a curator has the summary switch even where the group sends no weekly one', async () => {
+    // The daily email about sign-ups reaches them whatever the frequency.
     setApi({ menu: { ...CURATOR_MENU, digest_frequency: 'NONE' } });
     renderThing();
     await openMenu();
 
-    expect(within(panel()).queryByRole('button', { name: 'Mute the summary' })).toBeNull();
+    expect(within(panel()).getByRole('button', { name: 'Mute the summaries' })).toBeInTheDocument();
   });
 
   test('a curator who had muted it is offered to turn it back on', async () => {
@@ -394,7 +425,7 @@ describe('the thing page — what the menu does from here', () => {
     await openMenu();
 
     expect(
-      within(panel()).getByRole('button', { name: 'Get the summary again' })
+      within(panel()).getByRole('button', { name: 'Get the summaries again' })
     ).toBeInTheDocument();
   });
 
@@ -405,7 +436,7 @@ describe('the thing page — what the menu does from here', () => {
     await openMenu();
 
     expect(
-      within(panel()).getByRole('button', { name: 'Get the summary again' })
+      within(panel()).getByRole('button', { name: 'Get the summaries again' })
     ).toBeInTheDocument();
   });
 

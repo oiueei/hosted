@@ -2675,11 +2675,16 @@ JOIN_SUMMARY_MAX_NAMES = 10
 
 
 def send_join_summary_email(collection, curator, names):
-    """Tell one curator who joined their group: ``names`` are the members' bare
-    ``name`` values (empty for someone who never set one, written as "a member").
+    """Tell one curator who joined their group: ``names`` are the members' ``name``
+    values, each replaced by the member's address when they never set one (the
+    caller does it: this email goes only to the team, who read every member's
+    address in the members list). An empty entry still reads as "a member".
 
     At most ``JOIN_SUMMARY_MAX_NAMES`` are named, then "and N more". Activity mail,
-    so whoever silenced activity gets nothing.
+    so whoever silenced activity gets nothing. The footer carries the same
+    one-click "stop the summaries from this group" link as the digest's, and
+    silencing a group (``Collection.digest_muted``) stops this email too — the
+    command does not send it to a curator who did.
     """
     user, lang = _recipient(curator.email, collection)
     T, L = _texts(lang), _local(lang)
@@ -2704,8 +2709,15 @@ def send_join_summary_email(collection, curator, names):
     )
     url = f"{_frontend_base_url()}{_collection_path(collection.code, collection)}/invites"
     cta = T("join_summary_cta")
-    plain = _headline_prefix(group, f"{intro}\n\n{cta}: {url}")
+    plain = f"{intro}\n\n{cta}: {url}"
     html = _render_email([_para(intro), _cta(url, cta, T("cta_fallback"))], lang=lang, header=group)
+
+    def mute_footer(footer_user, _lang):
+        if footer_user is None:
+            return None
+        token = make_digest_mute_token(footer_user, collection)
+        return T("digest_mute_cta"), f"{_frontend_base_url()}/digest/mute/{token}"
+
     _send(
         curator.email,
         subject,
@@ -2716,6 +2728,7 @@ def send_join_summary_email(collection, curator, names):
         lang=lang,
         collection=collection,
         header=group,
+        extra_footer=mute_footer,
     )
 
 

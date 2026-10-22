@@ -7,9 +7,8 @@ whatever its status, in both modes (their contributions in a COMMUNITY collectio
 co-curator's catalogue entries in a PROPRIETARY one).
 """
 
-from datetime import date
-
 from django.db import transaction
+from django.utils import timezone
 
 from core.models import BookingPeriod, Thing
 from core.models.booking import RETURNABLE_TYPES
@@ -28,7 +27,7 @@ def _people_to_tell(leaving, user):
     takes the bookings with it. ``holding`` is true when they have the thing now — an
     accepted loan or rental that has already started. The leaving member's own bookings
     are not announced to them."""
-    today = date.today()
+    today = timezone.localdate()
     told = {}
     bookings = BookingPeriod.objects.filter(
         BookingPeriod.blocking_filter(), thing_code__in=leaving
@@ -55,7 +54,12 @@ def end_membership(collection, user, *, actor):
     each ``THING_REMOVED`` event names them. Whoever had a live request or reservation on
     one of those things is emailed once the transaction commits, and never if it rolls
     back. Returns how many things were deleted.
+
+    The founder is not a member (an FK, never an ``invites`` row): ending theirs would
+    delete things nobody else may delete, so it raises before touching anything.
     """
+    if collection.is_owner(user.code):
+        raise ValueError("The owner can't be removed from their own collection.")
     with transaction.atomic(), deleting_as(actor):
         leaving = list(things_leaving_with(collection, user))
         to_tell = _people_to_tell(leaving, user)

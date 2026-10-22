@@ -11,8 +11,9 @@ import { deploymentI18n } from '../deployment';
  * held the *code* to them: a `t('home.fooBody')` for a key nobody ever wrote
  * renders as the raw key on screen — "home.fooBody" — with every suite green,
  * because the parity test only compares the catalogues with each other. This
- * sweeps the source for the literal keys (`t('…')`, `i18n.t('…')` and
- * `<Trans i18nKey="…">`) and demands each one exists in `en.json` (merged with
+ * sweeps the source for the literal keys (`t('…')`, `i18n.t('…')`,
+ * `<Trans i18nKey="…">` and `errorKey('…')`, the key an error is held as until the
+ * page says it in the reader's language) and demands each one exists in `en.json` (merged with
  * whatever this deployment adds through `deploymentI18n`, which is `{}`
  * upstream and real pages on a deployment — without the merge, a deployment's
  * own keys would fail a sweep that runs in its CI too).
@@ -81,8 +82,15 @@ const T_CALL = /(?<![A-Za-z0-9_])t\(\s*(['"])([^'"\n]+)\1/g;
 // `<Trans i18nKey="a.b">` — react-i18next's own attribute.
 const I18N_KEY_ATTR = /\bi18nKey\s*=\s*(['"])([^'"\n]+)\1/g;
 
+// `errorKey('a.b', { … })` — an error held as its key, translated where it is shown.
+const ERROR_KEY_CALL = /\berrorKey\(\s*(['"])([^'"\n]+)\1/g;
+
 function literalKeys(source) {
-  return [...source.matchAll(T_CALL), ...source.matchAll(I18N_KEY_ATTR)].map((m) => m[2]);
+  return [
+    ...source.matchAll(T_CALL),
+    ...source.matchAll(I18N_KEY_ATTR),
+    ...source.matchAll(ERROR_KEY_CALL),
+  ].map((m) => m[2]);
 }
 
 describe('every literal i18n key the code names exists', () => {

@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+import Papa from 'papaparse';
 
 vi.mock('../services/api', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -25,6 +26,9 @@ const renderBulkInvite = (onInvited = vi.fn()) => ({
   onInvited,
   ...render(<BulkInviteCsv collectionCode="COL001" onInvited={onInvited} />),
 });
+
+// A spy on the parser must not outlive the test that placed it, even when that test fails.
+afterEach(() => vi.restoreAllMocks());
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -131,6 +135,20 @@ describe('BulkInviteCsv', () => {
 
     expect(await screen.findByText('Every row needs an email.')).toBeInTheDocument();
     expect(screen.queryByText(/^Preview/)).toBeNull();
+  });
+
+  test('a CSV the parser cannot read says so, and offers no preview', async () => {
+    vi.spyOn(Papa, 'parse').mockImplementation((_input, config) => {
+      config.error(new Error('unreadable'));
+    });
+    const { container } = renderBulkInvite();
+
+    pick(container, csvFile('email\nlala@your-domain.test\n'));
+
+    expect(
+      await screen.findByText("We couldn't read that CSV. Check the format and try again.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Send/ })).toBeNull();
   });
 
   test('refuses an empty file', async () => {

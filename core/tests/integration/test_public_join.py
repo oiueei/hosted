@@ -530,6 +530,11 @@ class TestSignedInJoin:
         res = self._join(api_client, join_setup["public"])
 
         assert res.status_code == 400
+        assert res.data["code"] == "already_owner"
+        assert not join_setup["public"].invites.filter(code=owner.code).exists()
+        assert not Event.objects.filter(
+            kind=Event.Kind.MEMBER_JOINED, actor_code=owner.code
+        ).exists()
 
     @override_settings(
         RATELIMIT_ENABLE=True,

@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import InboxNotifications from '../components/InboxNotifications';
 import DemoNotice from '../components/DemoNotice';
 import ButtonLink from '../components/ButtonLink';
+import RefusalWayOut from '../components/RefusalWayOut';
 import useTheeeme from '../hooks/useTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
@@ -18,7 +19,6 @@ import Toast from '../components/Toast';
 import { useCanonicalCollectionPath } from '../hooks/useCollectionBase';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { collectionPath } from '../utils/collectionPath';
-import { loginPathFor } from '../utils/nextPath';
 import { hasOpeningHours } from '../utils/rental';
 import CollectionHero from '../components/collection/CollectionHero';
 import BroadcastBox from '../components/collection/BroadcastBox';
@@ -32,7 +32,7 @@ export default function CollectionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { tc, btnStyle } = useTheeeme();
   const [collection, setCollection] = useState(null);
   // The move off a wrong address: a link made before kinds, or at the wrong
   // kind's prefix, is corrected here.
@@ -166,30 +166,22 @@ export default function CollectionPage() {
   }, [code, navigate]);
 
   if (error) {
+    // Not being allowed in is a fact about the reader's access, not a fault: it
+    // says so in the title and is announced as a notice rather than as an error.
+    const noAccess = error === 'collectionPage.noPermission';
     return (
-      <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">
+      <PageLayout
+        title={noAccess ? t('collectionPage.noAccessTitle') : t('common.error')}
+        backTo="/"
+        backLabel={t('common.home')}
+      >
+        <Notification
+          label={noAccess ? t('common.notice') : t('common.error')}
+          type={noAccess ? 'info' : 'error'}
+        >
           {t(error)}
         </Notification>
-        {error === 'collectionPage.noPermission' && (
-          // A refusal is a dead end unless it says where to go: with a session the
-          // way is Home (the groups they do belong to), without one it is the
-          // sign-in, which brings them back here.
-          <>
-            <div className="spacer-m" />
-            <div className="button-row-wide">
-              {localStorage.getItem('userCode') ? (
-                <ButtonLink to="/" style={btnSecondaryStyle}>
-                  {t('common.home')}
-                </ButtonLink>
-              ) : (
-                <ButtonLink to={loginPathFor(location)} style={btnStyle}>
-                  {t('login.signIn')}
-                </ButtonLink>
-              )}
-            </div>
-          </>
-        )}
+        {noAccess && <RefusalWayOut />}
       </PageLayout>
     );
   }

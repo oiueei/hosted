@@ -738,7 +738,7 @@ describe('the collection menu in the CollectionPage hero corner', () => {
 /**
  * The same menu for a member: the corner icon in the same
  * place, with what is theirs — the group's welcome document (a link that opens in
- * a new tab, first), "Mute the summary" / "Get the summary again" (only where the
+ * a new tab, first), "Mute the summaries" / "Get the summaries again" (only where the
  * group sends one) and, under a divider, "Leave the group". The three things were
  * scattered: leaving only in "My groups" on the profile, the summary switch only
  * in the footer of the email, the document a loose link in the hero.
@@ -756,8 +756,8 @@ describe('the collection menu for a member', () => {
     welcome_doc_url: DOC,
   };
   const DIGEST_URL = '/api/v1/collections/COL001/digest/';
-  const MUTE = 'Mute the summary';
-  const UNMUTE = 'Get the summary again';
+  const MUTE = 'Mute the summaries';
+  const UNMUTE = 'Get the summaries again';
   const LEAVE = 'Leave the group';
   const DOC_NAME = /welcome document \(PDF\)/;
 
@@ -872,7 +872,7 @@ describe('the collection menu for a member', () => {
     fireEvent.click(within(panel()).getByRole('button', { name: MUTE }));
 
     expect(
-      await screen.findByText("Done: you won't get this group's summary any more.")
+      await screen.findByText("Done: you won't get this group's summaries any more.")
     ).toBeInTheDocument();
     expect(digestPosts()).toHaveLength(1);
     expect(JSON.parse(digestPosts()[0][1].body)).toEqual({ muted: true });
@@ -892,11 +892,53 @@ describe('the collection menu for a member', () => {
     fireEvent.click(within(panel()).getByRole('button', { name: UNMUTE }));
 
     expect(
-      await screen.findByText("Done: you'll get this group's summary again.")
+      await screen.findByText("Done: you'll get this group's summaries again.")
     ).toBeInTheDocument();
     expect(JSON.parse(digestPosts()[0][1].body)).toEqual({ muted: false });
     await openMenu();
     expect(within(panel()).getByRole('button', { name: MUTE })).toBeInTheDocument();
+  });
+
+  // The team's switch is in the same menu, but `is_member` is false for it, so the
+  // member's block (and its status zone) is not rendered: the answer has its own
+  // place under the team's row.
+  const FOUNDER = { ...COLLECTION, digest_frequency: 'WEEKLY', is_digest_muted: false };
+  const CO_CURATOR = {
+    ...FOUNDER,
+    owner: 'OTHER1',
+    owner_name: 'Owner',
+    co_owners: [{ code: 'ABC123', name: 'Me' }],
+  };
+
+  test.each([
+    ['the founder', FOUNDER],
+    ['a co-curator', CO_CURATOR],
+  ])('%s who mutes the summary is told it worked', async (_who, view) => {
+    renderMember(view);
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: MUTE }));
+
+    expect(
+      await screen.findByText("Done: you won't get this group's summaries any more.")
+    ).toBeInTheDocument();
+    expect(JSON.parse(digestPosts()[0][1].body)).toEqual({ muted: true });
+  });
+
+  test.each([
+    ['the founder', FOUNDER],
+    ['a co-curator', CO_CURATOR],
+  ])('%s whose mute fails is told it did not', async (_who, view) => {
+    renderMember(view, {
+      digest: () => ({ ok: false, status: 500, json: () => Promise.resolve({}) }),
+    });
+    await openMenu();
+
+    fireEvent.click(within(panel()).getByRole('button', { name: MUTE }));
+
+    expect(
+      await screen.findByText("We couldn't change that. Please try again.")
+    ).toBeInTheDocument();
   });
 
   test.each([
@@ -965,8 +1007,24 @@ describe('the collection menu for a member', () => {
     expect(panel().querySelectorAll('.collection-menu-divider').length).toBeGreaterThan(0);
   });
 
-  test('a curator’s group with no summary has no switch for it', async () => {
-    renderMember({ ...COLLECTION, digest_frequency: 'NONE' });
+  test.each([
+    ['the founder', COLLECTION],
+    [
+      'a co-curator',
+      { ...COLLECTION, owner: 'OTHER1', co_owners: [{ code: 'ABC123', name: 'Me' }] },
+    ],
+  ])(
+    'a group with no weekly summary still offers %s the switch: the sign-ups email reaches them anyway',
+    async (_who, view) => {
+      renderMember({ ...view, digest_frequency: 'NONE' });
+      await openMenu();
+
+      expect(entries().at(-1)).toBe(MUTE);
+    }
+  );
+
+  test('a member of that same group is offered nothing to mute: they get no summary at all', async () => {
+    renderMember({ ...MEMBER, digest_frequency: 'NONE', welcome_doc_url: '' });
     await openMenu();
 
     expect(within(panel()).queryByRole('button', { name: MUTE })).toBeNull();

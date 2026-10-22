@@ -417,6 +417,7 @@ export default function RequestThingPage() {
 
   return (
     <PageLayout
+      heroClassName="form-hero--request"
       title={
         isReservation
           ? t('reservation.pageTitle', { headline })

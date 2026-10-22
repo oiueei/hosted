@@ -70,6 +70,9 @@ class TestWhoMayDownloadIt:
         _loan(collection, user, user2)
         res = authenticated_client.post(URL.format(code=collection.code))
         assert res.status_code == 200
+        assert res["Content-Type"].startswith("text/calendar")
+        assert int(res["X-Calendar-Events"]) == 1
+        assert _uids(res.content) == ["BKG001@oiueei"]
 
     def test_a_co_owner_gets_the_file(self, authenticated_client2, user, user2, collection):
         collection.mode = Collection.Mode.PROPRIETARY

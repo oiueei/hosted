@@ -527,7 +527,7 @@ describe("the dashboard's second button follows aboutPath", () => {
     // asserting about that one too. Exactly one link here, and it is the only
     // one this screen can honestly offer — no dangling second button however
     // the href had been spelled.
-    const emptyState = screen.getByText('You have no active collections yet.').parentElement;
+    const emptyState = screen.getByText("You don't have a collection yet.").parentElement;
     const links = [...emptyState.querySelectorAll('a')];
     expect(links.map((a) => a.getAttribute('href'))).toEqual(['/new']);
     expect(screen.queryByText('See how it works')).not.toBeInTheDocument();

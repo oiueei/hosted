@@ -254,16 +254,16 @@ TEXTS = {
     "faq_hidden_team_plain": "{hider} has hidden a question about '{thing}'. View thing: {url}",
     "faq_hidden_team_intro": "{hider} hid a question about:",
     # Listing reported (to owner, anonymous)
-    "reported_subject": "Someone reported one of your listings",
+    "reported_subject": "Someone reported one of your things",
     "reported_plain": (
-        "Someone reported your listing '{thing}'. "
+        "Someone reported your thing '{thing}'. "
         "We don't share who reported it. Please take a look: {url}"
     ),
-    "reported_intro": "Someone reported one of your listings:",
+    "reported_intro": "Someone reported one of your things:",
     "reported_outro": (
         "We don't share who reported it. Please take a look and make sure everything is in order."
     ),
-    "reported_review_cta": "Review the listing",
+    "reported_review_cta": "Review the thing",
     # Broadcast (owner → invitees)
     "email_note_test_subject": "Your email note, as members will see it — {collection}",
     "email_note_test_intro": (
@@ -299,12 +299,12 @@ TEXTS = {
         "{manager} is reminding you that {thing} was due back on {end}. "
         "If you've already returned it, you can ignore this email."
     ),
-    "view_thing_cta": "View the listing",
+    "view_thing_cta": "View the thing",
     "demo_note": "This group is a demo: its things and its people are examples.",
     # Reservations (RESERVE_THING) — auto-confirmed, so "confirmed", not "requested"
     "reservation_confirmed_subject": "Your reservation of '{thing}' is confirmed",
     "reservation_confirmed_plain": (
-        "Your reservation of '{thing}' is confirmed {when}. View the listing: {url}"
+        "Your reservation of '{thing}' is confirmed {when}. View the thing: {url}"
     ),
     "reservation_confirmed_intro": "Your reservation is confirmed:",
     "contact_shared_reservation": "Your email goes with the booking.",
@@ -335,7 +335,7 @@ TEXTS = {
     ),
     "reservation_reminder_subject": "Your reservation of '{thing}' starts tomorrow",
     "reservation_reminder_plain": (
-        "A friendly nudge: your reservation of '{thing}' is {when}. View the listing: {url}"
+        "A friendly nudge: your reservation of '{thing}' is {when}. View the thing: {url}"
     ),
     "reservation_reminder_intro": "Your reservation starts tomorrow:",
     # Digest

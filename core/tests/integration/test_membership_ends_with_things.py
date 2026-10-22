@@ -13,7 +13,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import BookingPeriod, Collection, Event, InAppNotification, Thing, User
+from core.models import RSVP, BookingPeriod, Collection, Event, InAppNotification, Thing, User
 
 LEAVE = "/api/v1/collections/{code}/leave/"
 INVITE = "/api/v1/collections/{code}/invite/"
@@ -134,6 +134,31 @@ class TestAMemberWhoLeaves:
             user=founder, type=InAppNotification.Type.MEMBER_LEFT
         )
         assert notice.payload["things_deleted"] == how_many
+
+    def test_a_member_with_no_name_who_leaves_reaches_the_founder_by_their_address(
+        self, group, founder, member
+    ):
+        User.objects.filter(pk=member.pk).update(name="")
+
+        client_for(member).post(LEAVE.format(code=group.code), format="json")
+
+        payload = InAppNotification.objects.get(
+            user=founder, type=InAppNotification.Type.MEMBER_LEFT
+        ).payload
+        assert payload["member_name"] == ""
+        assert payload["member_email"] == member.email
+
+    def test_a_named_member_who_leaves_keeps_their_address_out_of_the_notice(
+        self, group, founder, member
+    ):
+        client_for(member).post(LEAVE.format(code=group.code), format="json")
+
+        payload = InAppNotification.objects.get(
+            user=founder, type=InAppNotification.Type.MEMBER_LEFT
+        ).payload
+        assert payload["member_name"] == member.name
+        assert "member_email" not in payload
+        assert member.email not in str(payload)
 
     def test_each_removed_thing_is_logged_with_the_member_as_actor(self, group, member):
         make_thing(group, member, "MINE01")
@@ -270,3 +295,98 @@ class TestAMemberWhoIsRemoved:
 
         assert response.status_code == 400
         assert Thing.objects.filter(code="MINE01").exists()
+
+
+class TestTheFounderIsToldWhenACoCuratorRemovesSomeone:
+    """The founder did not do it, so the founder is the one who must hear of it."""
+
+    @pytest.fixture
+    def curator(self, group, other_member):
+        group.co_owners.add(other_member)
+        return other_member
+
+    def _remove(self, actor, group, member):
+        return client_for(actor).delete(
+            INVITE.format(code=group.code), {"user_code": member.code}, format="json"
+        )
+
+    def _left_notices(self, user):
+        return InAppNotification.objects.filter(user=user, type=InAppNotification.Type.MEMBER_LEFT)
+
+    def test_a_co_curator_removal_deletes_the_things_and_names_the_co_curator_as_actor(
+        self, group, member, curator
+    ):
+        make_thing(group, member, "MINE01")
+
+        response = self._remove(curator, group, member)
+
+        assert response.status_code == 200
+        assert not Thing.objects.filter(code="MINE01").exists()
+        removed = Event.objects.get(kind=Event.Kind.THING_REMOVED)
+        assert removed.actor_code == curator.code
+
+    def test_the_founder_gets_a_member_left_notice_naming_who_removed_whom(
+        self, group, founder, member, curator
+    ):
+        make_thing(group, member, "MINE01")
+        make_thing(group, member, "MINE02")
+
+        self._remove(curator, group, member)
+
+        notice = self._left_notices(founder).get()
+        assert notice.payload == {
+            "collection_headline": group.headline,
+            "collection_code": group.code,
+            "member_name": member.name,
+            "things_deleted": 2,
+            "removed_by_name": curator.name,
+        }
+
+    def test_a_removed_member_with_no_name_reaches_the_founder_by_their_address(
+        self, group, founder, member, curator
+    ):
+        User.objects.filter(pk=member.pk).update(name="")
+
+        self._remove(curator, group, member)
+
+        payload = self._left_notices(founder).get().payload
+        assert payload["member_name"] == ""
+        assert payload["member_email"] == member.email
+        assert payload["removed_by_name"] == curator.name
+
+    def test_nobody_else_is_given_that_notice(self, group, founder, member, curator):
+        self._remove(curator, group, member)
+
+        assert not self._left_notices(curator).exists()
+        assert not self._left_notices(member).exists()
+        assert self._left_notices(founder).count() == 1
+
+    def test_the_notice_never_carries_the_co_curators_address(
+        self, group, founder, member, curator
+    ):
+        self._remove(curator, group, member)
+
+        assert curator.email not in str(self._left_notices(founder).get().payload)
+
+    def test_the_founder_removing_someone_writes_no_member_left_notice(
+        self, group, founder, member
+    ):
+        self._remove(founder, group, member)
+
+        assert not self._left_notices(founder).exists()
+
+    def test_cancelling_a_pending_invitation_tells_the_founder_nothing(
+        self, group, founder, curator
+    ):
+        stranger = User.objects.create(code="STRA02", email="lolo2@your-domain.test")
+        RSVP.objects.create(
+            user_code=stranger,
+            user_email=stranger.email,
+            action=RSVP.Action.COLLECTION_INVITE,
+            target_code=group.code,
+        )
+
+        response = self._remove(curator, group, stranger)
+
+        assert response.status_code == 200
+        assert not self._left_notices(founder).exists()

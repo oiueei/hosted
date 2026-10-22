@@ -231,7 +231,7 @@ export default function HomePage() {
         <p>{t('userPage.noCollections')}</p>
       ) : myCollections.length === 0 ? (
         <div>
-          <p>{t('userPage.noCollections')}</p>
+          <p>{t('userPage.noCollectionsYet')}</p>
           <p className="text-muted">{t('userPage.collectionExplainer')}</p>
           <div className="spacer-m" />
           <div className="button-row-wide">

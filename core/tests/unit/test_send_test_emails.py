@@ -490,3 +490,14 @@ def test_the_digest_sample_shows_how_many_people_joined(lang, sentence):
 
     assert sentence in message.body
     assert sentence in html.unescape(message.alternatives[0][0])
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("sample", ["join-summary", "join-summary-many"])
+def test_the_join_summary_samples_list_a_nameless_member_by_address(sample):
+    """The team sees a member who never set a name by their address, so the sample
+    shows that, and "a member" is not what a sign-up looks like any more."""
+    (message,) = [m for m in _run("--only", sample, "--lang", "en") if f" {sample}]" in m.subject]
+
+    assert "@your-domain.test" in message.body.split("\n\n", 1)[1]
+    assert "a member" not in message.body

@@ -265,6 +265,30 @@ describe("the collection's request-page note — every date-based verb, not only
     localStorage.clear();
   });
 
+  test('the hero of a request carries the request modifier, whichever verb it is', async () => {
+    mockRoutes({ thing: RENTAL_THING });
+    const { container, unmount } = renderPage('RCOL01', 'RTHG01');
+    await screen.findByText('Rental length');
+    expect(container.querySelector('.form-hero')).toHaveClass('form-hero--request');
+    unmount();
+
+    mockRoutes({ thing: { ...RENTAL_THING, type: 'RESERVE_THING', reservation_unit: 'DAY' } });
+    const reservation = renderPage('RCOL01', 'RTHG01');
+    await screen.findByRole('heading', { level: 1, name: /Reserve/ });
+    expect(reservation.container.querySelector('.form-hero')).toHaveClass('form-hero--request');
+  });
+
+  test("the page's error hero keeps the large title: only the form is the request's", async () => {
+    mockRoutes({ thing: {} });
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
+    );
+    const { container } = renderPage('RCOL01', 'RTHG01');
+    await screen.findByRole('heading', { level: 1, name: 'Error' });
+
+    expect(container.querySelector('.form-hero')).not.toHaveClass('form-hero--request');
+  });
+
   test('shows on a RENT_THING request page too', async () => {
     mockRoutes({
       thing: { ...RENTAL_THING, collection_request_info: 'Pickup is Tuesdays only.' },

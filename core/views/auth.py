@@ -37,6 +37,7 @@ from core.services.email_service import (
     send_magic_link_email,
 )
 from core.services.invitation_service import (
+    ProposalAlreadyDecided,
     approve_proposal,
     proposal_approval_blocked,
     reject_proposal,
@@ -129,8 +130,10 @@ def _tell_the_team_of_a_join(collection, user):
 
     Joining is never blocked or approved, in any mode and through any door; whoever
     runs the group just hears of it. The one joining is left out when they are on
-    the team. ``member_name`` is the bare ``name``: the address never travels, and
-    the inbox words an empty one as "a member".
+    the team. ``member_name`` is the bare ``name``. Someone who joined by a public
+    link has given only an address, so the notice then carries it as ``member_email``
+    and names them by it: the team already reads every member's address in the
+    members list, and nobody else is ever sent this notice.
     """
     for curator in [collection.owner, *collection.co_owners.all()]:
         if curator.code == user.code:
@@ -142,6 +145,7 @@ def _tell_the_team_of_a_join(collection, user):
                 "collection_code": collection.code,
                 "collection_headline": collection.headline,
                 "member_name": user.name,
+                **({} if user.name else {"member_email": user.email}),
             },
         )
 
@@ -169,7 +173,13 @@ def _join_collection(collection, user, source=""):
     Event log can answer "which of these actually brings people in?" — the
     question that decides whether any of them earns its place. Every caller
     passes one; a blank means a row written before this existed.
+
+    The founder is an FK, never an ``invites`` row: when ``user`` is the owner this
+    is a no-op (no membership, no event, no counter, no document), and the caller
+    still lands them on the collection, which the owner can always read.
     """
+    if collection.is_owner(user.code):
+        return
     already_member = collection.invites.filter(code=user.code).exists()
     collection.invites.add(user)
     if already_member:
@@ -895,11 +905,18 @@ class VerifyLinkView(APIView):
                 # "invalid or expired link", telling the owner to stop clicking
                 # a link that was still good.
                 return Response({**refusal_body(reason), "retryable": True}, status=code)
-            approve_proposal(proposal)
-            message = "Invitation sent"
+            decide, message = approve_proposal, "Invitation sent"
         else:
-            reject_proposal(proposal)
-            message = "Suggestion declined"
+            decide, message = reject_proposal, "Suggestion declined"
+        try:
+            decide(proposal)
+        except ProposalAlreadyDecided:
+            # Another curator settled it between the check above and now.
+            rsvp.delete()
+            return Response(
+                refusal_body("This suggestion is no longer pending", code="proposal_not_pending"),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Every curator's links and notices went with the decision
         # (``clear_proposal_traces``, called by approve/reject).

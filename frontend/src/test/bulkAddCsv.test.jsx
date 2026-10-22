@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import JSZip from 'jszip';
+import Papa from 'papaparse';
 
 vi.mock('../services/api', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -50,6 +51,9 @@ const renderBulkAdd = (onImported = vi.fn()) => ({
   onImported,
   ...render(<BulkAddCsv collectionCode="COL001" onImported={onImported} />),
 });
+
+// A spy on the parser must not outlive the test that placed it, even when that test fails.
+afterEach(() => vi.restoreAllMocks());
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -177,6 +181,20 @@ describe('BulkAddCsv — guards', () => {
 
     expect(await screen.findByText('No rows found in that file.')).toBeInTheDocument();
   });
+
+  test('a CSV the parser cannot read says so, and offers no preview', async () => {
+    vi.spyOn(Papa, 'parse').mockImplementation((_input, config) => {
+      config.error(new Error('unreadable'));
+    });
+    const { container } = renderBulkAdd();
+
+    pick(container, csvFile('headline\nCazo\n'));
+
+    expect(
+      await screen.findByText("We couldn't read that CSV. Check the format and try again.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Import/ })).toBeNull();
+  });
 });
 
 describe('BulkAddCsv — ZIP', () => {
@@ -233,6 +251,33 @@ describe('BulkAddCsv — ZIP', () => {
     pick(container, await zipFile({ 'cazo.jpg': 'fake-jpeg-bytes' }));
 
     expect(await screen.findByText('The ZIP must contain a CSV file.')).toBeInTheDocument();
+  });
+
+  test('a ZIP that is not a ZIP says so, and offers no preview', async () => {
+    const { container } = renderBulkAdd();
+
+    pick(
+      container,
+      new File(['this is not an archive'], 'things.zip', { type: 'application/zip' })
+    );
+
+    expect(
+      await screen.findByText("We couldn't read that ZIP. Check the file and try again.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Import/ })).toBeNull();
+  });
+
+  test('a ZIP whose CSV the parser cannot read says the CSV is unreadable', async () => {
+    vi.spyOn(Papa, 'parse').mockImplementation((_input, config) => {
+      config.error(new Error('unreadable'));
+    });
+    const { container } = renderBulkAdd();
+
+    pick(container, await zipFile({ 'things.csv': 'headline\nCazo\n' }));
+
+    expect(
+      await screen.findByText("We couldn't read that CSV. Check the format and try again.")
+    ).toBeInTheDocument();
   });
 
   test('a failed photo upload stops the import and says so', async () => {
