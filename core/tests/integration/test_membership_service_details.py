@@ -89,7 +89,7 @@ class TestTheThingsThatLeave:
 
 class TestWhoMustHearAThingIsGoing:
     def test_a_request_on_a_thing_that_stays_is_not_announced(self, group, member, founder, asker):
-        going = thing(group, member, "GOING01", "Going")
+        going = thing(group, member, "GOING1", "Going")
         staying = thing(group, founder, "STAY01", "Staying")
         book(going, asker)
         other = User.objects.create(code="MOTH01", email="lolo@your-domain.test", name="Lolo")
