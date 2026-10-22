@@ -174,8 +174,10 @@ class TestProposing:
         inside = client_for(member).post(url, {"email": member.email}, format="json")
         queued = client_for(member).post(url, {"email": "lili@your-domain.test"}, format="json")
 
-        assert inside.status_code == queued.status_code == 400
-        assert inside.data == queued.data
+        founder = client_for(member).post(url, {"email": group.owner.email}, format="json")
+
+        assert inside.status_code == queued.status_code == founder.status_code == 400
+        assert inside.data == queued.data == founder.data
         # And a stranger nobody has mentioned still gets a *different* answer —
         # otherwise this test would pass on an endpoint that refused everything.
         fresh = client_for(member).post(url, {"email": "lolo1@your-domain.test"}, format="json")
@@ -995,3 +997,93 @@ class TestTheWholeTeamIsAsked:
         assert asked == {owner.code, second.code}
         assert not _proposal_links(proposal).filter(user_code=first).exists()
         assert first.email not in [addr for m in mail.outbox for addr in m.to]
+
+
+@pytest.mark.django_db
+class TestARecommendationIsSettledOnce:
+    """Two curators answering at once: the first decision stands, the second sends nothing.
+
+    Deterministic stand-in for the race: the proposal is loaded as pending, then
+    settled in the database by "the other curator", then the stale copy is decided.
+    """
+
+    def _stale(self, group, member, settled_as):
+        from core.services.invitation_service import create_proposal
+
+        proposal, _, _ = create_proposal(group, member, "lele14@your-domain.test")
+        stale = InvitationProposal.objects.get(pk=proposal.pk)
+        InvitationProposal.objects.filter(pk=proposal.pk).update(status=settled_as)
+        mail.outbox.clear()
+        return stale
+
+    def test_approving_a_recommendation_another_curator_rejected_invites_nobody(
+        self, group, member
+    ):
+        from core.services.invitation_service import ProposalAlreadyDecided, approve_proposal
+
+        stale = self._stale(group, member, InvitationProposal.Status.REJECTED)
+
+        with pytest.raises(ProposalAlreadyDecided):
+            approve_proposal(stale)
+
+        assert mail.outbox == []
+        assert not User.objects.filter(email="lele14@your-domain.test").exists()
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.INVITE_PROPOSAL_APPROVED
+        ).exists()
+        stale.refresh_from_db()
+        assert stale.status == InvitationProposal.Status.REJECTED
+
+    def test_rejecting_a_recommendation_another_curator_approved_tells_the_proposer_nothing(
+        self, group, member
+    ):
+        from core.services.invitation_service import ProposalAlreadyDecided, reject_proposal
+
+        stale = self._stale(group, member, InvitationProposal.Status.APPROVED)
+
+        with pytest.raises(ProposalAlreadyDecided):
+            reject_proposal(stale)
+
+        assert mail.outbox == []
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.INVITE_PROPOSAL_DECLINED
+        ).exists()
+        stale.refresh_from_db()
+        assert stale.status == InvitationProposal.Status.APPROVED
+
+    def test_the_winner_sees_the_status_it_wrote(self, group, member):
+        from core.services.invitation_service import create_proposal, reject_proposal
+
+        proposal, _, _ = create_proposal(group, member, "lele15@your-domain.test")
+
+        reject_proposal(proposal)
+
+        assert proposal.status == InvitationProposal.Status.REJECTED
+        assert proposal.resolved is not None
+
+    @pytest.mark.parametrize("action", ["approve", "reject"])
+    def test_the_app_answers_a_lost_race_as_a_settled_suggestion(self, group, member, action):
+        stale = self._stale(group, member, InvitationProposal.Status.REJECTED)
+
+        # The view passed its is_valid() check just before the other curator decided.
+        with patch.object(InvitationProposal, "is_valid", return_value=True):
+            resp = client_for(group.owner).post(f"/api/v1/proposals/{stale.code}/{action}/")
+
+        assert resp.status_code == 400
+        assert resp.data["code"] == "proposal_not_pending"
+        assert mail.outbox == []
+
+    @pytest.mark.parametrize("action", [RSVP.Action.PROPOSAL_APPROVE, RSVP.Action.PROPOSAL_REJECT])
+    def test_the_email_link_answers_a_lost_race_as_a_settled_suggestion(
+        self, group, member, action
+    ):
+        stale = self._stale(group, member, InvitationProposal.Status.REJECTED)
+        link = RSVP.objects.get(target_code=stale.code, user_code=group.owner, action=action)
+
+        with patch.object(InvitationProposal, "is_valid", return_value=True):
+            resp = APIClient().post(f"/api/v1/rsvp/{link.token}/")
+
+        assert resp.status_code == 400
+        assert resp.data["code"] == "proposal_not_pending"
+        assert mail.outbox == []
+        assert not RSVP.objects.filter(pk=link.pk).exists(), "the pressed link is consumed"

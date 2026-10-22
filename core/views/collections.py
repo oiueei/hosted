@@ -57,6 +57,7 @@ from core.services.email_service import (
 from core.services.export_service import collection_stats_rows
 from core.services.invitation_service import (
     _INVITE_QUOTA_MESSAGE,
+    ProposalAlreadyDecided,
     _consume_invite_quota,
     _invite_quota_left,
     approve_proposal,
@@ -377,6 +378,17 @@ class CollectionInviteView(APIView):
 
         user_code = serializer.validated_data["user_code"]
 
+        # The founder is an FK, never an ``invites`` row: refused before ``invites`` is
+        # read, so a stray row can't turn this into the founder's own removal.
+        if user_code == collection.owner_id:
+            return Response(
+                refusal_body(
+                    "The owner can't be removed from their own collection.",
+                    code="owner_cannot_be_removed",
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Check if user is a confirmed invite
         try:
             invited_user = collection.invites.get(code=user_code)
@@ -392,6 +404,25 @@ class CollectionInviteView(APIView):
                 # sent them to decide are no longer theirs (same as a demotion).
                 drop_team_notices_of(invited_user, collection)
             Event.log(Event.Kind.MEMBER_LEFT, actor=invited_user, collection=collection)
+
+            # A co-curator's removal is told to the founder, who did not do it
+            # (the same notice a member's own leaving writes, plus who removed them,
+            # by bare name). The founder removing someone is told nothing. A removed
+            # member with no name is named to the founder by their address
+            # (``member_email``): the members list already shows it to them.
+            if request.user.code != collection.owner_id:
+                InAppNotification.objects.create(
+                    user=collection.owner,
+                    type=InAppNotification.Type.MEMBER_LEFT,
+                    payload={
+                        "collection_headline": collection.headline,
+                        "collection_code": collection.code,
+                        "member_name": invited_user.name,
+                        **({} if invited_user.name else {"member_email": invited_user.email}),
+                        "things_deleted": things_deleted,
+                        "removed_by_name": request.user.name,
+                    },
+                )
 
             # Notify the removed user — invited_user is already in hand (fetched
             # above), so there's no need to re-query and no DoesNotExist to guard.
@@ -640,7 +671,8 @@ class CollectionLeaveView(APIView):
             type=InAppNotification.Type.MEMBER_LEFT,
             payload={
                 "collection_headline": collection.headline,
-                "member_name": request.user.display_name,
+                "member_name": request.user.name,
+                **({} if request.user.name else {"member_email": request.user.email}),
                 "collection_code": collection.code,
                 "things_deleted": things_deleted,
             },
@@ -829,7 +861,10 @@ class CollectionProposeInviteView(APIView):
         # endpoint handed the same fact back one guess at a time. Answering with
         # both possibilities keeps the proposer's real question answered ("do I
         # need to do anything? no") while confirming neither branch.
-        already_member = collection.invites.filter(email=email).exists()
+        already_member = (
+            collection.invites.filter(email=email).exists()
+            or collection.owner.email.lower() == email
+        )
         already_proposed = InvitationProposal.objects.filter(
             collection=collection, email=email, status=InvitationProposal.Status.PENDING
         ).exists()
@@ -846,7 +881,7 @@ class CollectionProposeInviteView(APIView):
 
         create_proposal(collection, request.user, email, note)
         return Response(
-            {"message": "Suggestion sent to the owner"},
+            {"message": "Suggestion sent to whoever runs the group"},
             status=status.HTTP_200_OK,
         )
 
@@ -862,6 +897,17 @@ class CollectionProposalActionView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def _not_pending():
+        return Response(
+            refusal_body(
+                "This suggestion is no longer pending.",
+                code="proposal_not_pending",
+                key="detail",
+            ),
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     def post(self, request, proposal_code, action):
         proposal = get_object_or_404(InvitationProposal, code=proposal_code)
 
@@ -874,14 +920,7 @@ class CollectionProposalActionView(APIView):
             return denied
 
         if not proposal.is_valid():
-            return Response(
-                refusal_body(
-                    "This suggestion is no longer pending.",
-                    code="proposal_not_pending",
-                    key="detail",
-                ),
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return self._not_pending()
 
         if action == "approve":
             # The ceiling and the quota are the owner's, and are checked for the
@@ -895,10 +934,16 @@ class CollectionProposalActionView(APIView):
                 # ``VerifyLinkView._handle_proposal_action``): the suggestion
                 # stays pending and the owner may answer later.
                 return Response({**refusal_body(reason), "retryable": True}, status=code)
-            approve_proposal(proposal)
+            try:
+                approve_proposal(proposal)
+            except ProposalAlreadyDecided:
+                return self._not_pending()
             return Response({"message": "Invitation sent"}, status=status.HTTP_200_OK)
 
-        reject_proposal(proposal)
+        try:
+            reject_proposal(proposal)
+        except ProposalAlreadyDecided:
+            return self._not_pending()
         return Response({"message": "Suggestion declined"}, status=status.HTTP_200_OK)
 
 
@@ -1106,6 +1151,7 @@ class CollectionBulkInviteView(APIView):
             already = set(
                 collection.invites.filter(email__in=emails).values_list("email", flat=True)
             )
+            already.add(collection.owner.email.lower())
             full = collection.capacity_violation(
                 "invites", adding=sum(1 for email in emails if email not in already)
             )
@@ -1130,7 +1176,9 @@ class CollectionBulkInviteView(APIView):
                 if created:
                     Event.log(Event.Kind.USER_JOINED, actor=invited_user)
 
-                if collection.is_invited(invited_user.code):
+                if collection.is_owner(invited_user.code) or collection.is_invited(
+                    invited_user.code
+                ):
                     skipped.append({"email": email, "reason": "already_member"})
                     continue
                 if RSVP.objects.filter(

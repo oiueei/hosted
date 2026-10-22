@@ -291,6 +291,16 @@ describe('MyBookingsPage listing', () => {
   });
 });
 
+describe('MyBookingsPage when the list cannot be read', () => {
+  test('without a connection it says so, not that the bookings failed to load', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    renderPage();
+
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(screen.queryByText('Error loading bookings.')).toBeNull();
+  });
+});
+
 describe('MyBookingsPage cancelling', () => {
   test('only a pending request offers the cancel control', async () => {
     // Cancelling a settled request is meaningless, and offering it would invite

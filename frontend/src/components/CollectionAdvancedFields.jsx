@@ -59,6 +59,8 @@ export default function CollectionAdvancedFields({
   welcomeDocUrl,
 }) {
   const { t, i18n } = useTranslation();
+  const requestInfoCount = localizedCounter(requestInfo, 512);
+  const emailNoteCount = localizedCounter(emailNote, 512);
 
   const digestOptions = [
     { label: t('editCollection.digestNone'), value: 'NONE' },
@@ -114,10 +116,8 @@ export default function CollectionAdvancedFields({
               label={t('requestInfo.label')}
               value={requestInfo}
               onChange={(e) => setRequestInfo(e.target.value)}
-              invalid={localizedCounter(requestInfo, 512).over}
-              errorText={
-                localizedCounter(requestInfo, 512).over ? t('requestInfo.maxLength') : undefined
-              }
+              invalid={requestInfoCount.over}
+              errorText={requestInfoCount.over ? t('requestInfo.maxLength') : undefined}
               helperText={localizedHelper(requestInfo, 512, t)}
             />
             <LocalizedInfo id={`${idPrefix}-request-info-info`} variant="requestInfo" />
@@ -130,8 +130,8 @@ export default function CollectionAdvancedFields({
             label={t('emailNote.label')}
             value={emailNote}
             onChange={(e) => setEmailNote(e.target.value)}
-            invalid={localizedCounter(emailNote, 512).over}
-            errorText={localizedCounter(emailNote, 512).over ? t('emailNote.maxLength') : undefined}
+            invalid={emailNoteCount.over}
+            errorText={emailNoteCount.over ? t('emailNote.maxLength') : undefined}
             helperText={localizedHelper(emailNote, 512, t)}
           />
           <LocalizedInfo id={`${idPrefix}-email-note-info`} variant="emailNote" />

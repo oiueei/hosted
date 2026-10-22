@@ -73,4 +73,30 @@ describe('ContactPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });
+
+  async function sendHelp() {
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/Email/), {
+      target: { value: 'lala@your-domain.test' },
+    });
+    fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'Help!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  }
+
+  test('a send that never connects says the connection failed, not that the message was refused', async () => {
+    globalThis.fetch = vi.fn(() => Promise.reject(new TypeError('Failed to fetch')));
+    await sendHelp();
+    expect(await screen.findByText('Connection error.')).toBeInTheDocument();
+    expect(screen.queryByText("We couldn't send your message. Please try again.")).toBeNull();
+  });
+
+  test('a server error says the message could not be sent, and keeps the form', async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve(mockResponse({}, false, 500)));
+    await sendHelp();
+    expect(
+      await screen.findByText("We couldn't send your message. Please try again.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Connection error.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+  });
 });

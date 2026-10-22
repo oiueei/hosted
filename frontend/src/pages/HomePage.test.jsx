@@ -120,7 +120,7 @@ describe('HomePage — which section leads', () => {
 
     expect(
       await screen.findByText(
-        'A collection is a shareable list — gifts, loans, rentals, sales, or something to book. You decide whether only the people you invite can see it, or anyone with the link.'
+        'A collection is where you share your things with your people: a stall to give away or sell, a library to lend or rent out, or a shed to book. You decide whether only the people you invite can see it, or anyone with the link.'
       )
     ).toBeInTheDocument();
   });
@@ -259,6 +259,15 @@ describe('HomePage — one create button, in one place', () => {
     await screen.findByRole('link', { name: 'Create your first collection' });
     expect(heroButton(container)).toBeNull();
     expect(createLinks()).toHaveLength(1);
+    // Nothing at all, not "no active ones": that is what only-inactive accounts read.
+    expect(screen.getByText("You don't have a collection yet.")).toBeInTheDocument();
+    expect(screen.queryByText('You have no active collections yet.')).toBeNull();
+    // The explainer names the three kinds.
+    expect(
+      screen.getByText(
+        /a stall to give away or sell, a library to lend or rent out, or a shed to book/
+      )
+    ).toBeInTheDocument();
   });
 
   test('with an active collection the button is in the hero and nowhere else', async () => {
@@ -281,7 +290,8 @@ describe('HomePage — one create button, in one place', () => {
     expect(screen.getByText('You have no active collections yet.')).toBeInTheDocument();
     expect(createLinks()).toHaveLength(1);
     expect(screen.queryByRole('link', { name: 'Create your first collection' })).toBeNull();
-    expect(screen.queryByText(/A collection is a shareable list/)).toBeNull();
+    expect(screen.queryByText(/A collection is where you share your things/)).toBeNull();
+    expect(screen.queryByText("You don't have a collection yet.")).toBeNull();
   });
 
   test('while the read is in flight there is no button, then the right one', async () => {

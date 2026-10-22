@@ -3,6 +3,8 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
+import InlineConfirm from './InlineConfirm';
+import useTheeeme from '../hooks/useTheeeme';
 import { curatorGuidePath } from '../deployment';
 import { useLocalized } from '../utils/localized';
 import { formatBookingWhen, formatDateTime } from '../utils/rental';
@@ -91,6 +93,7 @@ const notificationType = (type) => {
  */
 export default function InboxNotifications({ collection, reloadKey = 0, onNetworkError }) {
   const { t, i18n } = useTranslation();
+  const { btnStyle } = useTheeeme();
   // Owner content in a payload (headlines) may carry one text per language.
   const L = useLocalized();
   const [notifications, setNotifications] = useState([]);
@@ -103,6 +106,11 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
   const infoCount = notifications.filter(isInformativeNotice).length;
   const infoFolded = infoCount > GROUP_THRESHOLD;
   const [infoOpen, setInfoOpen] = useState(false);
+  // The notices the Show / Hide button opens, by id, for `aria-controls`.
+  const infoNoticeIds = notifications
+    .filter(isInformativeNotice)
+    .map((n) => `inbox-notice-${n.code}`)
+    .join(' ');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -201,16 +209,29 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
   // name therefore arrives as `''`, and every one of these strings interpolates
   // the name mid-sentence — so without this the body reads " has replied to your
   // question about:". One funnel, so a builder cannot forget.
+  //
+  // The stand-in is written with a capital where the name opens its sentence
+  // ("A member joined…") and in lower case where it falls in the middle of one
+  // ("…cancelled the reservation of a member"): `<key>_inline` is the second form,
+  // and each builder takes the one its own sentence needs in every language.
   const named = (value) => value || t('common.aMember');
+  const namedInline = (value) => value || t('common.aMemberInline');
   const localizedPayload = (payload) => ({
     ...payload,
     collection_headline: L(payload.collection_headline),
     thing_headline: L(payload.thing_headline),
     owner_name: named(payload.owner_name),
+    owner_name_inline: namedInline(payload.owner_name),
     questioner_name: named(payload.questioner_name),
     requester_name: named(payload.requester_name),
+    requester_name_inline: namedInline(payload.requester_name),
     invitee_name: named(payload.invitee_name),
-    member_name: named(payload.member_name),
+    // A member who joined by a public link has given only an address: the team
+    // (the only readers of these two notices) reads it in the members list, so it
+    // names them in the place of a name.
+    member_name: payload.member_name || payload.member_email || t('common.aMember'),
+    member_name_inline: payload.member_name || payload.member_email || t('common.aMemberInline'),
+    removed_by_name: named(payload.removed_by_name),
     proposer_name: named(payload.proposer_name),
     other_name: named(payload.other_name),
     decider_name: named(payload.decider_name),
@@ -244,7 +265,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'THING_REPORTED':
         return t('home.reportedLabel');
       case 'MEMBER_LEFT':
-        return t('home.memberLeftLabel');
+        // A co-curator's removal of someone carries who did it.
+        return t(
+          'removed_by_name' in n.payload ? 'home.memberRemovedLabel' : 'home.memberLeftLabel'
+        );
       case 'MEMBER_JOINED':
         return t('home.memberJoinedLabel');
       case 'INVITE_PROPOSAL_APPROVED':
@@ -275,12 +299,14 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'COLLECTION_DELETED':
         return t('home.collectionDeletedBody', {
           collection_headline: p.collection_headline,
-          owner_name: p.owner_name,
+          owner_name: p.owner_name_inline,
         });
       case 'COLLECTION_REVOKED':
+        // The name opens the sentence in Spanish and Catalan and follows "by" in English.
         return t('home.collectionRevokedBody', {
           collection_headline: p.collection_headline,
           owner_name: p.owner_name,
+          owner_name_inline: p.owner_name_inline,
         });
       case 'BOOKING_ACCEPTED':
         return t('home.bookingAcceptedBody', {
@@ -325,10 +351,19 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           member_name: p.member_name,
         });
       case 'MEMBER_LEFT': {
-        const left = t('home.memberLeftBody', {
-          collection_headline: p.collection_headline,
-          member_name: p.member_name,
-        });
+        // A co-curator's removal of someone is told to the founder with who did
+        // it; a member's own leaving carries no `removed_by_name`.
+        const left =
+          'removed_by_name' in n.payload
+            ? t('home.memberRemovedBody', {
+                removed_by: p.removed_by_name,
+                collection_headline: p.collection_headline,
+                member_name: p.member_name_inline,
+              })
+            : t('home.memberLeftBody', {
+                collection_headline: p.collection_headline,
+                member_name: p.member_name,
+              });
         // A notice written before the count existed has no `things_deleted`: 0.
         const things = p.things_deleted || 0;
         return things > 0 ? `${left} ${t('home.memberLeftThings', { count: things })}` : left;
@@ -361,13 +396,13 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
             p.accepted
               ? 'home.bookingDecidedAcceptedByYouBody'
               : 'home.bookingDecidedRejectedByYouBody',
-            { requester_name: p.requester_name, thing_headline: p.thing_headline }
+            { requester_name: p.requester_name_inline, thing_headline: p.thing_headline }
           );
         return t(
           p.accepted ? 'home.bookingDecidedAcceptedBody' : 'home.bookingDecidedRejectedBody',
           {
             decider_name: p.decider_name,
-            requester_name: p.requester_name,
+            requester_name: p.requester_name_inline,
             thing_headline: p.thing_headline,
           }
         );
@@ -387,7 +422,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
             'member_name' in (n.payload || {})
               ? 'home.reservationCancelledByYouOtherBody'
               : 'home.reservationCancelledByYouOwnBody',
-            { member_name: p.member_name, thing_headline: p.thing_headline }
+            { member_name: p.member_name_inline, thing_headline: p.thing_headline }
           );
         return t('home.reservationCancelledBody', {
           other_name: p.other_name,
@@ -491,13 +526,20 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
             variant="supplementary"
             size="small"
             aria-expanded={infoOpen}
+            aria-controls={infoOpen ? infoNoticeIds : undefined}
             onClick={() => setInfoOpen((open) => !open)}
           >
             {infoOpen ? t('inbox.info.hide') : t('inbox.info.show')}
           </Button>{' '}
-          <Button variant="supplementary" size="small" onClick={dismissInfo}>
-            {t('inbox.info.dismissAll')}
-          </Button>
+          <InlineConfirm
+            triggerLabel={t('inbox.info.dismissAll')}
+            triggerProps={{ variant: 'supplementary', size: 'small' }}
+            title={t('inbox.info.dismissConfirmTitle', { count: infoCount })}
+            body={t('inbox.info.dismissConfirmBody')}
+            confirmLabel={t('inbox.info.dismissAll')}
+            onConfirm={dismissInfo}
+            confirmProps={{ size: 'small', style: btnStyle }}
+          />
         </Notification>
       )}
       {notifications
@@ -529,6 +571,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           return (
             <Notification
               key={n.code}
+              id={`inbox-notice-${n.code}`}
               type={notificationType(n.type)}
               label={notificationLabel(n)}
               // Each notice is a landmark; the number keeps two of one kind apart.

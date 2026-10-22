@@ -116,6 +116,8 @@ export default function CollectionHero({
   const isMember = isAuthenticated && !!collection.is_member && !isCurator;
   const isDemo = !!collection.is_onboarding;
   const showInvite = !!collection.allow_member_proposals && !isDemo;
+  // A member has a summary only where the group sends the weekly or monthly one; whoever
+  // runs the group also gets the daily one about sign-ups, whatever the frequency.
   const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
   // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
   // this group" and "Sign in" — whatever the mode and whether it holds things or not.
@@ -175,7 +177,7 @@ export default function CollectionHero({
                 hasDateThings={hasDateThings}
                 downloads={downloads}
                 welcomeDocUrl={collection.welcome_doc_url || ''}
-                digest={(isMember || isCurator) && sendsDigest ? digestPref : null}
+                digest={isCurator || (isMember && sendsDigest) ? digestPref : null}
               />
             )}
             {canShare && (
@@ -338,6 +340,9 @@ export default function CollectionHero({
                 </ButtonLink>
               </div>
               <CollectionDownloadsStatus downloads={downloads} />
+              {/* Whoever runs the group has the summary switch in the menu too
+                  (`is_member` is false for the team), so its outcome shows here. */}
+              <CollectionDigestStatus digest={digestPref} />
             </>
           )}
           {/* Everything in here is a rank-and-file member's control —
@@ -398,9 +403,9 @@ export default function CollectionHero({
                   }}
                 />
               )}
-              {/* The outcome of "Mute the summary" / "Get the summary again" from the
+              {/* The outcome of "Mute the summaries" / "Get the summaries again" from the
                 collection menu: a short message in a live region, as the downloads'.
-                Only a member has the switch. */}
+                Members only: the team's own zone is under its row. */}
               <CollectionDigestStatus digest={digestPref} />
               {/* "Leave the group" used to sit here, third in a stack of
                 unlabelled text links under the description — and the only

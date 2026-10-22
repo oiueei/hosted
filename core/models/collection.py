@@ -291,7 +291,10 @@ class Collection(models.Model):
     # The last day whose sign-ups ``send_join_summaries`` has already told the
     # curators about. The command claims a day here (a conditional UPDATE) before
     # it sends, so a second run — or two at once — finds nothing left to do, and a
-    # day the Scheduler skipped is picked up from the day after this one.
+    # day the Scheduler skipped is picked up from the day after this one. NULL
+    # means the command has never looked at this group (its first summary names
+    # only yesterday); every pass dates the groups it had nothing to tell, so a
+    # skipped day is recovered.
     join_summary_sent_on = models.DateField(null=True, blank=True)
     things = models.ManyToManyField(
         "Thing",

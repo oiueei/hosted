@@ -301,6 +301,60 @@ class TestNPlusOneGuards:
 
 
 @pytest.mark.django_db
+class TestInvitedCollectionsQueryBudget:
+    """`GET /invited-collections/` is not paginated and serialises every thing of
+    every group the member belongs to (Home and the profile read it). The contract
+    stays as it is; what is pinned here is what it costs, so a regression shows."""
+
+    URL = "/api/v1/invited-collections/"
+
+    def _groups(self, member, owner, n, things):
+        for _ in range(n):
+            group = CollectionFactory(owner=owner)
+            group.invites.add(member)
+            _make_things(owner, group, things)
+
+    def test_the_cost_does_not_grow_with_the_things_in_each_group(self, authenticated_client, user):
+        owner = UserFactory()
+        self._groups(user, owner, 3, 5)
+        _warm_activity(authenticated_client)
+        with CaptureQueriesContext(connection) as small:
+            r1 = authenticated_client.get(self.URL)
+        assert r1.status_code == 200
+        assert [len(c["things"]) for c in r1.data] == [5, 5, 5]
+
+        for group in user.invited_to_collections.all():
+            _make_things(owner, group, 55)
+        with CaptureQueriesContext(connection) as big:
+            r2 = authenticated_client.get(self.URL)
+        assert r2.status_code == 200
+        assert [len(c["things"]) for c in r2.data] == [60, 60, 60]
+
+        assert len(big) == len(small), (
+            f"N+1 per thing on invited-collections: {len(small)} queries for 3x5 things, "
+            f"{len(big)} for 3x60 ({len(r2.content)} bytes)"
+        )
+
+    def test_the_cost_does_not_grow_with_the_number_of_groups(self, authenticated_client, user):
+        owner = UserFactory()
+        self._groups(user, owner, 2, 5)
+        _warm_activity(authenticated_client)
+        with CaptureQueriesContext(connection) as few:
+            r1 = authenticated_client.get(self.URL)
+        assert len(r1.data) == 2
+
+        self._groups(user, owner, 4, 5)
+        with CaptureQueriesContext(connection) as many:
+            r2 = authenticated_client.get(self.URL)
+        assert len(r2.data) == 6
+
+        assert len(many) == len(few), (
+            f"N+1 per group on invited-collections: {len(few)} queries for 2 groups, "
+            f"{len(many)} for 6"
+        )
+
+
+@pytest.mark.django_db
 class TestDataExportQueryBudgets:
     """An export walks every table a person appears in, so an N+1 here is not a
     slow page — it is a 30-second Heroku timeout on the one request somebody

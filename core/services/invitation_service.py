@@ -119,7 +119,9 @@ def deliver_invitation(collection, email, inviter_name, quota_user_code=None, pr
     if created:
         Event.log(Event.Kind.USER_JOINED, actor=invited_user)
 
-    if collection.is_invited(invited_user.code):
+    # The founder counts as already inside: they are an FK, never an ``invites`` row,
+    # so no invitation (RSVP, email, quota) is ever minted for them.
+    if collection.is_owner(invited_user.code) or collection.is_invited(invited_user.code):
         return invited_user, True
 
     # Resend-safe: a fresh pair replaces any pending one for this user+collection.
@@ -266,14 +268,47 @@ def clear_proposal_traces(proposal):
     ).delete()
 
 
+class ProposalAlreadyDecided(Exception):
+    """Another curator settled the recommendation first (or it is no longer pending)."""
+
+
+def _claim_decision(proposal, status):
+    """Reserve the one decision a recommendation gets, before any effect of it.
+
+    A conditional ``UPDATE ... WHERE status = PENDING``: of two curators answering
+    at the same time the first takes the row (in Postgres the second waits for the
+    first's commit, then finds the status changed), and the other raises
+    ``ProposalAlreadyDecided`` with nothing sent. Must run inside the caller's
+    ``transaction.atomic()`` so a failing effect undoes the reservation.
+    """
+    resolved = timezone.now()
+    claimed = InvitationProposal.objects.filter(
+        pk=proposal.pk, status=InvitationProposal.Status.PENDING
+    ).update(status=status, resolved=resolved)
+    if not claimed:
+        raise ProposalAlreadyDecided(proposal.code)
+    proposal.status = status
+    proposal.resolved = resolved
+
+
 def approve_proposal(proposal):
-    """The owner said yes: send the invitation for real.
+    """A curator said yes: send the invitation for real.
 
     Charged to the owner's quota (see ``deliver_invitation``). Returns
     ``(invited_user, already_invited)``; `already_invited` means somebody else
     got there first while the proposal was waiting, which is a no-op, not an
     error.
+
+    The decision is reserved first (``_claim_decision``): a recommendation is
+    settled once, and raises ``ProposalAlreadyDecided`` if another curator got
+    there before this call, with nothing sent.
     """
+    with transaction.atomic():
+        _claim_decision(proposal, InvitationProposal.Status.APPROVED)
+        return _approve_claimed(proposal)
+
+
+def _approve_claimed(proposal):
     collection = proposal.collection
     invited_user, already = deliver_invitation(
         collection,
@@ -287,9 +322,6 @@ def approve_proposal(proposal):
         # doesn't get a line rather than having their address forwarded.
         proposer_name=proposal.proposer.name,
     )
-    proposal.status = InvitationProposal.Status.APPROVED
-    proposal.resolved = timezone.now()
-    proposal.save(update_fields=["status", "resolved"])
 
     InAppNotification.objects.create(
         user=proposal.proposer,
@@ -308,17 +340,23 @@ def approve_proposal(proposal):
 
 
 def reject_proposal(proposal):
-    """The owner said no. The proposer is told; the proposed person never is.
+    """A curator said no. The proposer is told; the proposed person never is.
 
     **No reason travels with it.** The owner may be enforcing rules we know
     nothing about — a subscription, papers, a waiting list — and a product that
     demanded a justification would either put words in their mouth or turn a
     quiet no into an argument. The proposer learns the answer and nothing else.
+
+    Reserves the decision first, like ``approve_proposal``: raises
+    ``ProposalAlreadyDecided`` and sends nothing if another curator answered.
     """
+    with transaction.atomic():
+        _claim_decision(proposal, InvitationProposal.Status.REJECTED)
+        _reject_claimed(proposal)
+
+
+def _reject_claimed(proposal):
     collection = proposal.collection
-    proposal.status = InvitationProposal.Status.REJECTED
-    proposal.resolved = timezone.now()
-    proposal.save(update_fields=["status", "resolved"])
 
     InAppNotification.objects.create(
         user=proposal.proposer,

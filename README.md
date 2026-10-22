@@ -197,7 +197,7 @@ All relationships use proper Django ForeignKey and ManyToManyField:
 | POST | `/api/v1/collections/{code}/leave/` | Leave a collection you're invited to (self-unlink) — refused for the owner and any co-owner. Deletes your things in that group (`things_deleted` in the answer) |
 | POST | `/api/v1/collections/{code}/invite/propose/` | Members only, not a curator: recommend a guest to the owner. Nothing reaches the proposed address until a curator approves. Rate limited: 30/day |
 | POST | `/api/v1/proposals/{code}/{approve\|reject}/` | A curator's answer to a member's recommendation (owner or co-owner) |
-| POST | `/api/v1/collections/{code}/digest/` | Members only: silence or un-silence this collection's digest (`{"muted": true\|false}`). Rate limited: 30/h. The bundled frontend no longer calls it — its members silence a group from the footer link of each digest |
+| POST | `/api/v1/collections/{code}/digest/` | A member or the founder: silence or un-silence this collection's digest (`{"muted": true\|false}`). Rate limited: 30/h. The bundled frontend calls it from the collection menu's "Mute the summary" entry; the footer link of each digest is the other way out |
 | POST | `/api/v1/collections/{code}/invite/bulk/` | Bulk-invite guests from a CSV (owner or co-owner, rate limited: 5/h) |
 | GET | `/api/v1/collections/{code}/stats/` | Download a 90-day activity CSV (owner or co-owner) |
 | GET | `/api/v1/collections/{code}/export/` | Download the whole collection as one JSON file — members, things (whoever owns them), bookings, questions and handovers (owner or co-owner, rate limited: 10/day). A plain member gets 403, never a partial file |
@@ -357,7 +357,7 @@ python manage.py backfill_events
 Backend `pytest` + `pytest-django`, frontend `vitest` + Testing Library + `jest-axe`.
 Coverage floors are **ratchets, not targets** — they sit a couple of points under
 the suite's real coverage so a regression is visible, and CI enforces both:
-backend 96%, frontend 93/88/89/94 (statements/branches/functions/lines).
+backend 96%, frontend 93/89/89/94 (statements/branches/functions/lines).
 
 **CI runs the backend suite against PostgreSQL, not SQLite.** That is not parity
 for its own sake. On SQLite, Django reports `has_select_for_update = False` and

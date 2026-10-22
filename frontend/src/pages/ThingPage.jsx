@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router';
+import { useParams, useNavigate, Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button, Notification } from 'hds-react';
 import { apiFetch } from '../services/api';
@@ -25,7 +25,7 @@ import { useLocalized } from '../utils/localized';
 import useTheeeme from '../hooks/useTheeeme';
 import useThingActions from '../hooks/useThingActions';
 import ButtonLink from '../components/ButtonLink';
-import { loginPathFor } from '../utils/nextPath';
+import RefusalWayOut from '../components/RefusalWayOut';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useDigestPreference from '../hooks/useDigestPreference';
@@ -36,7 +36,6 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 export default function ThingPage() {
   const { code, thingCode } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useTranslation();
   const userCode = localStorage.getItem('userCode');
   const isAuthenticated = !!userCode;
@@ -183,30 +182,22 @@ export default function ThingPage() {
   }, [userCode, thingCode, code, navigate]);
 
   if (error) {
+    // Not being allowed in is a fact about the reader's access, not a fault: it
+    // says so in the title and is announced as a notice rather than as an error.
+    const noAccess = error === 'thingPage.noPermission';
     return (
-      <PageLayout title={t('common.error')} backTo="/" backLabel={t('common.home')}>
-        <Notification label={t('common.error')} type="error">
+      <PageLayout
+        title={noAccess ? t('thingPage.noAccessTitle') : t('common.error')}
+        backTo="/"
+        backLabel={t('common.home')}
+      >
+        <Notification
+          label={noAccess ? t('common.notice') : t('common.error')}
+          type={noAccess ? 'info' : 'error'}
+        >
           {t(error)}
         </Notification>
-        {error === 'thingPage.noPermission' && (
-          // A refusal is a dead end unless it says where to go: Home for a
-          // signed-in reader, the sign-in (which brings them back) for one
-          // with no session.
-          <>
-            <div className="spacer-m" />
-            <div className="button-row-wide">
-              {localStorage.getItem('userCode') ? (
-                <ButtonLink to="/" style={btnSecondaryStyle}>
-                  {t('common.home')}
-                </ButtonLink>
-              ) : (
-                <ButtonLink to={loginPathFor(location)} style={btnStyle}>
-                  {t('login.signIn')}
-                </ButtonLink>
-              )}
-            </div>
-          </>
-        )}
+        {noAccess && <RefusalWayOut />}
       </PageLayout>
     );
   }
@@ -302,7 +293,7 @@ export default function ThingPage() {
       downloads={downloads}
       welcomeDocUrl={menu.welcome_doc_url || ''}
       digest={
-        (menu.is_member || menu.is_curator) && menu.digest_frequency !== 'NONE' ? digestPref : null
+        menu.is_curator || (menu.is_member && menu.digest_frequency !== 'NONE') ? digestPref : null
       }
     />
   ) : undefined;
@@ -314,14 +305,10 @@ export default function ThingPage() {
       heroActions={decisionActions}
       collectionMenu={collectionMenu}
     >
-      {/* The outcome of a download (a curator's) or of the summary switch (a member's)
+      {/* The outcome of a download (a curator's) and of the summary switch
           from the corner menu: a live region right under the hero. */}
-      {menu &&
-        (menu.is_curator ? (
-          <CollectionDownloadsStatus downloads={downloads} />
-        ) : (
-          <CollectionDigestStatus digest={digestPref} />
-        ))}
+      {menu && menu.is_curator && <CollectionDownloadsStatus downloads={downloads} />}
+      {menu && <CollectionDigestStatus digest={digestPref} />}
       <div className="form-grid">
         {thing.collection_is_onboarding && <DemoNotice />}
         {(() => {

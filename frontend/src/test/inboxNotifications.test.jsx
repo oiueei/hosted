@@ -1,6 +1,6 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 window.scrollTo = vi.fn();
 
@@ -11,6 +11,8 @@ vi.mock('../services/api', () => ({
   getCsrfToken: vi.fn(() => 'mock-csrf'),
 }));
 
+import i18n from '../i18n';
+import { switchLanguage } from './settle';
 import { apiFetch } from '../services/api';
 import CollectionPage from '../pages/CollectionPage';
 import HomePage from '../pages/HomePage';
@@ -186,7 +188,56 @@ describe('InboxNotifications — every type says something', () => {
       links: '/collections/COL001/invites',
     },
     {
-      what: 'a member who set no name is "a member", never an address',
+      what: 'a member who joined with only an address is named by it',
+      notification: {
+        code: 'NOTJ03',
+        type: 'MEMBER_JOINED',
+        payload: {
+          collection_headline: 'Toy library',
+          member_name: '',
+          member_email: 'lulu@your-domain.test',
+          collection_code: 'COL001',
+        },
+        created: '2026-10-19T10:00:00Z',
+      },
+      says: [/lulu@your-domain\.test joined Toy library\./],
+      links: '/collections/COL001/invites',
+    },
+    {
+      what: 'a member who left with only an address is named by it',
+      notification: {
+        code: 'NOTL03',
+        type: 'MEMBER_LEFT',
+        payload: {
+          collection_headline: 'Toy library',
+          member_name: '',
+          member_email: 'lulu@your-domain.test',
+          collection_code: 'COL001',
+        },
+        created: '2026-10-19T10:00:00Z',
+      },
+      says: [/lulu@your-domain\.test/, /Toy library/],
+      links: '/collections/COL001/invites',
+    },
+    {
+      what: 'a member who was removed with only an address is named by it',
+      notification: {
+        code: 'NOTL04',
+        type: 'MEMBER_LEFT',
+        payload: {
+          collection_headline: 'Toy library',
+          member_name: '',
+          member_email: 'lulu@your-domain.test',
+          removed_by_name: 'Lele',
+          collection_code: 'COL001',
+        },
+        created: '2026-10-19T10:00:00Z',
+      },
+      says: [/Lele removed lulu@your-domain\.test from “Toy library”/],
+      links: '/collections/COL001/invites',
+    },
+    {
+      what: 'a member who set no name and gave no address is "a member"',
       notification: {
         code: 'NOTJ02',
         type: 'MEMBER_JOINED',
@@ -295,7 +346,7 @@ describe('InboxNotifications — every type says something', () => {
       says: [/You confirmed Lulu's request/i, /A mitre saw/],
       label: /Request confirmed/i,
       links: '/collections/COL001/things/THG009',
-      linkName: /view listing/i,
+      linkName: /view thing/i,
     },
     {
       // The other two corners of the by_you × accepted square: the bodies are
@@ -322,7 +373,7 @@ describe('InboxNotifications — every type says something', () => {
       says: [/You declined Lulu's request/i, /A mitre saw/],
       label: /Request declined/i,
       links: '/collections/COL001/things/THG011',
-      linkName: /view listing/i,
+      linkName: /view thing/i,
     },
     {
       what: "a teammate's acceptance names them, and says it was a yes",
@@ -344,7 +395,7 @@ describe('InboxNotifications — every type says something', () => {
       says: [/Lala confirmed Lolo's request/i, /A board game/],
       label: /Request confirmed/i,
       links: '/collections/COL001/things/THG012',
-      linkName: /view listing/i,
+      linkName: /view thing/i,
     },
     {
       what: "a teammate's decision names them, and whether it was a yes",
@@ -366,7 +417,7 @@ describe('InboxNotifications — every type says something', () => {
       says: [/Lala declined Lolo's request/i, /A board game/],
       label: /Request declined/i,
       links: '/collections/COL001/things/THG010',
-      linkName: /view listing/i,
+      linkName: /view thing/i,
     },
     {
       // Its link read "I can help!" — the retired WISH_THING call-for-help CTA —
@@ -975,7 +1026,7 @@ describe('InboxNotifications — whoever cancelled keeps their own record', () =
     ]);
 
     expect(
-      await screen.findByText(/You cancelled A member's reservation of The meeting room/)
+      await screen.findByText(/You cancelled a member's reservation of The meeting room/)
     ).toBeInTheDocument();
     expect(screen.queryByText(/your reservation/)).not.toBeInTheDocument();
   });
@@ -1035,6 +1086,36 @@ describe('InboxNotifications — a member leaving says how many of their things 
 
     expect(await screen.findByText('Lulu has left “Toy library”.')).toBeInTheDocument();
     expect(screen.queryByText(/deleted with them/)).not.toBeInTheDocument();
+  });
+
+  test('a removal says who removed whom, and keeps the count of things', async () => {
+    renderInbox([left({ removed_by_name: 'Lele', things_deleted: 2 })]);
+
+    expect(
+      await screen.findByText(
+        'Lele removed Lulu from “Toy library”. Their 2 things in it were deleted with them.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/has left/)).not.toBeInTheDocument();
+  });
+
+  test('a removal is labelled as one, and a member leaving of their own accord is not', async () => {
+    const { unmount } = renderInbox([left({ removed_by_name: 'Lele' })]);
+    expect(await screen.findByText('Someone was removed from the group')).toBeInTheDocument();
+    expect(screen.queryByText('Someone left the group')).not.toBeInTheDocument();
+    unmount();
+
+    renderInbox([left()]);
+    expect(await screen.findByText('Someone left the group')).toBeInTheDocument();
+    expect(screen.queryByText('Someone was removed from the group')).not.toBeInTheDocument();
+  });
+
+  test('a removal by someone with no name says "A member" and is still a removal', async () => {
+    renderInbox([left({ removed_by_name: '', things_deleted: 0 })]);
+
+    expect(
+      await screen.findByText('A member removed Lulu from “Toy library”.')
+    ).toBeInTheDocument();
   });
 });
 
@@ -1110,5 +1191,184 @@ describe('InboxNotifications — where a notice links', () => {
       'href',
       '/library/COL001/things/THG001'
     );
+  });
+});
+
+/**
+ * The stand-in for a person with no name is written in lower case where the name
+ * falls in the middle of a sentence ("…the reservation of a member") and with a
+ * capital where it opens one ("A member joined…"). Which one a key needs depends on
+ * the language's own word order, so each row says where the name falls in the three.
+ */
+describe('InboxNotifications — "a member" in the middle of a sentence', () => {
+  const base = { collection_headline: 'Toy library', collection_code: 'COL001' };
+  const CASES = [
+    {
+      what: 'COLLECTION_DELETED (the owner follows "by")',
+      type: 'COLLECTION_DELETED',
+      payload: { ...base, owner_name: '' },
+      says: {
+        en: 'has been deleted by a member.',
+        es: 'ha sido eliminada por un miembro.',
+        ca: 'ha estat eliminada per un membre.',
+      },
+    },
+    {
+      what: 'COLLECTION_REVOKED (follows "by" in English, opens the sentence in es/ca)',
+      type: 'COLLECTION_REVOKED',
+      payload: { ...base, owner_name: '' },
+      says: {
+        en: 'by a member.',
+        es: 'Un miembro te ha eliminado de',
+        ca: "Un membre t'ha eliminat de",
+      },
+    },
+    {
+      what: 'BOOKING_DECIDED, mine (the requester is the object)',
+      type: 'BOOKING_DECIDED',
+      payload: { thing_headline: 'The drill', requester_name: '', by_you: true, accepted: true },
+      says: {
+        en: "You confirmed a member's request for The drill.",
+        es: 'Has confirmado la solicitud de un miembro de The drill.',
+        ca: 'Has confirmat la sol·licitud de The drill feta per un membre.',
+      },
+    },
+    {
+      what: "BOOKING_DECIDED, a teammate's (the decider opens, the requester follows)",
+      type: 'BOOKING_DECIDED',
+      payload: {
+        thing_headline: 'The drill',
+        requester_name: '',
+        decider_name: '',
+        accepted: false,
+      },
+      says: {
+        en: "A member declined a member's request for The drill.",
+        es: 'Un miembro ha rechazado la solicitud de un miembro de The drill.',
+        ca: 'Un membre ha rebutjat la sol·licitud de The drill feta per un membre.',
+      },
+    },
+    {
+      what: 'MEMBER_LEFT after a removal (the remover opens, the removed follows)',
+      type: 'MEMBER_LEFT',
+      payload: { ...base, member_name: '', removed_by_name: '' },
+      says: {
+        en: 'A member removed a member from “Toy library”.',
+        es: 'Un miembro ha sacado a un miembro de “Toy library”.',
+        ca: 'Un membre ha tret un membre de “Toy library”.',
+      },
+    },
+    {
+      what: 'RESERVATION_CANCELLED by you, somebody else’s (the member is the object)',
+      type: 'RESERVATION_CANCELLED',
+      payload: { thing_headline: 'The room', by_you: true, member_name: '' },
+      says: {
+        en: "You cancelled a member's reservation of The room.",
+        es: 'Has cancelado la reserva de un miembro de The room.',
+        ca: 'Has cancel·lat la reserva de The room feta per un membre.',
+      },
+    },
+  ];
+
+  const renderInbox = () =>
+    render(
+      <MemoryRouter>
+        <InboxNotifications />
+      </MemoryRouter>
+    );
+
+  afterEach(async () => {
+    await switchLanguage(i18n, 'en');
+  });
+
+  describe.each(['en', 'es', 'ca'])('in %s', (lang) => {
+    test.each(CASES)('$what', async ({ type, payload, says }) => {
+      await switchLanguage(i18n, lang);
+      apiFetch.mockImplementation((url) =>
+        url.startsWith('/api/v1/inbox/')
+          ? ok([{ code: 'NOTX01', type, payload, created: '2026-10-20T10:00:00Z' }])
+          : ok([])
+      );
+
+      renderInbox();
+
+      // A regex, not `exact: false`: that one ignores case, which is the point here.
+      const phrase = new RegExp(says[lang].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      expect(await screen.findByText(phrase)).toBeInTheDocument();
+    });
+  });
+
+  test.each([
+    ['accepted by you', { by_you: true, accepted: true }],
+    ['rejected by you', { by_you: true, accepted: false }],
+    ['accepted by a teammate', { decider_name: '', accepted: true }],
+    ['rejected by a teammate', { decider_name: '', accepted: false }],
+  ])(
+    'in Catalan a decision %s names the requester after "per", never "de un membre"',
+    async (_what, extra) => {
+      await switchLanguage(i18n, 'ca');
+      apiFetch.mockImplementation((url) =>
+        url.startsWith('/api/v1/inbox/')
+          ? ok([
+              {
+                code: 'NOTX03',
+                type: 'BOOKING_DECIDED',
+                payload: { thing_headline: 'El trepant', requester_name: '', ...extra },
+                created: '2026-10-20T10:00:00Z',
+              },
+            ])
+          : ok([])
+      );
+
+      renderInbox();
+
+      expect(
+        await screen.findByText(/sol·licitud de El trepant feta per un membre\./)
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/de un membre/)).not.toBeInTheDocument();
+    }
+  );
+
+  test('in Catalan a name after "per" needs no elision, whichever letter it starts with', async () => {
+    await switchLanguage(i18n, 'ca');
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? ok([
+            {
+              code: 'NOTX04',
+              type: 'RESERVATION_CANCELLED',
+              payload: { thing_headline: 'La sala', by_you: true, member_name: 'Anna' },
+              created: '2026-10-20T10:00:00Z',
+            },
+          ])
+        : ok([])
+    );
+
+    renderInbox();
+
+    expect(
+      await screen.findByText('Has cancel·lat la reserva de La sala feta per Anna.')
+    ).toBeInTheDocument();
+  });
+
+  test('a name that opens the sentence keeps its capital', async () => {
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? ok([
+            {
+              code: 'NOTX02',
+              type: 'FAQ_ANSWERED',
+              payload: { thing_headline: 'The drill', owner_name: '' },
+              created: '2026-10-20T10:00:00Z',
+            },
+          ])
+        : ok([])
+    );
+
+    renderInbox();
+
+    expect(
+      await screen.findByText('A member answered your question about The drill.')
+    ).toBeInTheDocument();
   });
 });

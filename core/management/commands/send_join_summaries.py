@@ -10,7 +10,16 @@ and is claimed with a conditional UPDATE **before** anything is sent, so a secon
 run the same day (or two at once) finds nothing to do. The window runs from the
 day after that one to yesterday, never more than ``MAX_DAYS`` back, so a day the
 Scheduler skipped loses no sign-ups. Only people still in the group are named; a
-person who joined and left in the window is not.
+person who joined and left in the window is not. A curator who silenced the group's
+summaries (``Collection.digest_muted``) is not sent this one either.
+
+``join_summary_sent_on`` is NULL only for a collection this command has never
+looked at: its first summary names just yesterday, so switching the command on
+never dumps a backlog. The command writes a date only for collections with
+sign-ups, so every pass also dates yesterday on the ones still NULL (they had
+nothing to tell). Otherwise a group quiet for weeks would stay NULL, and its
+first sign-up on a day the Scheduler skipped would be read as a "first summary"
+and lost.
 """
 
 from datetime import timedelta
@@ -30,6 +39,9 @@ class Command(BaseCommand):
     help = "Email each group's curators the people who joined it since the last summary"
 
     def handle(self, *args, **options):
+        # Collections whose claim a failed send handed back: still to be told.
+        # Per pass, so a reused instance does not carry them into the next one.
+        self._given_back = set()
         yesterday = timezone.localdate() - timedelta(days=1)
         earliest = yesterday - timedelta(days=MAX_DAYS - 1)
 
@@ -45,12 +57,19 @@ class Command(BaseCommand):
         collections = (
             Collection.objects.filter(code__in=busy, status=Collection.Status.ACTIVE)
             .select_related("owner")
-            .prefetch_related("co_owners", "invites")
+            .prefetch_related("co_owners", "invites", "digest_muted")
         )
 
         total = 0
         for collection in collections:
             total += self._summarise(collection, yesterday, earliest)
+
+        # After the loop, so a group with sign-ups keeps its claim for itself; the
+        # isnull filter leaves every date already written alone. A group whose
+        # sends all failed went back to NULL on purpose, to be retried.
+        Collection.objects.filter(join_summary_sent_on__isnull=True).exclude(
+            code__in=self._given_back
+        ).update(join_summary_sent_on=yesterday)
 
         self.stdout.write(self.style.SUCCESS(f"Sent {total} join summary emails"))
 
@@ -87,11 +106,17 @@ class Command(BaseCommand):
         )
         joined = [members[c] for c in codes if c in members]
 
+        silenced = {u.code for u in collection.digest_muted.all()}
         sent = 0
         failed = False
         for curator in dict.fromkeys([collection.owner, *collection.co_owners.all()]):
-            # A curator who joined is not told about themselves.
-            names = [u.name for u in joined if u.code != curator.code]
+            # Silencing a group's summaries covers this one too.
+            if curator.code in silenced:
+                continue
+            # A curator who joined is not told about themselves. Someone who never
+            # set a name is named by their address: it goes only to the team, who
+            # already read it in the members list.
+            names = [u.name or u.email for u in joined if u.code != curator.code]
             if not names:
                 continue
             try:
@@ -111,4 +136,5 @@ class Command(BaseCommand):
             Collection.objects.filter(code=collection.code, join_summary_sent_on=yesterday).update(
                 join_summary_sent_on=previous
             )
+            self._given_back.add(collection.code)
         return sent

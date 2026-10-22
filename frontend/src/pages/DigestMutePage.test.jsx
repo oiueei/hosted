@@ -71,7 +71,7 @@ describe('DigestMutePage', () => {
 
     expect(await screen.findByText(/“The street”/)).toBeInTheDocument();
     // And the reassurance that this cost them nothing else: the mute is scoped
-    // to one group's round-up, not to the transactional mail.
+    // to one group's summaries, not to the transactional mail.
     expect(screen.getByText(/still hear about your own requests/)).toBeInTheDocument();
   });
 
