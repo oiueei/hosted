@@ -7,6 +7,9 @@ import ImageUpload from './ImageUpload';
 import PdfUpload from './PdfUpload';
 import TagInput from './TagInput';
 import LocalizedInfo from './LocalizedInfo';
+import TheeemeSelector from './TheeemeSelector';
+import KoroSelector from './KoroSelector';
+import useTheeemeList from '../hooks/useTheeemeList';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 import { localizedCounter, localizedHelper } from '../utils/localized';
 import hdsLang from '../utils/hdsLang';
@@ -52,6 +55,11 @@ export default function CollectionAdvancedFields({
   setDigestFrequency,
   language,
   setLanguage,
+  theeeme,
+  setTheeeme,
+  theeemeHint,
+  koro,
+  setKoro,
   thumbnail,
   setThumbnail,
   thumbnailUrl,
@@ -59,6 +67,8 @@ export default function CollectionAdvancedFields({
   welcomeDocUrl,
 }) {
   const { t, i18n } = useTranslation();
+  // The palette of the group's pages: one of the twelve, and the wave of its koro.
+  const theeemes = useTheeemeList();
   const requestInfoCount = localizedCounter(requestInfo, 512);
   const emailNoteCount = localizedCounter(emailNote, 512);
 
@@ -173,6 +183,13 @@ export default function CollectionAdvancedFields({
             if (selectedOptions.length > 0) setLanguage(selectedOptions[0].value);
           }}
         />
+        <TheeemeSelector
+          theeemes={theeemes}
+          value={theeeme}
+          onChange={setTheeeme}
+          hint={theeemeHint}
+        />
+        <KoroSelector value={koro} onChange={setKoro} />
         <ImageUpload
           id={`${idPrefix}-thumbnail`}
           label={t('upload.thumbnailLabel')}

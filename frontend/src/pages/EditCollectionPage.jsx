@@ -86,6 +86,9 @@ export default function EditCollectionPage() {
   const [tags, setTags] = useState([]);
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
+  // The palette of the group's pages, as saved and as being picked.
+  const [theeeme, setTheeeme] = useState('');
+  const [koro, setKoro] = useState('basic');
   const [language, setLanguage] = useState('');
   // The collection's actual stored language, as loaded — never the live-edited
   // `language` draft above, which defaults to the browser's own language the
@@ -202,6 +205,8 @@ export default function EditCollectionPage() {
           setLanguage(data.language || i18n.resolvedLanguage || i18n.language);
           setSavedLanguage(data.language || '');
           setSavedPalette({ colors: data.theeeme_colors, koro: data.koro });
+          setTheeeme(data.theeeme || '');
+          setKoro(data.koro || 'basic');
           setSavedTexts([data.headline, data.description]);
           setWelcomeDoc(data.welcome_doc || '');
           setWelcomeDocUrl(data.welcome_doc_url || '');
@@ -268,8 +273,10 @@ export default function EditCollectionPage() {
       tags,
       thumbnail: thumbnail || '',
       language,
+      koro,
       welcome_doc: welcomeDoc || '',
     };
+    if (theeeme) body.theeeme = theeeme;
     if (hasRequestPage) {
       body.closed_dates = closedDates;
       body.request_info = requestInfo.trim();
@@ -454,6 +461,10 @@ export default function EditCollectionPage() {
         setDigestFrequency={setDigestFrequency}
         language={language}
         setLanguage={setLanguage}
+        theeeme={theeeme}
+        setTheeeme={setTheeeme}
+        koro={koro}
+        setKoro={setKoro}
         thumbnail={thumbnail}
         setThumbnail={setThumbnail}
         thumbnailUrl={thumbnailUrl}

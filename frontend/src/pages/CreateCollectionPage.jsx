@@ -104,6 +104,10 @@ function CreateCollectionForm({ kind }) {
   // that a new collection mails its members on the owner's behalf. The owner has
   // to be able to see and change it at the moment they create the group.
   const [digestFrequency, setDigestFrequency] = useState('WEEKLY');
+  // The palette of the group's pages. None picked by default: the server draws one of the
+  // twelve at random, and the selector says so. The koro starts as the basic wave.
+  const [theeeme, setTheeeme] = useState('');
+  const [koro, setKoro] = useState('basic');
   const [welcomeDoc, setWelcomeDoc] = useState('');
   const [errors, setErrors] = useState({});
 
@@ -190,8 +194,10 @@ function CreateCollectionForm({ kind }) {
       thumbnail: thumbnail || '',
       language,
       digest_frequency: digestFrequency,
+      koro,
       welcome_doc: welcomeDoc || '',
     };
+    if (theeeme) body.theeeme = theeeme;
     if (description.trim()) body.description = description.trim();
     if (hasRequestPage) {
       body.closed_dates = closedDates;
@@ -327,6 +333,11 @@ function CreateCollectionForm({ kind }) {
         setDigestFrequency={setDigestFrequency}
         language={language}
         setLanguage={setLanguage}
+        theeeme={theeeme}
+        setTheeeme={setTheeeme}
+        theeemeHint={t('createCollection.theeemeRandom')}
+        koro={koro}
+        setKoro={setKoro}
         thumbnail={thumbnail}
         setThumbnail={setThumbnail}
         setWelcomeDoc={setWelcomeDoc}
