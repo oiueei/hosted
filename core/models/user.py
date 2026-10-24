@@ -2,38 +2,17 @@
 User model for OIUEEI.
 """
 
-import random
 from datetime import date
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
-from django.db import OperationalError, ProgrammingError, models
+from django.db import models
 
 from core.models.language import Language
-from core.models.theeeme import KORO_CHOICES
+
+# Migration 0074 names this default by its old path; it is kept only so that
+# migration still imports. The palette left the user for the collection.
+from core.models.theeeme import random_theeeme as _random_theeeme  # noqa: F401
 from core.utils import generate_id
-
-# Bussi — the documented default palette (seeded in migration 0036). Used only as
-# a last-resort fallback when the Theeeme table is somehow empty.
-_DEFAULT_THEEEME_CODE = "BUU331"
-
-
-def _random_theeeme():
-    """Pick a random *existing* theeeme code for a new user's default palette.
-
-    Reads the live Theeeme table rather than a hardcoded list, so removing a
-    theeeme can never make user creation roll a dangling FK (a 1-in-N
-    IntegrityError). Falls back to the default code if the table is empty —
-    or missing entirely: Django's auth system check instantiates User()
-    (evaluating this default) before migrations have run on a fresh
-    environment, e.g. `makemigrations --check` on a bare CI checkout.
-    """
-    from core.models.theeeme import Theeeme
-
-    try:
-        codes = list(Theeeme.objects.values_list("code", flat=True))
-    except (OperationalError, ProgrammingError):
-        return _DEFAULT_THEEEME_CODE
-    return random.choice(codes) if codes else _DEFAULT_THEEEME_CODE
 
 
 class UserManager(BaseUserManager):
@@ -62,8 +41,6 @@ class User(AbstractBaseUser):
     Uses magic link authentication (no password).
     """
 
-    KORO_CHOICES = KORO_CHOICES
-
     class AgeRange(models.TextChoices):
         # Birth-year generations (2026-07 switch from age brackets — a birth
         # year never goes stale, an age bracket did).
@@ -89,15 +66,6 @@ class User(AbstractBaseUser):
     headline = models.CharField(max_length=64, blank=True, default="")
     about = models.CharField(max_length=2000, blank=True, default="")
     photo = models.CharField(max_length=255, blank=True, default="")
-    koro = models.CharField(max_length=9, choices=KORO_CHOICES, default="basic")
-    theeeme = models.ForeignKey(
-        "Theeeme",
-        on_delete=models.PROTECT,
-        to_field="code",
-        db_column="user_theeeme",
-        related_name="users",
-        default=_random_theeeme,
-    )
 
     # Notification preferences (see core/services/email_service.py categories).
     # Activity (Cat. 2) defaults ON — transactional, expected.

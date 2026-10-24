@@ -20,8 +20,6 @@ The `User` model represents a person who can own collections, be invited to othe
 | `headline` | CharField(64) | No | Short bio/tagline |
 | `about` | CharField(2000) | No | Free-form Markdown profile content (contact info, social links, extra info). Optional; any user may set it. Rendered with the frontend `MarkdownText` component; written through `SafeTextField` (rejects raw HTML, allows Markdown). |
 | `photo` | CharField(255) | No | Storage key for the optional profile photo. Exposed read-side as `photo_url`. When present, the `/:code` profile hero becomes a two-column split on desktop — text beside the photo, separated by a vertical Koros divider (rotated 90°, filled with theeeme `color_03`) — stacking vertically on mobile. |
-| `koro` | CharField(9) | No | Koros wave type: basic, beat, calm, pulse, vibration, wave (default: basic) |
-| `theeeme` | ForeignKey(Theeeme) | No | Colour palette (default: a random Theeeme, via `_random_theeeme`) |
 | `notify_activity` | BooleanField | No | Opt-out toggle for Cat. 2 (activity) emails — bookings, FAQs, reminders, broadcasts. Default: `True` |
 | `notify_news` | BooleanField | No | Opt-out toggle for Cat. 3 (news) emails — the per-collection digest. Default: `True` (it was `False`, and the digest consequently reached almost nobody). Defensible under DESIGN §6 only because of `Collection.digest_muted`: the way out of one group's summaries costs none of the transactional email. Remove that control and this default must go back to `False`. |
 | `age_range` | CharField(8) | No | Optional **birth-year generation** (`PRE_1946` / `BOOMER` 1946–1964 / `GEN_X` 1965–1980 / `GEN_Y` 1981–1996 / `GEN_Z` 1997–2012 / `GEN_A` 2013–2024 / `GEN_B` 2025–2039 — switched from age brackets in migration 0115: 51_60→GEN_X and 31_40→GEN_Y mapped faithfully, the rest reset to unanswered, mirroring 0114's policy). Asked of every user in the profile editor. Per member it's shared only with the owner of a COMMUNITY collection (guests page); in aggregate it appears in any collection owner's stats CSV. Never public. Default empty. |
@@ -74,8 +72,9 @@ Users authenticate via magic link (passwordless). The `UserManager` handles user
 
 ### Theeeme Relationship
 
-- Users have a FK to Theeeme with `on_delete=PROTECT` and `default=_random_theeeme` (a fresh user gets a random theeeme, not a fixed one). `_random_theeeme` reads the **live** Theeeme table (not a hardcoded list) and falls back to `_DEFAULT_THEEEME_CODE` (BUU331) if it is empty, so deleting a theeeme can never assign a dangling FK.
-- This prevents deleting a Theeeme that is in use
+- **A user has no palette.** `User.theeeme` and `User.koro` moved to the collection (migration `0165`). The two **columns** (`users.user_theeeme`, `users.koro`) are still in the database for one release, each with a database-level default (`BUU331` / `basic`), because the previous release's dynos name them in every User query and INSERT while the release phase runs; the field definitions are out of Django's state. The next release drops them (`0166`). Until then **Bussi (`BUU331`) must keep existing**: the retired column is a foreign key whose default points at it.
+- A collection has a FK to Theeeme with `on_delete=PROTECT` and `default=random_theeeme` (`core/models/theeeme.py`: a new collection gets a random theeeme, not a fixed one). `random_theeeme` reads the **live** Theeeme table (not a hardcoded list) and falls back to `DEFAULT_THEEEME_CODE` (BUU331) if it is empty, so deleting a theeeme can never assign a dangling FK.
+- This prevents deleting a Theeeme that is in use by a collection
 
 ---
 
@@ -97,6 +96,8 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 | `mode` | CharField(12) | No | Mode: PROPRIETARY (default) or COMMUNITY |
 | `visibility` | CharField(7) | No | Visibility: PUBLIC or PRIVATE. A PUBLIC collection is readable by anyone — including anonymous visitors — at its address `/{kind}/{code}`; PRIVATE keeps the invite-only behaviour (403 without membership). New collections are born **PRIVATE in both modes** (`CollectionCreateSerializer`, when the request sends no `visibility`); making one PUBLIC is the owner's explicit choice — the switch in the form, or `visibility` in the request — in either mode (whoever contributes to a group is not shown whether it is public, so a Community group that was born public was readable by anyone without its members knowing). Collections that already existed were **not** migrated: making today's public Community groups private would break every public link their curators have already handed out, and each curator decides that from Edit. The DB-level default is PRIVATE as well. |
 | `digest_frequency` | CharField(7) | No | Digest email frequency: NONE, **WEEKLY (the default; it used to be NONE)**, or MONTHLY. Both ends of the digest moved together: an on-by-default frequency here is what makes `User.notify_news` defaulting on mean anything. **Existing collections keep what they have** — an `AlterField` default rewrites no rows, and starting to mail someone else's members on their behalf isn't ours to decide (contrast migration 0127, which subscribes existing *recipients*, who can unsubscribe themselves). Shown in **both** the Create and Edit forms now: a default that sends email has to be visible to the person it sends for. |
+| `theeeme` | ForeignKey(Theeeme) | No | The colour palette this group's pages are painted with (`to_field="code"`, `PROTECT`, related name `collections`). Default: a random existing Theeeme (`random_theeeme`). Chosen by a curator among the twelve rows of `theeemes`; **the app's own palette (`Braaanding`) is not one of them and cannot be picked**. Added in `0165`, which gave each existing collection its founder's palette. |
+| `koro` | CharField(9) | No | The Koros wave type of the group's pages: basic, beat, calm, pulse, vibration, wave (default: basic). Also from its founder's, in `0165`. |
 | `language` | CharField(2) | No | The language this group's outbound email is written in (`es`/`ca`/`en`). Blank (default) = inherit the deployment default (`EMAIL_LANGUAGE`); a member's own `User.language` still wins over it. Set by the owner in the Create/Edit collection form. See `core/services/CLAUDE.md` → the email language hierarchy. **Also drives the frontend's generic UI chrome** on every collection/thing page (`useCollectionLanguage`, `frontend/CLAUDE.md`) for a visitor with no deliberate language of their own — the same hierarchy, applied client-side — unless the owner also wrote that page's text in the visitor's own language, which then wins. `ThingSerializer.get_collection_language` exposes it to the thing-only pages that never fetch the collection object directly. |
 | `allow_member_proposals` | BooleanField | No | Whether members may recommend guests (`InvitationProposal`). The owner still decides on every one — this is whether they are willing to be **asked**, which a group with a waiting list, a subscription or an admission process may not be. Default `False` (it was `True`): a new collection asks its owner nothing until the owner turns it on — being asked is something the person who runs a group chooses, not something every group is handed. Collections that existed before kept the value they had (migration 0155 changes only the default for new rows, no data). |
 | `is_onboarding` | BooleanField | No | Marks a collection as the landing place for a deployment's **open door**. Nothing in the standalone reads it any more — the open door left with the demo (v0.12.0) — but `seed_demo` still sets it and a deployment that mounts its own door from `DEPLOYMENT_URLCONFS` joins new accounts to every collection carrying it (default: False) |
@@ -191,7 +192,7 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 
 ## Theeeme
 
-The `Theeeme` model represents a colour palette for customising collections. Each theeeme has a name and 6 colours.
+The `Theeeme` model represents a colour palette a collection can be painted with. Each theeeme has a name and 6 colours.
 
 ### Fields
 
@@ -203,9 +204,10 @@ The `Theeeme` model represents a colour palette for customising collections. Eac
 
 ### Business Rules
 
-1. **Each user has a theeeme** - Users are personalised with a `theeeme` FK.
-2. **Default theeeme is Bussi** (code: Bussi).
-3. **Protected deletion** - Theeemes cannot be deleted if any user references them (`on_delete=PROTECT`).
+1. **Each collection has a theeeme** - A group's pages are painted with the palette its curators chose (`Collection.theeeme`); the viewer's own choice does not exist.
+2. **Default theeeme is a random one of those that exist** for a new collection; Bussi (code: `BUU331`) is the fallback if the table is empty, and must keep existing while the retired `users.user_theeeme` column does.
+3. **Protected deletion** - Theeemes cannot be deleted if any collection references them (`on_delete=PROTECT`).
+4. **The twelve are the selector.** `TheeemeListView` serves exactly these rows; the app's own palette is the `Braaanding` table below, never a row here.
 
 ---
 

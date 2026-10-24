@@ -250,7 +250,7 @@ class TestAccountExportShape:
 
         assert profile["code"] == user.code
         assert profile["email"] == user.email
-        assert profile["theeeme"]["code"] == user.theeeme.code
+        assert not {"theeeme", "koro"} & set(profile)
         assert not {"password", "is_staff", "is_superuser", "is_active"} & set(profile)
 
     def test_a_thing_carries_its_photos_as_urls_and_its_price_as_a_decimal_string(

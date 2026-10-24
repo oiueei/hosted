@@ -479,8 +479,6 @@ def _profile(user):
         "headline": user.headline,
         "about": user.about,
         "photo_url": asset_url(user.photo),
-        "koro": user.koro,
-        "theeeme": {"code": user.theeeme.code, "name": user.theeeme.name},
         "notify_activity": user.notify_activity,
         "notify_news": user.notify_news,
         "age_range": user.age_range,
