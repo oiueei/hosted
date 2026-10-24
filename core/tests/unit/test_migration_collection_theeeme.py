@@ -82,12 +82,31 @@ def test_a_user_created_by_the_new_code_gets_a_palette_from_the_database(at_befo
     _migrate(AFTER)
 
     with connection.cursor() as cursor:
+        # Parameters, not literals: PostgreSQL will not take 1/0 for a boolean column
+        # (SQLite does), and a parameter is written the same for both engines.
         cursor.execute(
             "INSERT INTO users (code, email, name, created, headline, about, photo,"
             " notify_activity, notify_news, age_range, postal_code, language, password,"
             " is_staff, is_superuser, is_active) VALUES"
-            " ('PFNEW1', 'lolo@your-domain.test', '', '2026-10-24', '', '', '', 1, 1, '',"
-            " '', '', '', 0, 0, 1)"
+            " (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            [
+                "PFNEW1",
+                "lolo@your-domain.test",
+                "",
+                "2026-10-24",
+                "",
+                "",
+                "",
+                True,
+                True,
+                "",
+                "",
+                "",
+                "",
+                False,
+                False,
+                True,
+            ],
         )
         cursor.execute("SELECT user_theeeme, koro FROM users WHERE code = 'PFNEW1'")
         assert cursor.fetchone() == ("BUU331", "basic")

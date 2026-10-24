@@ -201,10 +201,10 @@ class TestTheSharePreview:
     def test_the_door_of_a_group_carries_its_palette(self, api_client, collection):
         collection.theeeme_id = "JMPA01"
         collection.koro = "vibration"
-        collection.share_token = "tokentokentokentokento1"
+        collection.share_token = "tokentokentokentokent1"  # 22: the column's width
         collection.save()
 
-        data = api_client.get("/api/v1/share/tokentokentokentokento1/preview/").data
+        data = api_client.get("/api/v1/share/tokentokentokentokent1/preview/").data
 
         assert data["theeeme_colors"] == JMPA
         assert data["koro"] == "vibration"
