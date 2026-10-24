@@ -239,14 +239,15 @@ describe('JoinPage — the title names the collection', () => {
 });
 
 /**
- * The door looks like the page it leads to: a collection with a
- * photo paints it in the hero with the same composition its own page uses
- * (`HeroPhoto`), where `/join` used to be a plain hero in the same colours. The
- * photo comes from the collection endpoint the page already calls, which gives
+ * The door looks like the page it leads to: a collection's image is its logo here
+ * exactly as in its own hero — an ordinary `<img class="hero-logo" alt="">` after the
+ * way back and before the title, in a `form-hero--collection` hero — and never the
+ * full-bleed `HeroPhoto` composition (`form-hero--photo`) this page used to paint. The
+ * image comes from the collection endpoint the page already calls, which gives
  * `thumbnail_url` to an anonymous reader of a PUBLIC collection.
  */
-describe('JoinPage — the hero carries the collection’s photo', () => {
-  const PHOTO = 'https://bucket.your-domain.test/oiueei/collections/cover.jpg';
+describe('JoinPage — the hero carries the collection’s image as its logo', () => {
+  const LOGO = 'https://bucket.your-domain.test/oiueei/collections/cover.jpg';
 
   beforeEach(() => {
     localStorage.clear();
@@ -267,27 +268,37 @@ describe('JoinPage — the hero carries the collection’s photo', () => {
         }),
     });
 
-  test('with a photo, the hero shows it and takes the photo layout', async () => {
-    collectionWith(PHOTO);
+  test('with an image, the hero shows it as a decorative logo between the way back and the title', async () => {
+    collectionWith(LOGO);
 
     const { container } = renderJoin(undefined);
 
-    const photo = await screen.findByRole('img', { name: 'Tool Library' });
-    expect(photo).toHaveAttribute('src', PHOTO);
-    expect(container.querySelector('.form-hero')).toHaveClass('form-hero--photo');
-    // The words are still in the hero, above the photo's wedge.
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Join Tool Library' })
-    ).toBeInTheDocument();
+    await screen.findByText(/^Join to borrow in Tool Library\./);
+    const logo = container.querySelector('img.hero-logo');
+    expect(logo).toHaveAttribute('src', LOGO);
+    // Decorative: the <h1> already names the collection.
+    expect(logo).toHaveAttribute('alt', '');
+    const hero = container.querySelector('.form-hero');
+    expect(hero).toHaveClass('form-hero--collection');
+    expect(hero).not.toHaveClass('form-hero--photo');
+    // Not the photo composition: no wedge, no full-bleed picture.
+    expect(container.querySelector('.hero-photo-wrap, .hero-photo')).toBeNull();
+    // After the way back and before the title, in the hero's content column.
+    const back = container.querySelector('.form-hero-content .back-link');
+    const title = screen.getByRole('heading', { level: 1, name: 'Join Tool Library' });
+    expect(logo.parentElement).toBe(back.parentElement);
+    expect(back.compareDocumentPosition(logo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(logo.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  test('without one, the hero is the plain one: no image, no photo layout', async () => {
+  test('without one, the hero is the same collection hero with no image at all', async () => {
     collectionWith('');
 
     const { container } = renderJoin(undefined);
 
     await screen.findByText(/^Join to borrow in Tool Library\./);
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('.form-hero')).toHaveClass('form-hero--collection');
     expect(container.querySelector('.form-hero')).not.toHaveClass('form-hero--photo');
   });
 });
