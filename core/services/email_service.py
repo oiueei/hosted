@@ -47,7 +47,9 @@ from django.utils.html import escape
 from django.utils.module_loading import import_string
 from django.utils.safestring import mark_safe
 
+from core.models.braaanding import braaanding
 from core.services.email_texts import T, viral_lines
+from core.services.palette_contrast import AA_NORMAL, WHITE, contrast_ratio
 from core.utils import parse_localized, redact_email, resolve_localized
 
 logger = logging.getLogger(__name__)
@@ -524,7 +526,7 @@ def _bottom(
     def footer_line(label, link):
         html_parts.append(
             f'<p style="font-size:{EMAIL_FOOTER_SIZE};color:#888888;margin-top:8px;">'
-            f'<a href="{escape(link)}" style="{LINK_STYLE}">'
+            f'<a href="{escape(link)}" style="{link_style()}">'
             f"{escape(label)}</a></p>"
         )
 
@@ -551,12 +553,12 @@ def _bottom(
             # a pale-yellow background + padding sets the growth line apart
             # from the grey preferences/legal lines around it, and its own
             # text is black rather than the footer's muted grey — only the
-            # CTA link inside keeps LINK_STYLE's bus blue.
+            # CTA link inside keeps the accent colour (`email_style()['link_style']`).
             html_parts.append(
                 f'<p style="font-size:{EMAIL_FOOTER_SIZE};color:#000000;'
                 'background-color:#fff1a8;padding:10px;margin-top:16px;">'
                 f"{escape(line['text'])} "
-                f'<a href="{escape(url)}" style="{LINK_STYLE}">'
+                f'<a href="{escape(url)}" style="{link_style()}">'
                 f"{escape(line['cta'])}</a></p>"
             )
 
@@ -787,41 +789,71 @@ def _cta(url, label, fallback):
 
 
 # The app's two button roles as inline CSS, literal hex (email clients resolve no
-# `var()`): the PRIMARY is the filled bus-blue button, the SECONDARY its outlined
-# counterpart — white fill, a bus-blue border, **bus-blue label** (it was
-# black text on the border colour, which read as two different decisions on one
-# button). The secondary's padding
-# is two pixels short of the primary's on every side so its border brings both
-# to the same outer size. Defined once and handed to the layout, so the three
-# button blocks cannot drift apart. `BTN_PRIMARY_HOVER`/`BTN_SECONDARY_HOVER`
-# are the two states the `<style>` block in layout.html switches to on
-# `:hover` — bus-dark fill for the primary, bus-light fill for the secondary
-# (its border and label stay bus blue) — a progressive enhancement: clients
-# that strip `<style>` (most mobile mail apps) simply never see it, and the
-# resting, inline-styled look above is what they show instead.
-BUS = "#0000bf"
-BUS_DARK = "#00005e"
-BUS_LIGHT = "#f0f0ff"
-BTN_PRIMARY = (
-    f"display:inline-block;background-color:{BUS};color:#ffffff;"
+# `var()`), **in the app's own palette** (`Braaanding`, edited in the Django admin and
+# read here each time an email is composed — `braaanding()` remembers it in the
+# process, so that costs no query): the PRIMARY is filled with `color_01` and
+# labelled in `color_06`, the SECONDARY its outlined counterpart — a white fill, a
+# border and a label in the accent (below). The secondary's padding is two pixels
+# short of the primary's on every side so its border brings both to the same outer
+# size. `email_style()` defines them once and hands them to the layout, so the three
+# button blocks cannot drift apart. The two hover states are what the `<style>`
+# block in layout.html switches to on `:hover` — a progressive enhancement: clients
+# that strip `<style>` (most mobile mail apps) simply never see it, and the resting,
+# inline-styled look is what they show instead. The primary hovers to the hero's pair
+# (`color_03` fill, `color_05` label) and the secondary to a `color_02` fill; the
+# admin refuses a palette where either label would not read (`Braaanding.clean`).
+_BTN_TYPE = (
     f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_BODY_SIZE};font-weight:600;"
-    "line-height:1.4;text-decoration:none;padding:14px 24px;"
-)
-BTN_SECONDARY = (
-    f"display:inline-block;background-color:#ffffff;color:{BUS};border:2px solid {BUS};"
-    f"font-family:Arial,Helvetica,sans-serif;font-size:{EMAIL_BODY_SIZE};font-weight:600;"
-    "line-height:1.4;text-decoration:none;padding:12px 22px;"
+    "line-height:1.4;text-decoration:none;"
 )
 
-# Every plain-text link and every "this is data worth noticing" value (an
-# email address shown via `_email`/`_field(..., email=True)`) — bus blue,
-# underlined, `!important` on both (seen not to apply in real
-# Gmail). A client's own stylesheet — Gmail webmail forces its own link blue
-# in places, and an unstyled `color-scheme` leaves auto-dark-mode free to
-# recolour inline styles that lack it — can otherwise beat a plain inline
-# style; `!important` on the inline style outranks anything but another
-# `!important` later in the cascade, which nothing here is.
-LINK_STYLE = f"color:{BUS} !important;text-decoration:underline !important;"
+
+def email_style():
+    """The colours of an email's buttons and links, from the app's palette.
+
+    Returns a dict of ready-to-use strings: ``btn_primary``, ``btn_secondary``,
+    ``link_style`` (inline styles), ``primary_hover`` and ``secondary_hover`` (the
+    declarations of the two ``:hover`` rules).
+
+    **The accent** — the colour of the links, of the secondary button's border and of its
+    label — is ``color_01`` where that reads at 4.5:1 on white and on the page colour
+    (``color_02``), else ``color_04``: the rule the web app's content links follow
+    (``frontend/src/utils/linkColor.js``), so an email and the page agree.
+    """
+    palette = braaanding()
+    c = {role: palette[role].lower() for role in palette if role.startswith("color_")}
+    reads = (
+        contrast_ratio(c["color_01"], WHITE) >= AA_NORMAL
+        and contrast_ratio(c["color_01"], c["color_02"]) >= AA_NORMAL
+    )
+    accent = c["color_01"] if reads else c["color_04"]
+    return {
+        "btn_primary": (
+            f"display:inline-block;background-color:{c['color_01']};color:{c['color_06']};"
+            f"{_BTN_TYPE}padding:14px 24px;"
+        ),
+        "btn_secondary": (
+            f"display:inline-block;background-color:#ffffff;color:{accent};"
+            f"border:2px solid {accent};{_BTN_TYPE}padding:12px 22px;"
+        ),
+        # Every plain-text link and every "this is data worth noticing" value (an email
+        # address shown via `_email`/`_field(..., email=True)`) — the accent, underlined,
+        # `!important` on both (seen not to apply in real Gmail). A client's own
+        # stylesheet — Gmail webmail forces its own link blue in places, and an
+        # unstyled `color-scheme` leaves auto-dark-mode free to recolour inline styles
+        # that lack it — can otherwise beat a plain inline style; `!important` on the
+        # inline style outranks anything but another `!important` later in the
+        # cascade, which nothing here is.
+        "link_style": f"color:{accent} !important;text-decoration:underline !important;",
+        "primary_hover": (
+            f"background-color:{c['color_03']} !important;color:{c['color_05']} !important;"
+        ),
+        "secondary_hover": f"background-color:{c['color_02']} !important;",
+    }
+
+
+def link_style():
+    return email_style()["link_style"]
 
 
 def _ctas(primary, secondary, fallback):
@@ -936,7 +968,7 @@ def _md_inline(escaped_text):
         if not resolved:
             return None
         href, host = resolved
-        anchor = f'<a href="{href}" style="{LINK_STYLE}">{label}</a>'
+        anchor = f'<a href="{href}" style="{link_style()}">{label}</a>'
         if host and html_unescape(label).strip() != html_unescape(url.strip()):
             anchor += f" ({escape(host)})"
         anchors.append(anchor)
@@ -1053,6 +1085,7 @@ def _render_email(blocks, lang=None, header=None):
     leaving the tag blank was never "unknown", only unstated.
     """
     resolved_lang = lang or getattr(settings, "EMAIL_LANGUAGE", "en")
+    style = email_style()
     return render_to_string(
         "email/layout.html",
         {
@@ -1063,11 +1096,7 @@ def _render_email(blocks, lang=None, header=None):
             "lang": resolved_lang,
             "size_body": EMAIL_BODY_SIZE,
             "size_header": EMAIL_HEADER_SIZE,
-            "btn_primary": BTN_PRIMARY,
-            "btn_secondary": BTN_SECONDARY,
-            "bus_dark": BUS_DARK,
-            "bus_light": BUS_LIGHT,
-            "link_style": LINK_STYLE,
+            **style,
         },
     )
 

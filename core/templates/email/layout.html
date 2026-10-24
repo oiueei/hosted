@@ -27,7 +27,7 @@ free to drop it, and with no color-scheme declared, a client's own dark mode
 is free to auto-recolour inline styles it decides are "light-mode" values.
 `color-scheme`/`supported-color-schemes` "light" opts every client that reads
 them out of that auto-recolouring; every link colour below also now carries
-`!important` (LINK_STYLE, email_service.py) as a second, independent
+`!important` (`link_style`, email_service.email_style) as a second, independent
 defence against a client stylesheet that would otherwise win the
 cascade.{% endcomment %}
 <head>
@@ -41,8 +41,8 @@ some mail clients still strip <style> even from <head>, and one that does is
 left with the plain resting look already set inline on each anchor — never
 unstyled, never broken.{% endcomment %}
 <style>
-.btn-primary:hover { background-color: {{ bus_dark }} !important; }
-.btn-secondary:hover { background-color: {{ bus_light }} !important; }
+.btn-primary:hover { {{ primary_hover }} }
+.btn-secondary:hover { {{ secondary_hover }} }
 {% comment %}The card shrinks the reading column on a phone (seen live in the
 Gmail iOS app): the outer page's 40px padding plus the
 card's own 24px stack to ~64px lost from EACH side on a ~375-414px screen.
@@ -62,7 +62,7 @@ usable, just cramped.{% endcomment %}
   with the rest of the message now that the card's own padding is gone too.
   `box-sizing: border-box` keeps the button's existing padding from pushing
   it past 100%; `ctas`' two buttons carry a side margin for their desktop
-  side-by-side layout (BTN_PRIMARY/BTN_SECONDARY, email_service.py) that has
+  side-by-side layout (`btn_primary`/`btn_secondary`, email_service.email_style) that has
   to be zeroed here too, or a 100%-wide box plus that margin would overflow
   past the text's own right edge.{% endcomment %}
   .btn-primary, .btn-secondary {
@@ -113,7 +113,7 @@ below it (every CTA repeats its link as plain text, not only
 the ones whose whole job is one click). A real <button> or a CSS custom
 property would be ignored here — email clients strip forms and don't resolve
 var() — so this is an inline-styled anchor in the app's literal bus blue,
-via email_service.BTN_PRIMARY, the one place that style is defined. The
+via email_service.email_style, the one place that style is defined. The
 btn-primary class carries only the :hover rule above; every other style is
 inline.{% endcomment %}
 <p style="margin:20px 0;"><a href="{{ b.url }}" style="{{ btn_primary }}" class="btn-primary">{{ b.label }}</a></p>

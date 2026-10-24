@@ -12,7 +12,6 @@ from django.test import Client, override_settings
 from django.utils.html import escape
 
 from core.models import Collection, Thing, User
-from core.models.braaanding import braaanding
 from core.services.email_texts import T
 from core.services.link_preview import inject_preview, plain_description
 
@@ -26,10 +25,6 @@ def built(tmp_path, db):
     dist = tmp_path / "frontend" / "dist"
     dist.mkdir(parents=True)
     (dist / "index.html").write_text(HEAD, encoding="utf-8")
-    # Every page carries the app's palette, which a worker remembers for a minute:
-    # the first view after that spends one query, every other none. The budgets
-    # below are the steady state, so the palette is already known.
-    braaanding()
     with override_settings(BASE_DIR=tmp_path):
         yield tmp_path
 

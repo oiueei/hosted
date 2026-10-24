@@ -12,7 +12,13 @@ from django.core.exceptions import ValidationError
 from django.test import RequestFactory
 
 from core.models import Braaanding, Theeeme
-from core.models.braaanding import BRAAANDING_CODE, CACHE_SECONDS, DEFAULT_COLORS, braaanding
+from core.models.braaanding import (
+    BRAAANDING_CODE,
+    CACHE_SECONDS,
+    DEFAULT_COLORS,
+    braaanding,
+    forget_braaanding,
+)
 from core.services.palette_contrast import contrast_failures, contrast_ratio
 
 SEED = {
@@ -154,6 +160,7 @@ class TestTheHelperAndItsCache:
         so what bounds the staleness is the time."""
         clock = [1000.0]
         monkeypatch.setattr("core.models.braaanding.time.monotonic", lambda: clock[0])
+        forget_braaanding()  # what was remembered was stamped by the real clock
         assert braaanding()["color_03"] == "#D77452"
         # Another worker's save: the row changes, no signal reaches this process.
         Braaanding.objects.filter(pk=BRAAANDING_CODE).update(color_03="#E0B090")
