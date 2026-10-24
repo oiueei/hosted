@@ -1,13 +1,14 @@
 // Picks html[lang] before React mounts. Mirrors
 // i18next-browser-languagedetector's own priority (a saved choice in
 // localStorage first, then the browser's own languages) and
-// src/i18n/index.js's fallbackLng map — retired locales (pt/eu/gl) land on
-// es, not the global en default — so this and i18next never disagree about
+// src/i18n/index.js's fallbackLng map — retired locales (eu/gl) land on es,
+// not the global en default; pt and every other language land on en — so this
+// and i18next never disagree about
 // which language a given browser gets. Kept dependency-free and framework-free
 // on purpose: it runs before any bundle has loaded.
 (function () {
   var SUPPORTED = ['en', 'es', 'ca'];
-  var RETIRED_TO_ES = { pt: 'es', eu: 'es', gl: 'es' };
+  var RETIRED_TO_ES = { eu: 'es', gl: 'es' };
 
   function resolve(code) {
     var base = (code || '').toLowerCase().split('-')[0];
