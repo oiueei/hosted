@@ -74,8 +74,7 @@
     "joining": "Enviant…",
     "sent": "Comprova el teu correu",
     "sentBody": "T'hem enviat un enllaç màgic per unir-t'hi. Obre'l en aquest dispositiu per començar a participar.",
-    "error": "Alguna cosa ha anat malament. Torna-ho a provar.",
-    "alreadyHaveAccount": "Ja tens un compte?"
+    "error": "Alguna cosa ha anat malament. Torna-ho a provar."
   },
   "visibility": {
     "publicLabel": "Col·lecció pública",

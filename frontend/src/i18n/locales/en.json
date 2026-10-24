@@ -80,8 +80,7 @@
     "joining": "Sending…",
     "sent": "Check your email",
     "sentBody": "We've sent you a magic link to join. Open it on this device to start taking part.",
-    "error": "Something went wrong. Please try again.",
-    "alreadyHaveAccount": "Already have an account?"
+    "error": "Something went wrong. Please try again."
   },
   "visibility": {
     "publicLabel": "Public collection",

@@ -60,9 +60,6 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
     });
   });
 
-  // Somebody from another group who pressed "Request" on a public group, chose
-  // "already have an account" and ended up on Home: the same failure as a session
-  // that ran out, in small. Sign-in now brings them back to what they came for.
   test('the door does not link to /legal itself — the site footer does', () => {
     // It used to repeat the footer's "Legal notice & privacy" link under the
     // form. The page this renders in already carries the footer.
@@ -70,24 +67,6 @@ describe('JoinToAct (login-to-act on a public collection)', () => {
 
     expect(container.querySelector('a[href="/legal"]')).toBeNull();
     expect(screen.queryByRole('link', { name: /legal notice|privacy/i })).toBeNull();
-  });
-
-  test('"already have an account" returns to the thing they were looking at', () => {
-    renderJoin({ thingCode: 'THG001' });
-
-    expect(screen.getByRole('link', { name: /Already have an account/ })).toHaveAttribute(
-      'href',
-      '/login?next=%2Fcollections%2FPUB001%2Fthings%2FTHG001'
-    );
-  });
-
-  test('"already have an account" returns to the group when there was no thing', () => {
-    renderJoin();
-
-    expect(screen.getByRole('link', { name: /Already have an account/ })).toHaveAttribute(
-      'href',
-      '/login?next=%2Fcollections%2FPUB001'
-    );
   });
 
   test('the intro reads at the pitch size — but stays a paragraph, not a heading', () => {
@@ -261,56 +240,27 @@ describe('JoinToAct — the first line says what a member can do in THIS collect
 });
 
 /**
- * "Already have an account?" is a secondary button under the primary one, not a text
- * link: one `<a>` (one tab stop) in the shape of a button, carrying the secondary
- * tokens and as wide as the form it sits under. It goes to the sign-in that comes back
- * to the group (or the thing), as the text link did.
+ * The form is the door's only action. A new address makes the account, one that
+ * already exists is used and a member is let back in, so there is no "already have an
+ * account?" button beside it and nothing in the page leads to /login.
  */
-describe('JoinToAct — the sign-in button', () => {
+describe('JoinToAct — the form is the only action', () => {
   beforeEach(() => localStorage.clear());
   afterEach(async () => {
     await switchLanguage(i18n, 'en');
     localStorage.removeItem('i18nextLng');
   });
 
-  test('is a button-shaped link in the secondary style, as wide as the form, not a line of text', () => {
-    renderJoin();
+  test.each(['en', 'es', 'ca'])(
+    'in %s the page holds the submit button and no link',
+    async (language) => {
+      await switchLanguage(i18n, language);
+      const { container } = renderJoin({ thingCode: 'THG001' });
 
-    const link = screen.getByRole('link', { name: 'Already have an account?' });
-    expect(link.tagName).toBe('A');
-    expect(link.className).toMatch(/hds-button/);
-    expect(link).toHaveClass('button-link--full');
-    // Not a sentence in a paragraph any more.
-    expect(link.closest('p')).toBeNull();
-    // The secondary tokens: a white fill, where the primary button wears the
-    // theeeme's colour.
-    const primary = screen.getByRole('button', { name: 'Send me a magic link' });
-    expect(link.style.getPropertyValue('--background-color')).toBe('var(--color-white)');
-    expect(primary.style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
-    // …and it comes after the primary one.
-    expect(primary.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  test('goes to the sign-in that comes back to the group', () => {
-    renderJoin();
-
-    expect(screen.getByRole('link', { name: 'Already have an account?' })).toHaveAttribute(
-      'href',
-      '/login?next=%2Fcollections%2FPUB001'
-    );
-  });
-
-  test.each([
-    ['en', 'Already have an account?'],
-    ['es', '¿Ya tienes cuenta?'],
-    ['ca', 'Ja tens un compte?'],
-  ])('in %s it reads "%s", and nothing more', async (language, label) => {
-    await switchLanguage(i18n, language);
-    renderJoin();
-
-    const link = screen
-      .getAllByRole('link')
-      .find((a) => a.getAttribute('href')?.startsWith('/login'));
-    expect(link).toHaveTextContent(new RegExp(`^${label.replace('?', '\\?')}$`));
-  });
+      expect(screen.getAllByRole('button')).toHaveLength(1);
+      expect(screen.getByRole('button')).toHaveAttribute('type', 'submit');
+      expect(screen.queryAllByRole('link')).toHaveLength(0);
+      expect(container.querySelector('a[href^="/login"]')).toBeNull();
+    }
+  );
 });

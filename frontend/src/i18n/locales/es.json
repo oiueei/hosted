@@ -74,8 +74,7 @@
     "joining": "Enviando…",
     "sent": "Revisa tu correo",
     "sentBody": "Te hemos enviado un enlace mágico para unirte. Ábrelo en este dispositivo para empezar a participar.",
-    "error": "Algo ha ido mal. Inténtalo de nuevo.",
-    "alreadyHaveAccount": "¿Ya tienes cuenta?"
+    "error": "Algo ha ido mal. Inténtalo de nuevo."
   },
   "visibility": {
     "publicLabel": "Colección pública",

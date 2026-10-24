@@ -102,8 +102,11 @@ export default function JoinPage() {
             className="form-hero-content"
             style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
           >
+            {/* No "Sign in" icon without a session: the email below serves a new
+                address, an account that exists and a member alike, so it is the
+                page's only action. With a session the menu is as ever. */}
             <span className="hero-corners">
-              <AccountMenu />
+              <AccountMenu offerSignIn={false} />
             </span>
             <BackLink to={base} label={headline || t('common.collection')} />
             <h1 className="form-hero-title">{heading}</h1>
@@ -121,7 +124,6 @@ export default function JoinPage() {
       <div className="page-container">
         <JoinToAct
           collectionCode={code}
-          collectionKind={kind}
           collectionHeadline={headline}
           thingCode={thingCode}
           mode={mode}

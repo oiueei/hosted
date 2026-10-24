@@ -291,3 +291,46 @@ describe('JoinPage — the hero carries the collection’s photo', () => {
     expect(container.querySelector('.form-hero')).not.toHaveClass('form-hero--photo');
   });
 });
+
+/**
+ * The page's email serves a new address, an account that exists and a member
+ * alike, so it is the only action: a reader with no session gets no "Sign in" icon in
+ * the corner and no link to /login anywhere. With a session the account menu is as
+ * on every other page.
+ */
+describe('JoinPage — the email is the only way in', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          code: 'PUB001',
+          headline: 'Tool Library',
+          mode: 'PROPRIETARY',
+          allowed_thing_types: ['LEND_THING'],
+        }),
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  test('with no session there is no link to /login on the page', async () => {
+    const { container } = renderJoin(undefined, '?thing=THG001');
+
+    await screen.findByText(/^Join to borrow in Tool Library\./);
+    expect(container.querySelector('a[href^="/login"]')).toBeNull();
+    expect(container.querySelector('.hero-corners a')).toBeNull();
+    expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
+  });
+
+  test('with a session the account menu is in the corner', async () => {
+    localStorage.setItem('userCode', 'VISITOR1');
+    const { container } = renderJoin(undefined);
+
+    await screen.findByText(/^Join to borrow in Tool Library\./);
+    expect(container.querySelector('.hero-corners')).toContainElement(
+      screen.getByRole('button', { name: /your account/i })
+    );
+  });
+});
