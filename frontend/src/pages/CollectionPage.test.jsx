@@ -300,11 +300,9 @@ describe('CollectionPage signed-out reader', () => {
   /**
    * The hero's "This group shares its things on OIUEEI. Join to take part →"
    * line was removed, a line in the content stood in for it for a while, and the
-   * hero's join came back as a pair, in a row, as on /welcome: `[Join this group]`
-   * primary and `[Sign in]` secondary at first, `[Sign in]` primary and `[Join this
-   * group]` secondary now, which also took the account icon out of the corner of
-   * this page.
-   * The tests of every shape of group are further down (`the two doors of a
+   * hero now has one door: `[Sign in]`, primary, to the group's join page, which
+   * also keeps the account icon out of the corner of this page.
+   * The tests of every shape of group are further down (`the one door of a
    * signed-out reader`); this one is the hero of a plain public group.
    *
    * Asserted through the links' targets and the raw i18n key — the old line's
@@ -320,7 +318,7 @@ describe('CollectionPage signed-out reader', () => {
     is_member: false,
   };
 
-  test('is offered "Sign in" and "Join this group" in the hero, and no standing line', async () => {
+  test('is offered one "Sign in" door to the join page in the hero, and no standing line', async () => {
     localStorage.clear();
     apiFetch.mockImplementation(() =>
       Promise.resolve({ ok: true, status: 200, json: async () => PUBLIC_VIEW })
@@ -337,15 +335,10 @@ describe('CollectionPage signed-out reader', () => {
       expect(container.querySelector('.form-hero-title')).toHaveTextContent('Kitchen Collection');
     });
     const doors = [...container.querySelectorAll('.form-hero .button-row-wide a')];
-    expect(doors.map((a) => a.textContent)).toEqual(['Sign in', 'Join this group']);
-    expect(doors.map((a) => a.getAttribute('href'))).toEqual([
-      '/login?next=%2Fcollections%2FCOL001',
-      '/collections/COL001/join',
-    ]);
-    // "Sign in" is the primary: the theeeme's fill, where the second is the white of
-    // a secondary.
+    expect(doors.map((a) => a.textContent)).toEqual(['Sign in']);
+    expect(doors.map((a) => a.getAttribute('href'))).toEqual(['/collections/COL001/join']);
+    // The primary: the theeeme's fill, not the white of a secondary.
     expect(doors[0].style.getPropertyValue('--background-color')).not.toBe('var(--color-white)');
-    expect(doors[1].style.getPropertyValue('--background-color')).toBe('var(--color-white)');
     expect(container.textContent).not.toMatch(/collectionPage\.anonIntro/);
   });
 });
@@ -1054,16 +1047,15 @@ describe('A signed-in visitor on a public group', () => {
   });
 
   // A signed-out reader of a PUBLIC group has a button to press on every card, and
-  // also a pair of doors in the hero: "Sign in" (primary:
-  // to /login, which brings them back here) and "Join this
-  // group" (secondary, to the group's join page, no ?thing= — there is no thing in it).
-  // In every public group, COMMUNITY or PROPRIETARY, empty or not. The line in the
-  // content that stood for them from 2026-09-29 — only in a COMMUNITY or an empty
-  // group — is gone.
+  // also one door in the hero: "Sign in" (primary, to the group's join page, no
+  // ?thing= — there is no thing in it), because that page serves a new address, an
+  // account that exists and a member alike. In every public group, COMMUNITY or
+  // PROPRIETARY, empty or not. No link to /login anywhere on the page: neither the
+  // hero nor the corner offers a second door.
   // Asserted by target as well as by words, and by the raw i18n key: the old
   // strings left the locales, so a resurrected `t('collectionPage.anonJoin…')`
   // renders its own key, which an English-text query would never catch.
-  describe('the two doors of a signed-out reader', () => {
+  describe('the one door of a signed-out reader', () => {
     const anThing = (n) => ({
       code: `THG${String(n).padStart(3, '0')}`,
       headline: `Thing ${n}`,
@@ -1089,17 +1081,16 @@ describe('A signed-in visitor on a public group', () => {
     const isPrimary = (link) =>
       link.style.getPropertyValue('--background-color') !== 'var(--color-white)';
 
-    const expectTheTwoDoors = () => {
+    const loginLinks = () => [...document.querySelectorAll('a[href^="/login"]')];
+
+    const expectTheOneDoor = () => {
       const doors = heroDoors();
-      expect(doors.map((a) => a.textContent)).toEqual([
-        en.login.signIn,
-        en.collectionPage.visitorJoin,
-      ]);
-      expect(doors.map((a) => a.getAttribute('href'))).toEqual([
-        '/login?next=%2Fcollections%2FCOL001',
-        '/collections/COL001/join',
-      ]);
-      expect(doors.map(isPrimary)).toEqual([true, false]);
+      expect(doors.map((a) => a.textContent)).toEqual([en.login.signIn]);
+      expect(doors.map((a) => a.getAttribute('href'))).toEqual(['/collections/COL001/join']);
+      expect(doors.map(isPrimary)).toEqual([true]);
+      // Nobody is sent to /login from here, and the old second button is gone.
+      expect(loginLinks()).toHaveLength(0);
+      expect(screen.queryByRole('link', { name: en.collectionPage.visitorJoin })).toBeNull();
     };
 
     test.each([
@@ -1120,19 +1111,16 @@ describe('A signed-in visitor on a public group', () => {
         { ...PUBLIC_COMMUNITY, mode: 'PROPRIETARY', things: [anThing(1)] },
         /Thing 1/,
       ],
-    ])(
-      '%s: both doors, in the hero, in that order, the first primary',
-      async (_what, group, ready) => {
-        show(group);
+    ])('%s: one door, in the hero, primary, to the join page', async (_what, group, ready) => {
+      show(group);
 
-        await screen.findByText(ready);
+      await screen.findByText(ready);
 
-        expectTheTwoDoors();
-        // The only link to the join page is the hero's: no second line in the content.
-        expect(joinLinks()).toHaveLength(1);
-        expect(document.body.textContent).not.toMatch(/anonJoin/);
-      }
-    );
+      expectTheOneDoor();
+      // The only link to the join page is the hero's: no second line in the content.
+      expect(joinLinks()).toHaveLength(1);
+      expect(document.body.textContent).not.toMatch(/anonJoin/);
+    });
 
     test('a COMMUNITY group with a second page of things has no line under the grid either', async () => {
       // 25 cards: one past the page size, so the "Show 1 more" button is there too.
@@ -1141,23 +1129,9 @@ describe('A signed-in visitor on a public group', () => {
 
       await screen.findByRole('button', { name: /Show 1 more/ });
 
-      expectTheTwoDoors();
+      expectTheOneDoor();
       expect(joinLinks()).toHaveLength(1);
       expect(document.body.textContent).not.toMatch(/anonJoin/);
-    });
-
-    test('"Sign in" brings the reader back to this group: its href carries the page as `next`', async () => {
-      show(PUBLIC_COMMUNITY);
-
-      await screen.findByText(/No things in this collection yet/);
-
-      // The hero's button, the first of the row — and the only "Sign in" on
-      // the page: the corner icon that carried the same words is left out here.
-      const signIn = heroDoors()[0];
-      const next = new URL(signIn.getAttribute('href'), 'https://oiueei.test').searchParams.get(
-        'next'
-      );
-      expect(next).toBe('/collections/COL001');
     });
 
     // The hero offers "Sign in" as its first button, so the
@@ -1171,6 +1145,7 @@ describe('A signed-in visitor on a public group', () => {
 
       expect(screen.getAllByRole('link', { name: en.login.signIn })).toHaveLength(1);
       expect(heroDoors()[0]).toHaveTextContent(en.login.signIn);
+      expect(loginLinks()).toHaveLength(0);
       expect(document.querySelector('.hero-corners .account-menu')).toBeNull();
       expect(document.querySelector('.hero-corners a[href^="/login"]')).toBeNull();
     });

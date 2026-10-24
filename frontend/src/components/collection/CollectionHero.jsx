@@ -17,7 +17,6 @@ import useTheeeme from '../../hooks/useTheeeme';
 import { useCollectionBase } from '../../hooks/useCollectionBase';
 import { useLocalized } from '../../utils/localized';
 import { teamParts } from '../../utils/team';
-import { loginPathFor } from '../../utils/nextPath';
 import { DATE_TYPES } from '../../constants/things';
 
 // What the member's "Invite someone" button controls (aria-controls) and the
@@ -119,11 +118,13 @@ export default function CollectionHero({
   // A member has a summary only where the group sends the weekly or monthly one; whoever
   // runs the group also gets the daily one about sign-ups, whatever the frequency.
   const sendsDigest = !!collection.digest_frequency && collection.digest_frequency !== 'NONE';
-  // A signed-out reader of a PUBLIC group is offered two doors in the hero — "Join
-  // this group" and "Sign in" — whatever the mode and whether it holds things or not.
-  // It used to be a line in the content that only a COMMUNITY or an
-  // empty group showed, and a member without a session (the weekly digest's link is an
-  // ordinary one) had no way in from here at all.
+  // A signed-out reader of a PUBLIC group is offered one door in the hero, "Sign in",
+  // which leads to the group's join page — whatever the mode and whether it holds
+  // things or not. The join page serves whoever types an address alike (a new
+  // account is made, an existing one is used, a member is let back in), so a second
+  // door to /login would lead to the same place. It used to be a line in the content
+  // that only a COMMUNITY or an empty group showed, and a member without a session
+  // (the weekly digest's link is an ordinary one) had no way in from here at all.
   const showsSignedOutDoors = !isAuthenticated && collection.visibility === 'PUBLIC';
   // Whether the calendar download has anything to offer: only date-based
   // things (loans, rentals, on-site reservations) ever reach it. A library and
@@ -156,10 +157,10 @@ export default function CollectionHero({
           <span className="hero-corners">
             {/* "Requests to me" is the collection menu's first entry where this page
                   has one: the account menu then leaves it out. */}
-            {/* Signed out, in a PUBLIC group the hero already offers "Sign in",
-                  so the corner's icon to the same place is left out; with
-                  a session `offerSignIn` changes nothing, and on every other page a
-                  signed-out reader keeps the icon. */}
+            {/* Signed out, in a PUBLIC group the hero's "Sign in" is the only
+                  door, so the corner's icon is left out rather than offering a
+                  second one; with a session `offerSignIn` changes nothing, and on
+                  every other page a signed-out reader keeps the icon. */}
             <AccountMenu
               requestsInCollectionMenu={isCurator || isMember}
               offerSignIn={!showsSignedOutDoors}
@@ -259,28 +260,21 @@ export default function CollectionHero({
           {/* The group's welcome PDF is an entry of the collection menu,
                 first, for members and curators — the API serves its
                 URL to those two only. It was a loose link here. */}
-          {/* The hero's two doors for a signed-out reader, in the
-              order: "Sign in" first and primary, to /login,
-              which brings them back here — most people who open a public group
-              without a session already have an account, and the member whose session
-              expired (the weekly digest's link is an ordinary one) is one of them —
-              and "Join this group" secondary, to the join page (no ?thing=: there is
-              no thing in it). Its first form — "This group shares its things on
-              OIUEEI. Join to take part →" — was removed on 2026-09-21; a line in
-              the content stood in for it from 2026-09-29, only where no card
-              had a button to press, and that line is gone in turn. In every PUBLIC
-              group, COMMUNITY or PROPRIETARY, empty or not; the action button on
-              each card (login-to-act) is still there for whoever has one. The
-              account icon of the corner is left out on this page (above): this row
-              is its replacement. */}
+          {/* The hero's one door for a signed-out reader: "Sign in", primary, to the
+              group's join page (no ?thing=: there is no thing in it). That page
+              takes any address — a new one makes the account, one that exists is
+              used, a member is let back in — so it is the way in for a visitor, a
+              person with an account and a member whose session expired (the weekly
+              digest's link is an ordinary one) alike. In every PUBLIC group,
+              COMMUNITY or PROPRIETARY, empty or not; the action button on each
+              card (login-to-act) is still there for whoever has one. The account
+              icon of the corner is left out on this page (above): this button is
+              the only door. */}
           {showsSignedOutDoors && (
             <div className="invite-nudge">
               <div className="button-row-wide">
-                <ButtonLink to={loginPathFor({ pathname: base })} style={btnStyle}>
+                <ButtonLink to={`${base}/join`} style={btnStyle}>
                   {t('login.signIn')}
-                </ButtonLink>
-                <ButtonLink to={`${base}/join`} style={btnSecondaryStyle}>
-                  {t('collectionPage.visitorJoin')}
                 </ButtonLink>
               </div>
             </div>
