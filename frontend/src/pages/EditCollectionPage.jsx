@@ -12,6 +12,7 @@ import LocalizedInfo from '../components/LocalizedInfo';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter, localizedHelper } from '../utils/localized';
 import { closedDatesToDisplay, hasOpeningHours } from '../utils/rental';
@@ -95,6 +96,10 @@ export default function EditCollectionPage() {
   // Likewise the owner's texts as saved, not as being typed.
   const [savedTexts, setSavedTexts] = useState([]);
   useCollectionLanguage(savedLanguage, savedTexts);
+  // The page wears the palette the group has *saved*, not the one being picked in the form:
+  // trying options must not repaint the page under the curator's hands.
+  const [savedPalette, setSavedPalette] = useState(null);
+  useCollectionTheeeme(savedPalette?.colors, savedPalette?.koro);
   const [welcomeDoc, setWelcomeDoc] = useState('');
   const [welcomeDocUrl, setWelcomeDocUrl] = useState('');
   const [pauseMessage, setPauseMessage] = useState('');
@@ -196,6 +201,7 @@ export default function EditCollectionPage() {
           // still wins over whatever the owner picks here.
           setLanguage(data.language || i18n.resolvedLanguage || i18n.language);
           setSavedLanguage(data.language || '');
+          setSavedPalette({ colors: data.theeeme_colors, koro: data.koro });
           setSavedTexts([data.headline, data.description]);
           setWelcomeDoc(data.welcome_doc || '');
           setWelcomeDocUrl(data.welcome_doc_url || '');

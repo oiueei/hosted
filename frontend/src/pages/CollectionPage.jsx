@@ -10,6 +10,7 @@ import DemoNotice from '../components/DemoNotice';
 import ButtonLink from '../components/ButtonLink';
 import RefusalWayOut from '../components/RefusalWayOut';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionDownloads from '../hooks/useCollectionDownloads';
 import useDigestPreference from '../hooks/useDigestPreference';
@@ -43,6 +44,9 @@ export default function CollectionPage() {
   const L = useLocalized();
   const headline = L(collection?.headline);
   useCollectionLanguage(collection?.language, [collection?.headline, collection?.description]);
+  // The group's pages wear the group's colours: the palette its curators chose, which
+  // anyone who can read the collection is served.
+  useCollectionTheeeme(collection?.theeeme_colors, collection?.koro);
   // Called unconditionally (it is a hook): non-curators simply never see the
   // menu that offers it. One call owns the calendar, stats and JSON
   // downloads, and the page hands it to the menu and to the status zone.

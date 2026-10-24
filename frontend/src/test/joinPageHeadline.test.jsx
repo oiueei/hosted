@@ -213,16 +213,26 @@ describe('JoinPage — the title names the collection', () => {
     expect(document.body.textContent).not.toMatch(/\{"en"/);
   });
 
-  test('with the name already in the navigation state it is there from the first paint', () => {
+  test('the tab names the collection from the first paint; the page waits for the colours', () => {
     // The collection call never answers: nothing but the state can have named it.
     apiFetch.mockReturnValue(new Promise(() => {}));
 
     renderJoin({ collectionHeadline: 'Tool Library' });
 
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Join Tool Library' })
-    ).toBeInTheDocument();
+    // The tab does not wait. The page does: it is the group's door and wears the
+    // group's colours, so no hero is painted in the app's palette meanwhile.
     expect(document.title).toBe('Join Tool Library — OIUEEI');
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+  });
+
+  test('a collection it cannot read still shows the page, with the name the card handed over', async () => {
+    apiFetch.mockResolvedValue({ ok: false, status: 403 });
+
+    renderJoin({ collectionHeadline: 'Tool Library' });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Join Tool Library' })
+    ).toBeInTheDocument();
   });
 
   test('without a name — a collection it cannot read — it is the title of always', async () => {
@@ -230,9 +240,8 @@ describe('JoinPage — the title names the collection', () => {
 
     renderJoin(undefined);
 
-    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Join to take part' })
+      await screen.findByRole('heading', { level: 1, name: 'Join to take part' })
     ).toBeInTheDocument();
     expect(document.title).toBe('Join to take part — OIUEEI');
   });

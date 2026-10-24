@@ -5,6 +5,8 @@ import { Koros } from 'hds-react';
 import BackLink from '../components/BackLink';
 import JoinToAct from '../components/JoinToAct';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
+import LoadingSpinner from '../components/LoadingSpinner';
 import AccountMenu from '../components/AccountMenu';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
@@ -59,6 +61,13 @@ export default function JoinPage() {
   // stayed in the one before. Until it arrives, the name the card handed over.
   const [ownerHeadline, setOwnerHeadline] = useState('');
   useCollectionLanguage(collectionLanguage, [ownerHeadline]);
+  // This is the door of that group, so it wears the group's colours — and does not
+  // paint its hero until the collection has answered, or the app's palette would show
+  // for an instant first. A collection that cannot be read (private, gone) settles
+  // with no palette and the page keeps the app's.
+  const [palette, setPalette] = useState(null);
+  const [settled, setSettled] = useState(!code);
+  useCollectionTheeeme(palette?.colors, palette?.koro);
   const headline = ownerHeadline ? L(ownerHeadline) : location.state?.collectionHeadline || '';
 
   // "Join {collection}", the words `/share/:token` already says:
@@ -82,10 +91,16 @@ export default function JoinPage() {
         setAllowedThingTypes(data?.allowed_thing_types || []);
         setThumbnailUrl(data?.thumbnail_url || '');
         setOwnerHeadline(data?.headline || '');
+        setPalette({ colors: data?.theeeme_colors, koro: data?.koro });
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setSettled(true);
+      });
     return () => controller.abort();
   }, [code]);
+
+  if (!settled) return <LoadingSpinner />;
 
   return (
     <div

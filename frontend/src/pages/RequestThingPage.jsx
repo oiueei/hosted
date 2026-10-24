@@ -23,6 +23,7 @@ import MarkdownText from '../components/MarkdownText';
 import Toast from '../components/Toast';
 import StatusRegion from '../components/StatusRegion';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useDocumentTitle from '../hooks/useDocumentTitle';
@@ -49,6 +50,7 @@ export default function RequestThingPage() {
   const headline = L(thing?.headline);
   const isReservation = thing?.type === 'RESERVE_THING';
   useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
+  useCollectionTheeeme(thing?.collection_theeeme_colors, thing?.collection_koro);
   useDocumentTitle(
     !thing
       ? t('titles.holdDefault')

@@ -8,6 +8,8 @@ import MagicLinkJoinPage from '../components/MagicLinkJoinPage';
 import StatusRegion from '../components/StatusRegion';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { collectionPath } from '../utils/collectionPath';
 import { errorKey, translateError } from '../utils/errorKey';
 
@@ -37,6 +39,10 @@ export default function SharePage() {
   const navigate = useNavigate();
   const { btnStyle } = useTheeeme();
   const [preview, setPreview] = useState(null);
+  // Whether the preview has answered, whatever it said: the page is the door of that
+  // group and wears its colours, so it is not painted before it knows them (the app's
+  // palette would show for an instant). A revoked link settles with no palette.
+  const [previewSettled, setPreviewSettled] = useState(false);
   const [useAnotherEmail, setUseAnotherEmail] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
@@ -52,7 +58,10 @@ export default function SharePage() {
       .then((data) => {
         if (!cancelled && data && data.headline) setPreview(data);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setPreviewSettled(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -61,6 +70,7 @@ export default function SharePage() {
   const name = preview ? L(preview.headline) : null;
   const description = preview ? L(preview.description) : null;
   useCollectionLanguage(preview?.language, [preview?.headline, preview?.description]);
+  useCollectionTheeeme(preview?.theeeme_colors, preview?.koro);
 
   const acceptWithSession = async () => {
     if (joiningRef.current) return;
@@ -122,6 +132,8 @@ export default function SharePage() {
         </p>
       </div>
     ) : undefined;
+
+  if (!previewSettled) return <LoadingSpinner />;
 
   return (
     <MagicLinkJoinPage

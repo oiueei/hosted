@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
+import LoadingSpinner from '../components/LoadingSpinner';
 import BulkAddCsv from '../components/BulkAddCsv';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized } from '../utils/localized';
@@ -37,6 +39,11 @@ export default function ImportThingsPage() {
   const [collectionHeadline, setCollectionHeadline] = useState('');
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, [collectionHeadline]);
+  // The group's colours, and no hero before the collection has answered (the app's
+  // palette would show for an instant); one that cannot be read keeps the app's.
+  const [palette, setPalette] = useState(null);
+  const [settled, setSettled] = useState(!userCode);
+  useCollectionTheeeme(palette?.colors, palette?.koro);
 
   useDocumentTitle(t('titles.importThings'));
 
@@ -47,9 +54,13 @@ export default function ImportThingsPage() {
       .then((data) => {
         setCollectionHeadline(data.headline || '');
         setCollectionLanguage(data.language || '');
+        setPalette({ colors: data.theeeme_colors, koro: data.koro });
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setSettled(true));
   }, [userCode, code]);
+
+  if (!settled) return <LoadingSpinner />;
 
   return (
     <PageLayout backTo={`${base}`} backLabel={L(collectionHeadline) || t('common.collection')}>

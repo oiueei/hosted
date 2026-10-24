@@ -3,6 +3,8 @@ import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../services/api';
 import PageLayout from '../components/PageLayout';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
+import LoadingSpinner from '../components/LoadingSpinner';
 import BulkInviteCsv from '../components/BulkInviteCsv';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useCollectionBase } from '../hooks/useCollectionBase';
@@ -37,6 +39,11 @@ export default function ImportInvitesPage() {
 
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, []);
+  // The group's colours, and no hero before the collection has answered (the app's
+  // palette would show for an instant); one that cannot be read keeps the app's.
+  const [palette, setPalette] = useState(null);
+  const [settled, setSettled] = useState(!userCode);
+  useCollectionTheeeme(palette?.colors, palette?.koro);
 
   useDocumentTitle(t('titles.importInvites'));
 
@@ -44,9 +51,15 @@ export default function ImportInvitesPage() {
     if (!userCode) return;
     apiFetch(`/api/v1/collections/${code}/`)
       .then((res) => (res.ok ? res.json() : {}))
-      .then((data) => setCollectionLanguage(data.language || ''))
-      .catch(() => {});
+      .then((data) => {
+        setCollectionLanguage(data.language || '');
+        setPalette({ colors: data.theeeme_colors, koro: data.koro });
+      })
+      .catch(() => {})
+      .finally(() => setSettled(true));
   }, [userCode, code]);
+
+  if (!settled) return <LoadingSpinner />;
 
   return (
     <PageLayout backTo={`${base}/invites`} backLabel={t('collectionPage.manageGuests')}>
