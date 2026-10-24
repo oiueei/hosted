@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, test, expect, vi, afterEach, beforeEach } from 'vitest';
 import ThingReportFooter from './ThingReportFooter';
+import declarePalette from '../test/declarePalette';
 
 // The trigger carries aria-expanded; the confirm button inside the panel does
 // not — that distinction keeps the two same-labelled "Report" buttons apart.
@@ -23,17 +24,14 @@ describe('ThingReportFooter (the anonymous report flow)', () => {
     // which reads as neither link nor button. The tokens are the secondary set
     // `useTheeeme` gives every other secondary — white fill, the theeeme's own
     // border — and themedButtons.test.js only checks that *a* style is present.
-    localStorage.setItem(
-      'theeemeColors',
-      JSON.stringify({
-        color_01: 'bus',
-        color_02: 'suomenlinna-light',
-        color_03: 'copper',
-        color_04: 'black',
-        color_05: 'white',
-        color_06: 'white',
-      })
-    );
+    declarePalette({
+      color_01: 'bus',
+      color_02: 'suomenlinna-light',
+      color_03: 'copper',
+      color_04: 'black',
+      color_05: 'white',
+      color_06: 'white',
+    });
     globalThis.fetch = vi.fn();
     render(<ThingReportFooter thingCode="THG001" onToast={vi.fn()} />);
 

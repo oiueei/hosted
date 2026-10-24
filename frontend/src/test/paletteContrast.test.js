@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { renderHook } from '@testing-library/react';
 import { describe, test, expect } from 'vitest';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import { linkColorToken } from '../utils/linkColor';
 import COLOR_TOKENS from '../utils/colorTokens';
 
@@ -133,6 +134,13 @@ const PAIRINGS = [
 ];
 
 const AA_NORMAL = 4.5;
+
+// What `useTheeeme` answers when a collection's page has declared this palette.
+const withPalette = (theeeme) =>
+  renderHook(() => {
+    useCollectionTheeeme(theeeme);
+    return useTheeeme();
+  });
 
 // Resolve HDS colour tokens to hex from the design-tokens package — the single
 // source of truth for the values behind names like "bus" or "fog-medium-light".
@@ -364,7 +372,7 @@ describe('focus never recolours a button', () => {
     ['primary', 'btnStyle'],
     ['secondary', 'btnSecondaryStyle'],
   ])('%s keeps its resting colours under focus', (_label, key) => {
-    const { result } = renderHook(() => useTheeeme(SUOMENLINNA));
+    const { result } = withPalette(SUOMENLINNA);
     const style = result.current[key];
     expect(style['--background-color-focus']).toBe(style['--background-color']);
     expect(style['--border-color-focus']).toBe(style['--border-color']);
@@ -407,7 +415,7 @@ describe('the colour of a content link', () => {
 
   test('useTheeeme puts the colour on the root as --link-color', () => {
     const engel = THEEEMES.find((t) => t.name === 'Engel');
-    renderHook(() => useTheeeme(engel));
+    withPalette(engel);
     expect(document.documentElement.style.getPropertyValue('--link-color')).toBe(
       `var(--color-${linkColorToken(engel)})`
     );
@@ -440,7 +448,7 @@ describe('the colour of a content link', () => {
 // text colour (`color_05`, already judged on `color_03` above) over it.
 describe('the header of a table reads on the hero colour', () => {
   const tokens = loadTokenHexMap();
-  const withTheme = (theeeme) => renderHook(() => useTheeeme(theeeme)).result.current.tableTheme;
+  const withTheme = (theeeme) => withPalette(theeeme).result.current.tableTheme;
 
   test.each(THEEEMES)('$name — header text is color_05 on color_03, and meets AA', (theeeme) => {
     const theme = withTheme(theeeme);

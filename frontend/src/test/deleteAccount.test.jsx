@@ -109,7 +109,6 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
 
   test('the explicit confirm commits, clears local state and says goodbye', async () => {
     localStorage.setItem('userCode', 'USER01');
-    localStorage.setItem('theeemeColors', '{}');
     globalThis.fetch = vi.fn((url, opts = {}) =>
       opts.method === 'POST'
         ? Promise.resolve(mockResponse({ action: 'ACCOUNT_DELETE' }))
@@ -123,7 +122,6 @@ describe('VerifyPage ACCOUNT_DELETE', () => {
     expect(postCalls(globalThis.fetch)).toHaveLength(1);
     await waitFor(() => {
       expect(localStorage.getItem('userCode')).toBeNull();
-      expect(localStorage.getItem('theeemeColors')).toBeNull();
     });
   });
 

@@ -23,6 +23,24 @@ export function contrastRatio(a, b) {
 }
 
 /**
+ * The hex behind a colour token: an HDS token from the table, or one of the app's
+ * own (`braaanding-0N`), whose value the server wrote into the page as
+ * `--color-braaanding-0N` — read from the root at the moment it is needed, since an
+ * operator can change it in the admin. `null` when it cannot be known.
+ */
+export function tokenHex(token) {
+  if (!token) return null;
+  if (TOKEN_HEX[token]) return TOKEN_HEX[token];
+  if (token.startsWith('braaanding-') && typeof document !== 'undefined') {
+    const value = getComputedStyle(document.documentElement)
+      .getPropertyValue(`--color-${token}`)
+      .trim();
+    return /^#[0-9a-f]{6}$/i.test(value) ? value : null;
+  }
+  return null;
+}
+
+/**
  * The token a content link takes in a theeeme: `color_01` (the primary button's
  * fill) when it reaches 4.5:1 on both surfaces links sit on — white (tables,
  * cards) and the page background `color_02` — else `color_04`, the theeeme's text.
@@ -30,8 +48,8 @@ export function contrastRatio(a, b) {
  */
 export function linkColorToken(tc) {
   if (!tc?.color_01 || !tc.color_02) return tc?.color_04 || null;
-  const link = TOKEN_HEX[tc.color_01];
-  const page = TOKEN_HEX[tc.color_02];
+  const link = tokenHex(tc.color_01);
+  const page = tokenHex(tc.color_02);
   const readable =
     link &&
     page &&

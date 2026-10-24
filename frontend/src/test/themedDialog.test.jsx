@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, test, expect, beforeEach } from 'vitest';
 import CancelReservationDialog from '../components/CancelReservationDialog';
 import ThemedDialog from '../components/ThemedDialog';
+import declarePalette from './declarePalette';
 
 // The line along the top of an HDS Dialog is HDS's blue unless the dialog is
 // handed `--accent-line-color`. It takes the viewer's primary theeeme colour.
@@ -29,7 +30,7 @@ const accentLine = () => {
 
 beforeEach(() => {
   localStorage.clear();
-  localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+  declarePalette(THEEEME);
 });
 
 describe('dialogs carry the theeeme colour', () => {

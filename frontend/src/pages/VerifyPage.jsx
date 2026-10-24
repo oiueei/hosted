@@ -111,11 +111,8 @@ export default function VerifyPage() {
           setSuccess(t('verify.invitationDeclined'));
         } else if (res.ok && data.user) {
           if (data.user?.code) localStorage.setItem('userCode', data.user.code);
-          if (data.user?.theeeme_colors)
-            localStorage.setItem('theeemeColors', JSON.stringify(data.user.theeeme_colors));
-          if (data.user?.koro) localStorage.setItem('koro', data.user.koro);
-          // The account's saved language, the same way the theme and the koro are
-          // taken from here: the app-wide effect that applies it (`App.jsx`) runs
+          // The account's saved language, taken from here (the palette is no longer
+          // the account's: it is the app's, or the collection's): the app-wide effect that applies it (`App.jsx`) runs
           // once, when the app mounts, and opening a magic link mounts it *before*
           // there is a session — its `/auth/me/` answers 401 — so until a reload a
           // person with a saved language saw the browser's ("English"
@@ -192,8 +189,6 @@ export default function VerifyPage() {
       if (res.ok && done.action === 'ACCOUNT_DELETE') {
         // The account is gone — so is everything this browser knew about it.
         localStorage.removeItem('userCode');
-        localStorage.removeItem('theeemeColors');
-        localStorage.removeItem('koro');
         setDeletePreview(null);
         setTitle(t('verify.accountDeletedTitle'));
         setSuccess(t('verify.accountDeletedBody'));

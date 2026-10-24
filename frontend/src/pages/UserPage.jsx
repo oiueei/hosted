@@ -59,15 +59,8 @@ export default function UserPage() {
 
   // This page builds its own hero (not PageLayout), so it derives the theeeme
   // styles itself — via the shared hook, so the keyboard-focus pins ride along.
-  // Own profile: the freshly-fetched colours; other profiles: the viewer's,
-  // from localStorage (the hook's fallback).
-  const {
-    tc,
-    koro: koroType,
-    btnStyle,
-    btnSecondaryStyle,
-    tableTheme,
-  } = useTheeeme(user?.theeeme_colors);
+  // A profile is an app page: the app's palette, whoever's it is.
+  const { tc, koro: koroType, btnStyle, btnSecondaryStyle, tableTheme } = useTheeeme();
   useDocumentTitle(t('titles.user', { name: user?.name || t('common.profile') }));
 
   // The code `/auth/me/` answered with, when this page had none stored: that answer

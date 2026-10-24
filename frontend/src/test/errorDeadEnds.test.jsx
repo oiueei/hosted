@@ -18,21 +18,19 @@ import CollectionPage from '../pages/CollectionPage';
 import ThingPage from '../pages/ThingPage';
 import UserPage from '../pages/UserPage';
 import MyBookingsPage from '../pages/MyBookingsPage';
+import declarePalette from './declarePalette';
 
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'U1');
-  localStorage.setItem(
-    'theeemeColors',
-    JSON.stringify({
-      color_01: 'bus',
-      color_02: 'fog',
-      color_03: 'summer',
-      color_04: 'black',
-      color_05: 'black',
-      color_06: 'white',
-    })
-  );
+  declarePalette({
+    color_01: 'bus',
+    color_02: 'fog',
+    color_03: 'summer',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'white',
+  });
   localStorage.setItem('koro', 'basic');
 });
 

@@ -49,9 +49,6 @@ export default function HomePage() {
           const data = await res.json();
           if (signal?.aborted) return;
           if (data.code) localStorage.setItem('userCode', data.code);
-          if (data.theeeme_colors)
-            localStorage.setItem('theeemeColors', JSON.stringify(data.theeeme_colors));
-          if (data.koro) localStorage.setItem('koro', data.koro);
           setUser(data);
         }
       } catch (err) {
@@ -149,7 +146,7 @@ export default function HomePage() {
   // localStorage/DEFAULT before the fetch resolves). Called at the top level so
   // the hook order stays stable across the `!user` early return below — and
   // above the two notices that follow, whose Retry buttons wear the style.
-  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme(user?.theeeme_colors);
+  const { tc, btnStyle, btnSecondaryStyle } = useTheeeme();
 
   const offlineBanner = (
     <Notification

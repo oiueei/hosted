@@ -28,6 +28,7 @@ vi.mock('../deployment', async (orig) => ({ ...(await orig()), curatorGuidePath:
 import { apiFetch } from '../services/api';
 import downloadBlob from '../utils/downloadBlob';
 import CollectionPage from '../pages/CollectionPage';
+import declarePalette from './declarePalette';
 
 const LEND_THING = {
   code: 'THG001',
@@ -172,17 +173,14 @@ async function openMenu() {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
-  localStorage.setItem(
-    'theeemeColors',
-    JSON.stringify({
-      color_01: 'bus',
-      color_02: 'suomenlinna-light',
-      color_03: 'copper',
-      color_04: 'black',
-      color_05: 'white',
-      color_06: 'white',
-    })
-  );
+  declarePalette({
+    color_01: 'bus',
+    color_02: 'suomenlinna-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'white',
+  });
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
 });

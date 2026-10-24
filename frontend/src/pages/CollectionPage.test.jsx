@@ -41,6 +41,7 @@ vi.mock('../services/api', async (importOriginal) => ({
 
 import { apiFetch } from '../services/api';
 import CollectionPage from './CollectionPage';
+import declarePalette from '../test/declarePalette';
 
 beforeEach(() => {
   localStorage.clear();
@@ -1515,7 +1516,7 @@ describe('the ways a collection fails to load', () => {
     const wayOut = (container) => container.querySelector('.button-row-wide a');
 
     test('with a session it is a secondary button to Home', async () => {
-      localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+      declarePalette(THEEEME);
       const { container } = renderAfter(refused(403));
       await screen.findByText(/your access may have changed/i);
 
@@ -1531,7 +1532,7 @@ describe('the ways a collection fails to load', () => {
 
     test('without one it is a primary Sign in that brings them back to this collection', async () => {
       localStorage.removeItem('userCode');
-      localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+      declarePalette(THEEEME);
       const { container } = renderAfter(refused(403));
       await screen.findByText(/your access may have changed/i);
 

@@ -22,6 +22,7 @@ import { apiFetch } from '../services/api';
 import downloadBlob from '../utils/downloadBlob';
 import ThingPage from '../pages/ThingPage';
 import { press, settle } from './settle';
+import declarePalette from './declarePalette';
 
 /**
  * The thing's page, read through a collection, has the same corner menu as the
@@ -135,17 +136,14 @@ const thingCalls = () =>
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'OWNER1');
-  localStorage.setItem(
-    'theeemeColors',
-    JSON.stringify({
-      color_01: 'bus',
-      color_02: 'suomenlinna-light',
-      color_03: 'copper',
-      color_04: 'black',
-      color_05: 'white',
-      color_06: 'white',
-    })
-  );
+  declarePalette({
+    color_01: 'bus',
+    color_02: 'suomenlinna-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'white',
+  });
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
 });
