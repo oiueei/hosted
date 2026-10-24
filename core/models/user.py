@@ -9,6 +9,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import OperationalError, ProgrammingError, models
 
 from core.models.language import Language
+from core.models.theeeme import KORO_CHOICES
 from core.utils import generate_id
 
 # Bussi — the documented default palette (seeded in migration 0036). Used only as
@@ -61,14 +62,7 @@ class User(AbstractBaseUser):
     Uses magic link authentication (no password).
     """
 
-    KORO_CHOICES = [
-        ("basic", "Basic"),
-        ("beat", "Beat"),
-        ("calm", "Calm"),
-        ("pulse", "Pulse"),
-        ("vibration", "Vibration"),
-        ("wave", "Wave"),
-    ]
+    KORO_CHOICES = KORO_CHOICES
 
     class AgeRange(models.TextChoices):
         # Birth-year generations (2026-07 switch from age brackets — a birth

@@ -6,6 +6,16 @@ from django.db import models
 
 from core.utils import generate_id
 
+# The Koros wave types, shared by every palette that carries one.
+KORO_CHOICES = [
+    ("basic", "Basic"),
+    ("beat", "Beat"),
+    ("calm", "Calm"),
+    ("pulse", "Pulse"),
+    ("vibration", "Vibration"),
+    ("wave", "Wave"),
+]
+
 
 class Theeeme(models.Model):
     """

@@ -209,6 +209,24 @@ The `Theeeme` model represents a colour palette for customising collections. Eac
 
 ---
 
+## Braaanding
+
+The app's own palette (`core/models/braaanding.py`, table `braaanding`): what paints everything that is **not** a collection's page — Home, the account pages, the front door, the legal text, the 404 — and every email. It is a table of its own, with **one row** (primary key `OIUEEI`), and deliberately **not** a row of `theeemes`: that table is the selector the collections choose from and the pool a new collection's palette is drawn from at random, so a palette stored there could reach both. No curator can pick it.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `code` | CharField(6) | Primary key, always `OIUEEI` |
+| `color_01` … `color_06` | CharField(7) | **Hexadecimal** `#RRGGBB` (validated), not HDS token names. The roles are the `Theeeme`'s: 01 primary button, secondary border and links, 02 page and wave, 03 hero, 04 body text, 05 hero text and table headers, 06 primary button text |
+| `koro` | CharField(9) | A `KORO_CHOICES` wave type |
+
+Migration `0164` creates the table and seeds the row (`#191919 #F4E5DD #D77452 #191919 #191919 #FAFAFA`, koro `basic`). After that an operator edits it in the Django admin (`BraaandingAdmin`: no add, no delete) and no code changes.
+
+**The admin refuses a palette that fails the contrast the twelve collection palettes meet.** `paletteContrast.test.js` proves those twelve against the HDS colour table, but it cannot see values that live in a database, so the guard goes where they are changed: `Braaanding.clean()` runs `core.services.palette_contrast.contrast_failures`, which asks 4.5:1 for body text on the page (04/02), the primary button's label on its fill (06/01), the hero's text on the hero (05/03), `color_04` on white (the secondary button's text and the content links' fallback) and the front door's warning (`brick-dark`) on the page. The keyboard ring is not checked: it is two bands, black and white, and one of the two reaches 3:1 on any surface. A malformed hex is rejected by the field before any contrast is measured.
+
+**`braaanding()`** returns the palette as `{"color_01": "#…", …, "koro": "basic"}`, cached on the shared cache for ten minutes and dropped on every save or delete of the row. The cache is an optimisation, never a dependency: unreadable, it falls through to the row, and with no row the defaults answer, so a page and an email still paint.
+
+---
+
 ## FAQ
 
 The `FAQ` model represents a question and answer about a thing. Invited users can ask questions, and only the thing owner can answer or hide them.
