@@ -314,7 +314,7 @@ Returns user profile. Own profile returns full data (`UserSerializer`), other pr
 | **Endpoint** | `PUT /api/v1/users/{user_code}/` |
 | **Permission** | `IsAuthenticated` + own profile only |
 
-Updates own profile via `UserUpdateSerializer` (partial update). Accepts optional `name`, `headline`, `about` (Markdown bio, max 2000, HTML rejected), `photo` (storage key), `koro`, `theeeme` (Theeeme code), `notify_activity`, and `notify_news`. Returns the full `UserSerializer` (including `photo_url`). Returns 403 if attempting to update another user.
+Updates own profile via `UserUpdateSerializer` (partial update). Accepts optional `name`, `headline`, `about` (Markdown bio, max 2000, HTML rejected), `photo` (storage key), `notify_activity`, and `notify_news` (a body that still names `koro` or `theeeme` has them ignored: the palette is a collection's now). Returns the full `UserSerializer` (including `photo_url`). Returns 403 if attempting to update another user.
 
 ---
 
@@ -613,7 +613,7 @@ Curator management of the public share token — a co-owner may generate, rotate
 | **Permission** | `AllowAny`, `authentication_classes = []` — the 22-char token is the whole credential |
 | **Rate limit** | 30 requests/minute per IP |
 
-The **name, description and language** of the collection a `/share/{token}` link opens, so `SharePage` can render "Join the Chalmercadillo" instead of "Join us on OIUEEI" — a stranger handed the link on WhatsApp has no idea what OIUEEI is. Returns **only** `{headline, description, language, kind}` (the kind is as unrevealing as the language: the app needs it for the page that follows). `headline`/`description` are **raw** (either may be a `{lang: text}` map the SPA resolves against the reader's language — same as every other collection read); `language` (added 2026-09-15) feeds `useCollectionLanguage` — this join door is reached before a stranger is a member of anything, so the collection's own language is the only signal there is yet, and it is no more sensitive than the other two. Never the owner, the roster, a member count or even the collection code.
+The **name, description and language** of the collection a `/share/{token}` link opens, so `SharePage` can render "Join the Chalmercadillo" instead of "Join us on OIUEEI" — a stranger handed the link on WhatsApp has no idea what OIUEEI is. Returns **only** `{headline, description, language, kind, theeeme_colors, koro}` (the kind is as unrevealing as the language: the app needs it for the page that follows; the palette is the group's own colours — the join page is the door of that group and wears them, so a stranger holding the link needs them before they are anything to it). `headline`/`description` are **raw** (either may be a `{lang: text}` map the SPA resolves against the reader's language — same as every other collection read); `language` (added 2026-09-15) feeds `useCollectionLanguage` — this join door is reached before a stranger is a member of anything, so the collection's own language is the only signal there is yet, and it is no more sensitive than the other two. Never the owner, the roster, a member count or even the collection code.
 
 Answers a **generic 404** (`Http404` → DRF's handler) for an unknown, revoked or INACTIVE token — the same `share_token=… , status=ACTIVE` filter `JoinView._resolve_target` uses — so the preview goes dark the instant the link does and reveals nothing the link itself doesn't already. The bearer link is the credential and whoever holds it already knows a real collection is behind it, so naming that collection to them is not a leak; naming anything *else* would be.
 
@@ -881,7 +881,7 @@ rewritten.
 | **Endpoint** | `GET /api/v1/theeemes/` |
 | **Permission** | `IsAuthenticated` |
 
-Lists all available theeemes. Returns `code` and `name` for each theeeme via `TheeemeSerializer`.
+Lists the twelve palettes a curator can pick for a collection (`theeeme` in the create/edit body). Returns `code`, `name` and the six colours for each via `TheeemeSerializer`. **It is the selector, and only the `theeemes` table**: the app's own palette (`Braaanding`) is never in it.
 
 ---
 

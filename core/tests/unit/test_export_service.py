@@ -637,6 +637,7 @@ class TestCollectionExportStaysInsideTheGroup:
     def test_the_boundary_costs_no_query_per_row(self, world, member):
         # The group's people are settled once for the whole file, not asked of each
         # booking (``is_invited`` per row is the cost this pins away).
+        world["mine"].theeeme  # noqa: B018 - the group's palette is read once, not per row
         with CaptureQueriesContext(connection) as few:
             build_collection_export(world["mine"])
         for n in range(6):

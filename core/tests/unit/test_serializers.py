@@ -142,7 +142,8 @@ class TestCollectionSerializer:
 
         assert data["code"] == "COLL01"
         assert data["headline"] == "My Collection"
-        assert "theeeme" not in data
+        assert data["theeeme"] == collection.theeeme_id
+        assert data["koro"] == "basic"
 
     def test_is_curator_and_co_owners(self):
         """`is_curator` is true for the owner and a co-owner, false for a plain

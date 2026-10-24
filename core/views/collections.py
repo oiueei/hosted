@@ -37,6 +37,7 @@ from core.serializers import (
     CollectionUpdateSerializer,
     EmailNoteTestSerializer,
 )
+from core.serializers.theeeme import theeeme_colors
 from core.serializers.thing import optimise_thing_queryset
 from core.services.creator_policy import (
     capabilities_for,
@@ -99,7 +100,7 @@ def _optimise_collection_queryset(queryset, viewer=None):
     The prefetch is narrowed to the viewer's own row rather than pulling every
     muted member of the group: the serializer only ever asks "did *I* mute this?"
     """
-    queryset = queryset.select_related("owner").prefetch_related(
+    queryset = queryset.select_related("owner", "theeeme").prefetch_related(
         "invites",
         # Public, like `owner_name` — `get_co_owners` serves it to every
         # viewer, and `is_curator`/`is_member` read it via `.all()` for any
@@ -1407,10 +1408,12 @@ class SharePreviewView(APIView):
 
     Public and unauthenticated: the 22-char token **is** the credential, and
     whoever holds it already knows a real collection sits behind it. It returns
-    **only** ``headline``, ``description``, ``language`` and ``kind`` — never the owner,
-    the roster or a member count — and a generic **404** for an unknown,
+    **only** ``headline``, ``description``, ``language``, ``kind`` and the palette — never
+    the owner, the roster or a member count — and a generic **404** for an unknown,
     revoked or inactive token, so it reveals nothing the link itself does not.
-    ``language`` and ``kind`` are no more sensitive than the other two: they are exactly what
+    ``language``, ``kind`` and the palette (``theeeme_colors``, ``koro``: the join page
+    is the door of that group and wears its colours) are no more sensitive than the other
+    two: they are exactly what
     `CollectionSerializer` already serves any signed-in member.
 
     ``headline``/``description`` are returned raw: either may be a
@@ -1426,9 +1429,11 @@ class SharePreviewView(APIView):
 
     @method_decorator(ratelimit(key="ip", rate="30/m", method="GET", block=True))
     def get(self, request, token):
-        collection = Collection.objects.filter(
-            share_token=token, status=Collection.Status.ACTIVE
-        ).first()
+        collection = (
+            Collection.objects.filter(share_token=token, status=Collection.Status.ACTIVE)
+            .select_related("theeeme")
+            .first()
+        )
         if collection is None:
             raise Http404
         return Response(
@@ -1437,6 +1442,8 @@ class SharePreviewView(APIView):
                 "description": collection.description,
                 "language": collection.language,
                 "kind": collection.kind,
+                "theeeme_colors": theeeme_colors(collection.theeeme),
+                "koro": collection.koro,
             }
         )
 

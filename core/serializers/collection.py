@@ -8,8 +8,9 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from core.models import RSVP, Collection, InvitationProposal, Thing
+from core.models import RSVP, Collection, InvitationProposal, Theeeme, Thing
 from core.models.collection import KIND_THING_TYPES, kind_for_thing_type
+from core.serializers.theeeme import theeeme_colors
 from core.serializers.thing import ThingComputedFieldsMixin
 from core.utils import Refusal, asset_url, doc_asset_url
 from core.validators import (
@@ -112,6 +113,10 @@ class CollectionSerializer(serializers.ModelSerializer):
     is_digest_muted = serializers.SerializerMethodField()
     pending_proposals = serializers.SerializerMethodField()
     email_note = serializers.SerializerMethodField()
+    # The palette the group's pages are painted with: public, like the language
+    # and the kind (they are colours, and a reader with no session sees the page).
+    theeeme = serializers.SlugRelatedField(slug_field="code", read_only=True)
+    theeeme_colors = serializers.SerializerMethodField()
     is_paused = serializers.BooleanField(read_only=True)
     # Seed/onboarding collection — `seed_demo` sets it, no API path writes it.
     # The SPA shows a demo notice on it when this deployment supplies the copy
@@ -135,6 +140,9 @@ class CollectionSerializer(serializers.ModelSerializer):
             "digest_frequency",
             "allow_member_proposals",
             "language",
+            "theeeme",
+            "theeeme_colors",
+            "koro",
             "allowed_thing_types",
             "rental_durations",
             "rental_weekdays",
@@ -189,6 +197,9 @@ class CollectionSerializer(serializers.ModelSerializer):
         # Bare name, not display_name — guests see this, so the email fallback
         # would leak the owner's address.
         return obj.owner.name
+
+    def get_theeeme_colors(self, obj):
+        return theeeme_colors(obj.theeeme)
 
     def get_thumbnail_url(self, obj):
         return asset_url(obj.thumbnail) if obj.thumbnail else None
@@ -450,9 +461,18 @@ class CollectionCreateSerializer(serializers.ModelSerializer):
         max_length=512, storage_max_length=2048, required=False, allow_blank=True
     )
 
+    # A curator picks one of the twelve palettes of `theeemes` (the app's own,
+    # `Braaanding`, is a different table and cannot be named here); left out, a new
+    # collection draws a random one and an update keeps what it has.
+    theeeme = serializers.SlugRelatedField(
+        slug_field="code", queryset=Theeeme.objects.all(), required=False
+    )
+
     class Meta:
         model = Collection
         fields = [
+            "theeeme",
+            "koro",
             "headline",
             "description",
             "kind",
@@ -809,9 +829,18 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         max_length=512, storage_max_length=2048, required=False, allow_blank=True
     )
 
+    # A curator picks one of the twelve palettes of `theeemes` (the app's own,
+    # `Braaanding`, is a different table and cannot be named here); left out, a new
+    # collection draws a random one and an update keeps what it has.
+    theeeme = serializers.SlugRelatedField(
+        slug_field="code", queryset=Theeeme.objects.all(), required=False
+    )
+
     class Meta:
         model = Collection
         fields = [
+            "theeeme",
+            "koro",
             "headline",
             "description",
             "status",

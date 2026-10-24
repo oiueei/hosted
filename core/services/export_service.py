@@ -941,7 +941,14 @@ def build_collection_export(collection):
     thing_codes = [thing.code for thing in things]
     people = _group_people(collection)
     data = {
-        "collection": {**_collection_columns(collection), "owner": _person(collection.owner)},
+        "collection": {
+            **_collection_columns(collection),
+            # The group's own palette: part of what the group is, so part of its copy.
+            # (The account export leaves it out: the palette is no longer a person's.)
+            "theeeme": {"code": collection.theeeme.code, "name": collection.theeeme.name},
+            "koro": collection.koro,
+            "owner": _person(collection.owner),
+        },
         "members": _collection_members(collection),
         "pending_invitations": _pending_invitations_by_collection([collection.code]).get(
             collection.code, []
