@@ -989,7 +989,10 @@ class JoinView(APIView):
     about many IPs mailing many strangers once each, which is the actual shape.
     The per-collection daily cap does, and a refusal returns the same unified
     response as everything else here. Off by default; see
-    `core/services/join_quota.py`.
+    `core/services/join_quota.py`. The cap stops mail to strangers, so an address
+    already in the group (its founder, a co-curator, a member) is neither refused
+    by it nor charged to it: they are only coming back in, and the 5/h per address
+    limit still bounds them. The response is the same for them too.
 
     **Language is never taken from the request.** This used to accept the
     visitor's current UI language and stamp it onto a newly-created user, so
@@ -1039,7 +1042,13 @@ class JoinView(APIView):
             )
             return self._unified_response()
 
-        if join_quota_exhausted(join_collection.code):
+        # Somebody already in the group is only coming back in, not being
+        # admitted: the cap stops mail to strangers, so it neither refuses nor
+        # charges them. Looked up without creating anything; the 5/h per address
+        # limit still bounds them. Co-curators are in `invites` too.
+        already_inside = self._is_inside(join_collection, email)
+
+        if not already_inside and join_quota_exhausted(join_collection.code):
             # This collection has taken its day's joins. Create nothing, send
             # nothing — and answer exactly as if we had, for the same reason the
             # no-target path does: "that collection is over its limit" would
@@ -1105,7 +1114,8 @@ class JoinView(APIView):
         # Charged after the send is dispatched, so a join that raised before
         # reaching it costs the collection nothing. In production the send is a
         # daemon thread, so "dispatched" is as far as this can honestly count.
-        consume_join_quota(join_collection.code)
+        if not already_inside:
+            consume_join_quota(join_collection.code)
 
         security_logger.info(
             f"Join request for {redact_email(email)} from IP {ip} "
@@ -1113,6 +1123,20 @@ class JoinView(APIView):
         )
 
         return self._unified_response()
+
+    @staticmethod
+    def _is_inside(collection, email):
+        """Whether this address already belongs to the group: its founder or a member.
+
+        Creates nothing. A co-curator is always in `invites`, so it covers them too.
+        """
+        existing = User.objects.filter(email=email).first()
+        if existing is None:
+            return False
+        return (
+            collection.owner_id == existing.code
+            or collection.invites.filter(code=existing.code).exists()
+        )
 
     @staticmethod
     def _resolve_target(share_token, collection_code):

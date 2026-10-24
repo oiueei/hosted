@@ -171,7 +171,11 @@ So `join_quota_exhausted()` is checked **after** the target resolves and
 **before** anything is created; `consume_join_quota()` charges one after the send
 is dispatched. It is keyed per collection, never per deployment: a single global
 counter would let anyone shut joining off for every group on the instance by
-spending it on one. A refusal creates nothing, sends nothing, returns the
+spending it on one. **Somebody already in the group is outside the cap**: the founder, a
+co-curator (always in `invites`) or a member is neither refused nor charged, because the cap
+stops mail to strangers and they are only coming back in (an expired session lands them on
+`/join`); the 5/h per address limit still bounds them, and their response is the same
+unified one. The lookup (`JoinView._is_inside`) creates nothing. A refusal creates nothing, sends nothing, returns the
 **unified response** — telling the visitor "over its limit" would confirm the
 code names a real, joinable collection — and writes a `security` warning, the
 same shape as the capacity alarms, where the tripwire reports to whoever set it

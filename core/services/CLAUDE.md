@@ -310,8 +310,8 @@ The view's own rate limits never closed this and were not meant to: they cap how
 
 | Function | Behaviour |
 |---|---|
-| `join_quota_exhausted(collection_code)` | Whether this collection has already taken today's joins. `False` when the cap is off. Checked in `JoinView` **after** the target resolves and **before** anything is created, so a refusal leaves no `User`, no RSVP and no mail. |
-| `consume_join_quota(collection_code)` | Records one join against today's allowance. Called after the send is dispatched, so a join that failed earlier costs the collection nothing. |
+| `join_quota_exhausted(collection_code)` | Whether this collection has already taken today's joins. `False` when the cap is off. Checked in `JoinView` **after** the target resolves and **before** anything is created, so a refusal leaves no `User`, no RSVP and no mail. Not asked for an address already in the group (founder, co-curator, member): the cap stops mail to strangers, and they are only coming back in. |
+| `consume_join_quota(collection_code)` | Records one join against today's allowance. Called after the send is dispatched, so a join that failed earlier costs the collection nothing; a send to someone already in the group is not charged. |
 
 **Keyed per collection, deliberately.** Per IP is what already failed. Per *deployment* would be worse than nothing here: one abused collection would deny every other collection its joins, handing the attacker a denial of service against the whole instance in the name of stopping a relay. Per collection, abusing a group's public code costs that group its own day.
 

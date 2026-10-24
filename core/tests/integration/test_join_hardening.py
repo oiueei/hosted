@@ -220,6 +220,66 @@ class TestOneCollectionCannotBeUsedAsAMailRelay:
             user_email="lulu1@your-domain.test", target_code=bystander.code
         ).exists()
 
+    @pytest.fixture
+    def team(self, public_collection, user2):
+        """A co-curator and a plain member of `public_collection` (its founder is `user`)."""
+        co_curator = User.objects.create(code="COCUR1", email="lili@your-domain.test")
+        member = User.objects.create(code="MEMBR1", email="lulu3@your-domain.test")
+        public_collection.invites.add(co_curator, member)
+        public_collection.co_owners.add(co_curator)
+        return {"founder": public_collection.owner, "co_curator": co_curator, "member": member}
+
+    @override_settings(**QUOTA_SETTINGS, COLLECTION_JOINS_PER_DAY=1)
+    def test_those_already_in_the_group_still_get_their_link_on_a_spent_day(
+        self, api_client, public_collection, team
+    ):
+        """The cap stops mail to strangers; a member with an expired session is not one.
+
+        Members re-enter through `/join`, and a spent day would otherwise leave
+        them without a link — silently, since the answer is the unified one.
+        """
+        caches["default"].clear()
+        self._join(api_client, public_collection, "lala9@your-domain.test")  # spends the day
+        mail.outbox.clear()
+
+        for who, person in team.items():
+            before = len(mail.outbox)
+            self._join(api_client, public_collection, person.email)
+            assert len(mail.outbox) == before + 1, who
+            assert RSVP.objects.filter(
+                user_code=person, target_code=public_collection.code
+            ).exists(), who
+
+        self._join(api_client, public_collection, "lolo9@your-domain.test")
+        assert not User.objects.filter(email="lolo9@your-domain.test").exists()
+        assert len(mail.outbox) == 3
+
+    @override_settings(**QUOTA_SETTINGS, COLLECTION_JOINS_PER_DAY=1)
+    def test_a_link_sent_to_a_member_does_not_spend_the_day(
+        self, api_client, public_collection, team
+    ):
+        caches["default"].clear()
+
+        self._join(api_client, public_collection, team["member"].email)
+        stranger = self._join(api_client, public_collection, "lele9@your-domain.test")
+
+        assert stranger.status_code == 200
+        assert RSVP.objects.filter(
+            user_email="lele9@your-domain.test", target_code=public_collection.code
+        ).exists()
+
+    @override_settings(**QUOTA_SETTINGS, COLLECTION_JOINS_PER_DAY=1)
+    def test_member_stranger_and_refused_get_byte_identical_answers(
+        self, api_client, public_collection, team
+    ):
+        caches["default"].clear()
+        member = self._join(api_client, public_collection, team["member"].email)
+        admitted = self._join(api_client, public_collection, "lele9@your-domain.test")
+        refused = self._join(api_client, public_collection, "lolo9@your-domain.test")
+
+        assert member.status_code == admitted.status_code == refused.status_code == 200
+        assert member.content == admitted.content == refused.content
+
     @override_settings(**QUOTA_SETTINGS)
     def test_unset_means_no_cap_at_all(self, api_client, public_collection):
         """The standalone default. A share link pasted into a group chat can
