@@ -16,6 +16,7 @@ from django.test import Client, override_settings
 
 from core import throttles
 from core.models import Collection, User
+from core.models.braaanding import braaanding
 
 RATE = "3/m"
 MID_MINUTE = 1_800_000_030.0
@@ -37,10 +38,13 @@ def _limits_on(settings):
 
 
 @pytest.fixture(autouse=True)
-def built(tmp_path):
+def built(tmp_path, db):
     dist = tmp_path / "frontend" / "dist"
     dist.mkdir(parents=True)
     (dist / "index.html").write_text(HEAD, encoding="utf-8")
+    # The app's palette rides in every page and a worker remembers it for a minute,
+    # so the budgets here are the steady state: it is already known.
+    braaanding()
     with override_settings(BASE_DIR=tmp_path):
         yield tmp_path
 

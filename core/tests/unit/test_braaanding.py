@@ -9,12 +9,10 @@ a docstring.
 import pytest
 from django.contrib import admin
 from django.core.exceptions import ValidationError
-from django.db import connection
 from django.test import RequestFactory
-from django.test.utils import CaptureQueriesContext
 
 from core.models import Braaanding, Theeeme
-from core.models.braaanding import BRAAANDING_CODE, DEFAULT_COLORS, braaanding
+from core.models.braaanding import BRAAANDING_CODE, CACHE_SECONDS, DEFAULT_COLORS, braaanding
 from core.services.palette_contrast import contrast_failures, contrast_ratio
 
 SEED = {
@@ -136,8 +134,8 @@ class TestTheHelperAndItsCache:
     def test_it_answers_the_row_as_colours_and_koro(self):
         assert braaanding() == {**SEED, "koro": "basic"}
 
-    def test_saving_the_row_drops_the_cached_answer(self):
-        assert braaanding()["color_03"] == "#D77452"  # now cached
+    def test_saving_the_row_drops_the_remembered_answer(self):
+        assert braaanding()["color_03"] == "#D77452"  # now remembered
 
         row = Braaanding.objects.get()
         row.color_03 = "#E0B090"
@@ -145,25 +143,32 @@ class TestTheHelperAndItsCache:
 
         assert braaanding()["color_03"] == "#E0B090"
 
-    def test_a_second_call_does_not_read_the_row_again(self):
-        braaanding()  # fills the cache
+    def test_a_second_call_does_not_read_the_row_again(self, django_assert_num_queries):
+        braaanding()  # remembers it
 
-        with CaptureQueriesContext(connection) as queries:
+        with django_assert_num_queries(0):
             braaanding()
 
-        # The shared cache is a table too, so only the palette's own is counted.
-        assert [q for q in queries if '"braaanding"' in q["sql"]] == []
+    def test_a_worker_forgets_it_after_a_minute_so_another_workers_edit_arrives(self, monkeypatch):
+        """The memory is per process: a save in another worker cannot clear this one,
+        so what bounds the staleness is the time."""
+        clock = [1000.0]
+        monkeypatch.setattr("core.models.braaanding.time.monotonic", lambda: clock[0])
+        assert braaanding()["color_03"] == "#D77452"
+        # Another worker's save: the row changes, no signal reaches this process.
+        Braaanding.objects.filter(pk=BRAAANDING_CODE).update(color_03="#E0B090")
+
+        clock[0] += CACHE_SECONDS - 1
+        assert braaanding()["color_03"] == "#D77452"
+        clock[0] += 2
+        assert braaanding()["color_03"] == "#E0B090"
+
+    def test_the_answer_is_a_copy_nobody_can_corrupt_the_memory_through(self):
+        braaanding()["color_01"] = "#000000"
+
+        assert braaanding()["color_01"] == "#191919"
 
     def test_without_a_row_the_defaults_answer(self):
         Braaanding.objects.all().delete()
 
         assert braaanding() == {**DEFAULT_COLORS, "koro": "basic"}
-
-    def test_a_broken_cache_does_not_take_the_helper_down(self, monkeypatch):
-        def boom(*_args, **_kwargs):
-            raise RuntimeError("cache down")
-
-        monkeypatch.setattr("core.models.braaanding.cache.get", boom)
-        monkeypatch.setattr("core.models.braaanding.cache.set", boom)
-
-        assert braaanding()["color_01"] == "#191919"

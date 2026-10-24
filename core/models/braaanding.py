@@ -17,7 +17,8 @@ collection palettes must meet is checked here, when a palette is saved
 (`clean`), and the admin refuses one that fails.
 """
 
-from django.core.cache import cache
+import time
+
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
@@ -43,8 +44,14 @@ DEFAULT_COLORS = {
 DEFAULT_KORO = "basic"
 
 COLOR_FIELDS = tuple(DEFAULT_COLORS)
-CACHE_KEY = "braaanding:v1"
-CACHE_SECONDS = 60 * 10
+# How long a worker keeps the palette it read. The cache lives in each process's own
+# memory, not in `CACHES['default']`: every page the app serves reads the palette, and
+# the shared cache is a table, so reading it there would spend a query per page view
+# on routes that promise to ask the database nothing (`core.throttles`, `spa_index`).
+# The price is that another worker keeps the old colours for up to this long after an
+# edit in the admin; the process that saved the row forgets at once.
+CACHE_SECONDS = 60
+_cached = {"palette": None, "expires": 0.0}
 
 _hex_validator = RegexValidator(HEX_RE, "Use a colour like #RRGGBB.")
 
@@ -103,16 +110,14 @@ class Braaanding(models.Model):
 def braaanding():
     """The app's palette as `{"color_01": "#…", …, "koro": "basic"}`.
 
-    Cached on the shared cache and dropped whenever the row is saved or deleted.
-    The cache is an optimisation, never a dependency: if it cannot be read or
-    written, the row is read directly, and with no row the defaults answer.
+    Kept in this process's memory for `CACHE_SECONDS` and dropped whenever the row
+    is saved or deleted, so a page view costs no query once a worker has read it.
+    With no row (a database flushed by hand) the seeded values answer, so a page
+    and an email still paint.
     """
-    try:
-        cached = cache.get(CACHE_KEY)
-    except Exception:  # noqa: BLE001 - a broken cache must not take pages down
-        cached = None
-    if cached is not None:
-        return dict(cached)
+    palette = _cached["palette"]
+    if palette is not None and time.monotonic() < _cached["expires"]:
+        return dict(palette)
 
     row = Braaanding.objects.filter(pk=BRAAANDING_CODE).first()
     palette = (
@@ -120,18 +125,19 @@ def braaanding():
         if row is not None
         else {**DEFAULT_COLORS, "koro": DEFAULT_KORO}
     )
-    try:
-        cache.set(CACHE_KEY, palette, CACHE_SECONDS)
-    except Exception:  # noqa: BLE001
-        pass
+    _cached["palette"] = palette
+    _cached["expires"] = time.monotonic() + CACHE_SECONDS
     return dict(palette)
 
 
+def forget_braaanding():
+    """Drop the palette this process remembers (on every save, and between tests)."""
+    _cached["palette"] = None
+    _cached["expires"] = 0.0
+
+
 def _forget_braaanding(**_kwargs):
-    try:
-        cache.delete(CACHE_KEY)
-    except Exception:  # noqa: BLE001
-        pass
+    forget_braaanding()
 
 
 post_save.connect(_forget_braaanding, sender=Braaanding)

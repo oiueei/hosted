@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import FAQ, RSVP, Collection, Theeeme, Thing, User
+from core.models.braaanding import forget_braaanding
 from core.services import storage
 from core.throttles import reset_counters
 
@@ -55,6 +56,16 @@ def anonymous_api_counts_start_at_zero():
     reset_counters()
     yield
     reset_counters()
+
+
+@pytest.fixture(autouse=True)
+def forget_the_apps_palette():
+    """The app's palette is remembered per process (`braaanding()`), and a test's
+    rollback fires no signal: without this, a colour one test saved would still be
+    answered to the next."""
+    forget_braaanding()
+    yield
+    forget_braaanding()
 
 
 @pytest.fixture(autouse=True)
