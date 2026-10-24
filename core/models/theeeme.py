@@ -42,8 +42,14 @@ def random_theeeme():
 
 class Theeeme(models.Model):
     """
-    A color palette theme for collections.
+    A colour palette a collection can be painted with: one of the twelve a curator
+    chooses among (`Collection.theeeme`), listed by `GET /theeemes/`.
     Colors are HDS token names (e.g. "bus", "copper", "suomenlinna-light").
+
+    This table is the **selector** and the pool a new collection's palette is drawn
+    from at random. The app's own palette — what paints everything that is not a
+    collection's page, and every email — is **not** a row here: it is `Braaanding`,
+    a table of its own with hexadecimal colours, so it can never be picked or drawn.
     """
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
