@@ -23,7 +23,7 @@ one of the six) is replaced by its seeded default rather than escaped and truste
 
 from core.models.braaanding import DEFAULT_COLORS, DEFAULT_KORO, braaanding
 from core.models.theeeme import KORO_CHOICES
-from core.services.palette_contrast import HEX_RE
+from core.services.palette_contrast import is_hex_colour
 
 KORO_META = "braaanding-koro"
 _KOROS = {value for value, _label in KORO_CHOICES}
@@ -34,7 +34,7 @@ def palette_style_and_meta(palette):
     declarations = []
     for index, role in enumerate(DEFAULT_COLORS, start=1):
         value = palette.get(role)
-        if not isinstance(value, str) or not HEX_RE.match(value):
+        if not is_hex_colour(value):
             value = DEFAULT_COLORS[role]
         declarations.append(f"--color-braaanding-{index:02d}:{value}")
     koro = palette.get("koro")
