@@ -290,27 +290,20 @@ class TestUserViews:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "Lala"
 
-    def test_update_own_profile_koro(self, authenticated_client, user):
-        """Should update koro preference and persist it."""
+    def test_a_profile_has_no_palette_to_update_or_to_read(self, authenticated_client, user):
+        """The theeeme and the koro are a collection's, not the reader's: a body that
+        still names them is ignored and the profile does not carry them."""
         response = authenticated_client.put(
             f"/api/v1/users/{user.code}/",
-            {"koro": "wave"},
+            {"name": "Lala", "koro": "wave", "theeeme": "JMPA01"},
             format="json",
         )
+
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["koro"] == "wave"
-
-        user.refresh_from_db()
-        assert user.koro == "wave"
-
-    def test_update_own_profile_koro_invalid(self, authenticated_client, user):
-        """Should reject invalid koro values."""
-        response = authenticated_client.put(
-            f"/api/v1/users/{user.code}/",
-            {"koro": "invalid_koro"},
-            format="json",
+        assert not {"koro", "theeeme", "theeeme_colors"} & set(response.data)
+        assert not {"koro", "theeeme", "theeeme_colors"} & set(
+            authenticated_client.get(f"/api/v1/users/{user.code}/").data
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_update_other_profile(self, authenticated_client, user2):
         """Should reject updating other user's profile."""

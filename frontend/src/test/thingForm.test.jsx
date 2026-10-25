@@ -19,6 +19,7 @@ import AddThingPage from '../pages/AddThingPage';
 import EditThingPage from '../pages/EditThingPage';
 import en from '../i18n/locales/en.json';
 import { settle } from './settle';
+import declarePalette from './declarePalette';
 
 function mockResponse(data, ok = true) {
   return { ok, status: ok ? 200 : 400, json: () => Promise.resolve(data) };
@@ -72,17 +73,14 @@ async function renderEdit(apiOpts) {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
-  localStorage.setItem(
-    'theeemeColors',
-    JSON.stringify({
-      color_01: 'bus',
-      color_02: 'suomenlinna-light',
-      color_03: 'copper',
-      color_04: 'black',
-      color_05: 'white',
-      color_06: 'white',
-    })
-  );
+  declarePalette({
+    color_01: 'bus',
+    color_02: 'suomenlinna-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'white',
+  });
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
   setApi();

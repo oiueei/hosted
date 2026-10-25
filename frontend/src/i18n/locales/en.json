@@ -80,8 +80,7 @@
     "joining": "Sending…",
     "sent": "Check your email",
     "sentBody": "We've sent you a magic link to join. Open it on this device to start taking part.",
-    "error": "Something went wrong. Please try again.",
-    "alreadyHaveAccount": "Already have an account?"
+    "error": "Something went wrong. Please try again."
   },
   "visibility": {
     "publicLabel": "Public collection",
@@ -521,8 +520,6 @@
     "pageTitle": "Edit profile",
     "nameLabel": "Public name",
     "bioLabel": "Bio",
-    "theeemeLabel": "Theeeme",
-    "koroLabel": "Koro",
     "languageLabel": "Language",
     "languageAutomatic": "Automatic",
     "maxName": "Maximum 32 characters.",
@@ -575,6 +572,9 @@
     "maxHeadline": "Maximum 64 characters per language.",
     "errorCreating": "Error creating collection.",
     "advancedTitle": "More options",
+    "theeemeLabel": "Theeeme",
+    "koroLabel": "Koro",
+    "theeemeRandom": "If you pick none, one is chosen at random for you.",
     "tagsLabel": "Tags",
     "tagsPlaceholder": "e.g. Vintage, Kitchen, Outdoor",
     "tagsHelper": "Optional labels to organise this collection's things",

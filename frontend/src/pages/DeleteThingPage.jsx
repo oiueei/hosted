@@ -7,6 +7,7 @@ import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import useDocumentTitle from '../hooks/useDocumentTitle';
@@ -32,6 +33,7 @@ export default function DeleteThingPage() {
   const [failedCode, setFailedCode] = useState(null);
   const error = failedCode === thingCode;
   useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
+  useCollectionTheeeme(thing?.collection_theeeme_colors, thing?.collection_koro);
 
   useDocumentTitle(
     thing

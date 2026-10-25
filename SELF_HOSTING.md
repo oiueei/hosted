@@ -276,6 +276,31 @@ quietly switching the line off for everybody.
 
 ---
 
+## 6. `Braaanding` — the colours of the app itself
+
+Everything that is not a collection's page — Home, the account pages, the front door,
+the legal text, the 404, a deployment's own pages — and **every email** is painted with
+one palette, the app's own, which no curator can pick (a collection's pages wear the
+palette its curators chose among the twelve of the `Theeeme` table). It is a single
+row of the `Braaanding` table, and **a deployment changes it in the Django admin, with
+no code**: six hexadecimal colours (`#RRGGBB`) and a Koros wave.
+
+- `color_01` primary button, the secondary button's border, links · `color_02` page and
+  the wave's fill · `color_03` hero · `color_04` body text and the secondary button's
+  label · `color_05` hero text and table headers · `color_06` primary button label.
+- **The admin refuses a palette that would paint unreadable text**: it asks for 4.5:1
+  where the twelve collection palettes are held to it (body text on the page, the primary
+  button's label on its fill, the hero's text on the hero, the text colour on white, the
+  front door's warning on the page). A malformed colour is refused before that.
+- The pages receive it inside the HTML (`spa_index` writes it into the `<head>`: no
+  request, no flash) and the emails read the same row, so the web and the mail agree.
+  Each web worker remembers the row for up to a minute, so a change shows within that.
+- A fresh install starts with the palette migration `0164` seeds
+  (`#191919 #F4E5DD #D77452 #191919 #191919 #FAFAFA`, koro `basic`); there is no setting
+  or environment variable for it.
+
+---
+
 ## What upstream deliberately does not have
 
 - **No open sign-up.** `POST /auth/join/` creates nothing without a valid share

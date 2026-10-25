@@ -221,7 +221,7 @@ def test_magic_link_action_is_a_button_with_the_link_spelled_out():
     # anchor — the token styles travel inline or not at all.
     assert (
         f'<a href="{link}" '
-        'style="display:inline-block;background-color:#0000bf;color:#ffffff;' in html
+        'style="display:inline-block;background-color:#191919;color:#fafafa;' in html
     )
     # The fallback sentence, and the URL again as plain copy-pastable text.
     assert "copy and paste this link into your browser" in html
@@ -328,12 +328,12 @@ def test_the_invitation_answers_are_a_primary_and_a_secondary_button():
 
     primary = (
         f'<a href="{INVITE_ACCEPT}" '
-        'style="display:inline-block;background-color:#0000bf;color:#ffffff;'
+        'style="display:inline-block;background-color:#191919;color:#fafafa;'
     )
     secondary = (
         f'<a href="{INVITE_REJECT}" '
-        'style="display:inline-block;background-color:#ffffff;color:#0000bf;'
-        "border:2px solid #0000bf;"
+        'style="display:inline-block;background-color:#ffffff;color:#191919;'
+        "border:2px solid #191919;"
     )
     assert primary in html
     assert secondary in html
@@ -416,12 +416,12 @@ def test_the_hold_request_answers_are_a_primary_and_a_secondary_button(user, use
 
     primary = (
         f'<a href="{HOLD_ACCEPT}" '
-        'style="display:inline-block;background-color:#0000bf;color:#ffffff;'
+        'style="display:inline-block;background-color:#191919;color:#fafafa;'
     )
     secondary = (
         f'<a href="{HOLD_REJECT}" '
-        'style="display:inline-block;background-color:#ffffff;color:#0000bf;'
-        "border:2px solid #0000bf;"
+        'style="display:inline-block;background-color:#ffffff;color:#191919;'
+        "border:2px solid #191919;"
     )
     assert primary in html
     assert secondary in html
@@ -506,7 +506,7 @@ def test_the_hold_request_buttons_say_request_and_decline_never_reservation_or_c
 # secondary one. `_links` is the bare-text-link row; the rule says almost
 # nothing may use it.
 
-BUTTON_PRIMARY_START = 'style="display:inline-block;background-color:#0000bf;color:#ffffff;'
+BUTTON_PRIMARY_START = 'style="display:inline-block;background-color:#191919;color:#fafafa;'
 
 
 def _first_button(url):
@@ -566,7 +566,7 @@ def test_every_single_action_cta_spells_its_own_link_out_below_it():
     assert ">Go there</a>" in html
     assert "Trouble clicking?" in html
     assert (
-        '<a href="http://x/go" style="color:#0000bf !important;text-decoration:underline !important;">http://x/go</a>'
+        '<a href="http://x/go" style="color:#191919 !important;text-decoration:underline !important;">http://x/go</a>'
         in html
     )
 
@@ -623,7 +623,7 @@ def test_the_proposal_answers_are_a_primary_and_a_secondary_button():
     assert _first_button(approve) in html
     secondary = (
         f'<a href="{reject}" style="display:inline-block;background-color:#ffffff;'
-        "color:#0000bf;border:2px solid #0000bf;"
+        "color:#191919;border:2px solid #191919;"
     )
     assert secondary in html
     assert html.index(_first_button(approve)) < html.index(secondary)
@@ -652,7 +652,7 @@ def test_an_email_shown_as_its_own_value_is_a_plain_mailto_link():
 
     assert (
         '<p><a href="mailto:lele4@your-domain.test" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        'style="color:#191919 !important;text-decoration:underline !important;">'
         "lele4@your-domain.test</a></p>" in html
     )
     assert "<strong" not in html
@@ -666,7 +666,7 @@ def test_a_field_shown_as_an_address_is_a_plain_mailto_link():
 
     assert (
         '<p>Email: <a href="mailto:lili1@your-domain.test" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        'style="color:#191919 !important;text-decoration:underline !important;">'
         "lili1@your-domain.test</a></p>" in html
     )
     assert "<strong" not in html
@@ -681,7 +681,7 @@ def test_a_named_email_field_keeps_the_name_plain_and_links_only_the_address():
 
     assert (
         '<p>Owner: Lala (<a href="mailto:lala14@your-domain.test" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        'style="color:#191919 !important;text-decoration:underline !important;">'
         "lala14@your-domain.test</a>)</p>" in html
     )
 
@@ -707,7 +707,7 @@ def test_the_capacity_alarms_owner_row_has_no_angle_brackets():
     assert (
         f"Owner: {owner.display_name} "
         f'(<a href="mailto:{owner.email}" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        'style="color:#191919 !important;text-decoration:underline !important;">'
         f"{owner.email}</a>)" in html
     )
     plain = mail.outbox[0].body
@@ -759,7 +759,7 @@ def test_the_viral_line_is_a_pale_yellow_callout_with_black_text():
     """In the real message the growth line reads as one more grey
     footer sentence otherwise. A pale-yellow background + padding sets it
     apart; its own text is black, not the footer's muted grey — only the CTA
-    link inside keeps the bus-blue LINK_STYLE."""
+    link inside keeps the accent-coloured link style."""
     email_service.send_magic_link_email(
         "lele8@your-domain.test", "http://localhost:3000/verify/tok"
     )
@@ -904,7 +904,9 @@ def test_buttons_go_full_width_below_480px():
     }
     # The button, not the plain fallback link under it (same href, no class).
     [button] = [
-        a for a in page.anchors if (a.get("style") or "").startswith(email_service.BTN_PRIMARY)
+        a
+        for a in page.anchors
+        if (a.get("style") or "").startswith(email_service.email_style()["btn_primary"])
     ]
     assert (button.get("class") or "").split() == ["btn-primary"]
 
@@ -1314,7 +1316,7 @@ def test_the_reservation_notice_names_the_requesters_email(user, user2, thing):
     html = msg.alternatives[0][0]
     assert (
         f'Email: <a href="mailto:{user2.email}" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        'style="color:#191919 !important;text-decoration:underline !important;">'
         f"{user2.email}</a>" in html
     )
     assert f"Email: {user2.email}" in msg.body
@@ -1640,7 +1642,7 @@ def test_note_blocks_renders_bold_links_lists_and_emojis():
     assert "<p>Hola! <strong>Léenos</strong> 🛠️</p>" in html
     expected_list = (
         '<ul><li>Trae tu <a href="https://your-domain.test/reglas" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        'style="color:#191919 !important;text-decoration:underline !important;">'
         "carnet</a> (your-domain.test)</li>"
         "<li>Planta 2</li></ul>"
     )
@@ -1668,7 +1670,7 @@ def test_a_link_dressed_as_another_address_names_where_it_really_goes():
     html = str(blocks[0]["html"])
     assert html == (
         '<p><a href="https://elsewhere.example/verify" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">https://www.your-domain.test/verify/abc</a>'
+        'style="color:#191919 !important;text-decoration:underline !important;">https://www.your-domain.test/verify/abc</a>'
         " (elsewhere.example)</p>"
     )
 
@@ -1682,7 +1684,7 @@ def test_a_link_whose_text_is_its_own_url_needs_no_host():
     # "(your-domain.test)" repeating what the text already says.
     assert html == (
         '<p><a href="https://your-domain.test/a?b=1&amp;c=2" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">https://your-domain.test/a?b=1&amp;c=2</a></p>'
+        'style="color:#191919 !important;text-decoration:underline !important;">https://your-domain.test/a?b=1&amp;c=2</a></p>'
     )
 
 

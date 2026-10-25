@@ -7,6 +7,7 @@ import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import ThingsGoNotice from '../components/ThingsGoNotice';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import { useCollectionBase } from '../hooks/useCollectionBase';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
@@ -25,6 +26,11 @@ export default function RemoveGuestPage() {
   // (`ThingLinkbox`, `InboxNotifications`, HomePage): the copy interpolates it
   // mid-sentence, so the sentence still needs a subject.
   const guestName = location.state?.guestName || t('common.aMember');
+  // This page reads no collection: the manage-members page that leads here hands over
+  // the group's palette, so the confirmation wears the group's colours from the first
+  // frame. (Reached any other way there is no guest either, and it leaves.)
+  const palette = location.state?.palette;
+  useCollectionTheeeme(palette?.colors, palette?.koro);
 
   useEffect(() => {
     if (!guestCode) navigate(backPath);

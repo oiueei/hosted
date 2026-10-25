@@ -25,6 +25,7 @@ import { apiFetch } from '../services/api';
 import { settle } from './settle';
 import ThingLinkbox from '../components/ThingLinkbox';
 import ThingPage from '../pages/ThingPage';
+import declarePalette from './declarePalette';
 
 const respond = (body, status = 200) =>
   Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
@@ -331,7 +332,7 @@ describe('ThingPage — how it fails to load', () => {
     const wayOut = (container) => container.querySelector('.button-row-wide a');
 
     test('with a session it is a secondary button to Home', async () => {
-      localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+      declarePalette(THEEEME);
       setApi({ thing: {}, thingStatus: 403 });
       const { container } = renderPage();
       await screen.findByText(en.thingPage.noPermission);
@@ -347,7 +348,7 @@ describe('ThingPage — how it fails to load', () => {
 
     test('without one it is a primary Sign in that brings them back to this thing', async () => {
       localStorage.removeItem('userCode');
-      localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+      declarePalette(THEEEME);
       setApi({ thing: {}, thingStatus: 403 });
       const { container } = renderPage('/collections/COL001/things/THG001');
       await screen.findByText(en.thingPage.noPermission);

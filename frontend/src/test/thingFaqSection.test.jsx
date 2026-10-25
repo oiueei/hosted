@@ -9,6 +9,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch, extractApiError } from '../services/api';
 import ThingFaqSection from '../components/ThingFaqSection';
 import { press, settle } from './settle';
+import declarePalette from './declarePalette';
 
 function jsonResponse(data, ok = true, status = ok ? 200 : 400) {
   return { ok, status, json: () => Promise.resolve(data) };
@@ -66,17 +67,14 @@ beforeEach(() => {
 // ════════════════════════════════════════════════════════════════════════
 describe('ThingFaqSection — the theeeme', () => {
   test('paints its own buttons with the viewer’s theeeme, without being handed it', async () => {
-    localStorage.setItem(
-      'theeemeColors',
-      JSON.stringify({
-        color_01: 'copper',
-        color_02: 'white',
-        color_03: 'tram',
-        color_04: 'black',
-        color_05: 'white',
-        color_06: 'black',
-      })
-    );
+    declarePalette({
+      color_01: 'copper',
+      color_02: 'white',
+      color_03: 'tram',
+      color_04: 'black',
+      color_05: 'white',
+      color_06: 'black',
+    });
     renderFaq();
 
     const send = await screen.findByRole('button', { name: 'Send question' });

@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, test } from 'vitest';
 import RefusalWayOut from './RefusalWayOut';
 import en from '../i18n/locales/en.json';
+import declarePalette from '../test/declarePalette';
 
 const THEEEME = {
   color_01: 'bus',
@@ -22,7 +23,7 @@ function renderAt(entry) {
 
 beforeEach(() => {
   localStorage.clear();
-  localStorage.setItem('theeemeColors', JSON.stringify(THEEEME));
+  declarePalette(THEEEME);
 });
 
 describe('RefusalWayOut: where a refused reader goes next', () => {

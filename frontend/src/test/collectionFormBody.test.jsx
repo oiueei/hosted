@@ -32,9 +32,34 @@ import en from '../i18n/locales/en.json';
 
 const ok = (data) => ({ ok: true, status: 200, json: () => Promise.resolve(data) });
 
+// The twelve palettes the selector lists (two of them are enough here).
+const THEEEMES = [
+  {
+    code: 'BUU331',
+    name: 'Bussi',
+    color_01: 'bus',
+    color_02: 'suomenlinna-medium-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'white',
+  },
+  {
+    code: 'JMPA01',
+    name: 'Metro',
+    color_01: 'metro',
+    color_02: 'suomenlinna-medium-light',
+    color_03: 'gold',
+    color_04: 'black',
+    color_05: 'black',
+    color_06: 'black',
+  },
+];
+
 function setApi(collection = {}) {
   apiFetch.mockImplementation((url, opts = {}) => {
     const method = opts.method || 'GET';
+    if (url === '/api/v1/theeemes/') return Promise.resolve(ok(THEEEMES));
     if (url === '/api/v1/collections/' && method === 'POST')
       return Promise.resolve(ok({ code: 'NEW001', kind: 'LIBRARY' }));
     if (/\/collections\/[^/]+\//.test(url)) return Promise.resolve(ok(collection));
@@ -71,6 +96,9 @@ async function fillAdvanced(container, p) {
   type(container, `#${p}-email-note`, 'The key is in the box');
   type(container, `#${p}-home-page`, 'https://group.example/');
   await pickOption(/Digest emails/, en.editCollection.digestMonthly);
+  // The palette and the wave of the group's pages.
+  fireEvent.click(await screen.findByRole('button', { name: 'Metro' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Wave' }));
 }
 
 const patchBody = () => {
@@ -120,6 +148,8 @@ describe('Create — the body of a library with every optional field filled in',
       thumbnail: '',
       language: 'en',
       digest_frequency: 'MONTHLY',
+      theeeme: 'JMPA01',
+      koro: 'wave',
       welcome_doc: '',
       closed_dates: '25/12/2099, 01/01/2100',
       request_info: 'Ask in the evening',
@@ -163,6 +193,8 @@ describe('Create — the body of a library with every optional field filled in',
       thumbnail: '',
       language: 'en',
       digest_frequency: 'WEEKLY',
+      // No palette picked: none is sent and the server draws one. The koro is the basic wave.
+      koro: 'basic',
       welcome_doc: '',
     });
   });
@@ -193,6 +225,8 @@ const LIBRARY = {
   // English, the language the test reads in: a collection in another language would
   // switch the page's own words under the queries.
   language: 'en',
+  theeeme: 'BUU331',
+  koro: 'calm',
   owner: 'ABC123',
 };
 
@@ -232,6 +266,8 @@ describe('Edit — the body of a library', () => {
       tags: ['Old tag'],
       thumbnail: 'oiueei/collections/thumb',
       language: 'en',
+      theeeme: 'BUU331',
+      koro: 'calm',
       welcome_doc: 'oiueei/documents/doc',
       closed_dates: '25/12/2099',
       request_info: 'Old request note',
@@ -255,6 +291,8 @@ describe('Edit — the body of a library', () => {
     type(container, '#edit-collection-home-page', 'https://new.example/');
     await pickOption(/Digest emails/, en.editCollection.digestNone);
     await pickOption(/Language of the group messages/, 'Español');
+    fireEvent.click(await screen.findByRole('button', { name: 'Metro' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wave' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -273,6 +311,8 @@ describe('Edit — the body of a library', () => {
       tags: ['Old tag', 'Kitchen'],
       thumbnail: 'oiueei/collections/thumb',
       language: 'es',
+      theeeme: 'JMPA01',
+      koro: 'wave',
       welcome_doc: 'oiueei/documents/doc',
       closed_dates: '01/01/2100',
       request_info: 'New request note',
@@ -322,6 +362,8 @@ describe('Edit — the body of a shed booked by the day', () => {
       tags: ['Old tag'],
       thumbnail: 'oiueei/collections/thumb',
       language: 'en',
+      theeeme: 'BUU331',
+      koro: 'calm',
       welcome_doc: 'oiueei/documents/doc',
       closed_dates: '25/12/2099',
       request_info: 'Old request note',

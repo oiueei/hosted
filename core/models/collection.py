@@ -12,6 +12,7 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from core.models.language import Language
+from core.models.theeeme import KORO_CHOICES, random_theeeme
 from core.utils import Refusal, generate_id
 
 logger = logging.getLogger(__name__)
@@ -136,6 +137,17 @@ class Collection(models.Model):
     # deployment default (EMAIL_LANGUAGE); a member's own preference still wins
     # over it. See email_service.resolve_email_language.
     language = models.CharField(max_length=2, choices=Language.choices, blank=True, default="")
+    # The palette this group's pages are painted with, and its Koros wave: chosen
+    # by a curator among the twelve rows of `theeemes`, a random one until they do.
+    # (The app's own palette, `Braaanding`, is not one of them and cannot be picked.)
+    theeeme = models.ForeignKey(
+        "Theeeme",
+        on_delete=models.PROTECT,
+        to_field="code",
+        related_name="collections",
+        default=random_theeeme,
+    )
+    koro = models.CharField(max_length=9, choices=KORO_CHOICES, default="basic")
     # Whether members may suggest new guests (InvitationProposal). The owner
     # always decides on each one — this decides whether they are willing to be
     # asked at all. A group with a waiting list, a subscription or an admission

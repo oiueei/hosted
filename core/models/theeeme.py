@@ -2,15 +2,54 @@
 Theeeme model for OIUEEI.
 """
 
-from django.db import models
+import random
+
+from django.db import OperationalError, ProgrammingError, models
 
 from core.utils import generate_id
+
+# The Koros wave types, shared by every palette that carries one.
+KORO_CHOICES = [
+    ("basic", "Basic"),
+    ("beat", "Beat"),
+    ("calm", "Calm"),
+    ("pulse", "Pulse"),
+    ("vibration", "Vibration"),
+    ("wave", "Wave"),
+]
+
+# Bussi — the documented default palette (seeded in migration 0036). Used only as
+# a last-resort fallback when the Theeeme table is somehow empty.
+DEFAULT_THEEEME_CODE = "BUU331"
+
+
+def random_theeeme():
+    """Pick a random *existing* theeeme code for a new collection's palette.
+
+    Reads the live Theeeme table rather than a hardcoded list, so removing a
+    theeeme can never make creating a collection roll a dangling FK (a 1-in-N
+    IntegrityError). Falls back to the default code if the table is empty — or
+    missing entirely: Django's system checks instantiate models (evaluating this
+    default) before migrations have run on a fresh environment, e.g.
+    `makemigrations --check` on a bare CI checkout.
+    """
+    try:
+        codes = list(Theeeme.objects.values_list("code", flat=True))
+    except (OperationalError, ProgrammingError):
+        return DEFAULT_THEEEME_CODE
+    return random.choice(codes) if codes else DEFAULT_THEEEME_CODE
 
 
 class Theeeme(models.Model):
     """
-    A color palette theme for collections.
+    A colour palette a collection can be painted with: one of the twelve a curator
+    chooses among (`Collection.theeeme`), listed by `GET /theeemes/`.
     Colors are HDS token names (e.g. "bus", "copper", "suomenlinna-light").
+
+    This table is the **selector** and the pool a new collection's palette is drawn
+    from at random. The app's own palette — what paints everything that is not a
+    collection's page, and every email — is **not** a row here: it is `Braaanding`,
+    a table of its own with hexadecimal colours, so it can never be picked or drawn.
     """
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)

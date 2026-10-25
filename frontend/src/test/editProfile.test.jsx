@@ -271,3 +271,32 @@ describe('EditProfilePage — the two exits', () => {
     expect(download.compareDocumentPosition(del) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
+
+/**
+ * The palette is a collection's, chosen by its curators in the collection's own form;
+ * the profile has neither a palette nor a koro to pick, reads no list of palettes and
+ * sends nothing of them.
+ */
+describe('EditProfilePage — no palette and no koro', () => {
+  test('offers neither selector and does not ask for the list of palettes', async () => {
+    renderPage();
+    await screen.findByLabelText(/name/i);
+
+    expect(screen.queryByText('Theeeme')).not.toBeInTheDocument();
+    expect(screen.queryByText('Koro')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /theeeme|koro/i })).not.toBeInTheDocument();
+    expect(apiFetch.mock.calls.some(([url]) => url === '/api/v1/theeemes/')).toBe(false);
+  });
+
+  test('the save carries neither a koro nor a theeeme, even for a profile that still has them', async () => {
+    setApi({ profile: { ...PROFILE, koro: 'wave', theeeme: 'BUU331' } });
+    renderPage();
+    await screen.findByLabelText(/name/i);
+
+    save();
+
+    await waitFor(() => expect(putCalls()).toHaveLength(1));
+    expect(putBody()).not.toHaveProperty('theeeme');
+    expect(putBody()).not.toHaveProperty('koro');
+  });
+});

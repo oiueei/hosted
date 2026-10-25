@@ -7,6 +7,8 @@ import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import ThingsGoNotice from '../components/ThingsGoNotice';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useCollectionBase } from '../hooks/useCollectionBase';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
@@ -26,6 +28,12 @@ export default function LeaveCollectionPage() {
   // The member's own things in this group, which leave with them. Leaving does not
   // depend on this: if the group cannot be read the page works without the notice.
   const [goingTitles, setGoingTitles] = useState([]);
+  // The same read gives the group's colours; the confirmation is not painted before it
+  // has answered (the app's palette would show for an instant). A group that cannot be
+  // read settles with no palette and the page keeps the app's.
+  const [palette, setPalette] = useState(null);
+  const [settled, setSettled] = useState(false);
+  useCollectionTheeeme(palette?.colors, palette?.koro);
 
   useEffect(() => {
     const userCode = localStorage.getItem('userCode');
@@ -36,6 +44,7 @@ export default function LeaveCollectionPage() {
         if (!res.ok || cancelled) return;
         const data = await res.json();
         if (cancelled) return;
+        setPalette({ colors: data.theeeme_colors, koro: data.koro });
         setGoingTitles(
           (data.things || [])
             .filter((thing) => thing.owner === userCode)
@@ -43,6 +52,8 @@ export default function LeaveCollectionPage() {
         );
       } catch {
         // No notice; the exit still works.
+      } finally {
+        if (!cancelled) setSettled(true);
       }
     })();
     return () => {
@@ -68,6 +79,8 @@ export default function LeaveCollectionPage() {
   };
 
   const { btnStyle, btnSecondaryStyle } = useTheeeme();
+
+  if (!settled) return <LoadingSpinner />;
 
   return (
     <PageLayout

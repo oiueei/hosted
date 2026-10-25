@@ -1,5 +1,6 @@
 from .activity import DailyActivity, DeviceDay
 from .booking import BookingPeriod
+from .braaanding import Braaanding
 from .collection import Collection
 from .event import Event
 from .faq import FAQ
@@ -20,6 +21,7 @@ __all__ = [
     "FAQ",
     "RSVP",
     "Theeeme",
+    "Braaanding",
     "Language",
     "BookingPeriod",
     "ThingTransfer",

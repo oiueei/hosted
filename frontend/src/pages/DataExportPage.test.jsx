@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 import DataExportPage from './DataExportPage';
+import declarePalette from '../test/declarePalette';
 
 const downloadBlobMock = vi.fn();
 
@@ -51,17 +52,14 @@ describe('DataExportPage', () => {
   test("the download button wears the viewer's theeeme, not HDS's default blue", () => {
     // The page used not to read the theeeme at all: its one button painted the default
     // blue on a page whose hero and background are the viewer's own palette.
-    localStorage.setItem(
-      'theeemeColors',
-      JSON.stringify({
-        color_01: 'copper',
-        color_02: 'suomenlinna-light',
-        color_03: 'copper',
-        color_04: 'black',
-        color_05: 'white',
-        color_06: 'white',
-      })
-    );
+    declarePalette({
+      color_01: 'copper',
+      color_02: 'suomenlinna-light',
+      color_03: 'copper',
+      color_04: 'black',
+      color_05: 'white',
+      color_06: 'white',
+    });
     render(
       <MemoryRouter>
         <DataExportPage />

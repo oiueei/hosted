@@ -6,8 +6,6 @@ import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
-import TheeemeSelector from '../components/TheeemeSelector';
-import KoroSelector from '../components/KoroSelector';
 import ImageUpload from '../components/ImageUpload';
 import useTheeeme from '../hooks/useTheeeme';
 import { invalidateMe } from '../hooks/useCapabilities';
@@ -33,9 +31,6 @@ export default function EditProfilePage() {
   const [about, setAbout] = useState('');
   const [photo, setPhoto] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
-  const [koro, setKoro] = useState('basic');
-  const [theeeme, setTheeeme] = useState('');
-  const [theeemes, setTheeemes] = useState([]);
   const [notifyActivity, setNotifyActivity] = useState(true);
   const [notifyNews, setNotifyNews] = useState(false);
   const [language, setLanguage] = useState('');
@@ -48,10 +43,7 @@ export default function EditProfilePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [profileRes, theemesRes] = await Promise.all([
-          apiFetch('/api/v1/auth/me/'),
-          apiFetch('/api/v1/theeemes/'),
-        ]);
+        const profileRes = await apiFetch('/api/v1/auth/me/');
 
         if (profileRes.ok) {
           const data = await profileRes.json();
@@ -60,8 +52,6 @@ export default function EditProfilePage() {
           setAbout(data.about || '');
           setPhoto(data.photo || '');
           setPhotoUrl(data.photo_url || '');
-          setKoro(data.koro || 'basic');
-          setTheeeme(data.theeeme || '');
           setNotifyActivity(data.notify_activity ?? true);
           setNotifyNews(data.notify_news ?? false);
           // The SAVED preference, blank included — never the language the
@@ -75,11 +65,6 @@ export default function EditProfilePage() {
           setPostalCode(data.postal_code || '');
         } else {
           setToast({ type: 'error', message: t('editProfile.errorLoading') });
-        }
-
-        if (theemesRes.ok) {
-          const data = await theemesRes.json();
-          setTheeemes(Array.isArray(data) ? data : data.results || []);
         }
       } catch {
         setToast({ type: 'error', message: t('common.connectionError') });
@@ -115,7 +100,6 @@ export default function EditProfilePage() {
       headline: headline.trim(),
       about: about.trim(),
       photo,
-      koro,
       notify_activity: notifyActivity,
       notify_news: notifyNews,
       // Also the language OIUEEI writes to this user in (email included).
@@ -123,7 +107,6 @@ export default function EditProfilePage() {
       age_range: ageRange,
       postal_code: postalCode,
     };
-    if (theeeme) body.theeeme = theeeme;
 
     try {
       const res = await apiFetch(`/api/v1/users/${userCode}/`, {
@@ -212,8 +195,6 @@ export default function EditProfilePage() {
           onChange={setPhoto}
           helperText={t('editProfile.photoHelper')}
         />
-        <TheeemeSelector theeemes={theeemes} value={theeeme} onChange={setTheeeme} />
-        <KoroSelector value={koro} onChange={setKoro} />
         <Select
           id="edit-profile-language"
           texts={{

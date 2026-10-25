@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from core.models import Collection, Thing
 from core.models.booking import DATE_BASED_TYPES, BookingPeriod
+from core.serializers.theeeme import theeeme_colors
 from core.utils import asset_url, doc_asset_url
 from core.validators import (
     LOCALIZED_DESCRIPTION_STORAGE,
@@ -60,7 +61,11 @@ def optimise_thing_queryset(queryset, *, with_collections=False):
         # `collections__co_owners` feeds the `can_manage` field: a PROPRIETARY
         # collection's curator manages its whole catalogue (2026-09), and
         # `Collection.is_curator` reads `co_owners` via `.all()`.
-        related.insert(0, "collections")
+        # The palette rides with the collection, joined here so reading it costs no
+        # query per thing (`collection_theeeme_colors`).
+        related.insert(
+            0, Prefetch("collections", queryset=Collection.objects.select_related("theeeme"))
+        )
         related.insert(1, "collections__co_owners")
     return (
         queryset.select_related("owner")
@@ -331,6 +336,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_is_onboarding = serializers.SerializerMethodField()
     collection_request_info = serializers.SerializerMethodField()
     collection_language = serializers.SerializerMethodField()
+    collection_theeeme_colors = serializers.SerializerMethodField()
+    collection_koro = serializers.SerializerMethodField()
     collection_menu = serializers.SerializerMethodField()
     rental_durations = serializers.SerializerMethodField()
     rental_weekdays = serializers.SerializerMethodField()
@@ -382,6 +389,8 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_is_onboarding",
             "collection_request_info",
             "collection_language",
+            "collection_theeeme_colors",
+            "collection_koro",
             "collection_menu",
             "rental_durations",
             "rental_weekdays",
@@ -546,6 +555,20 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         both mean "don't override"."""
         first = self._viewable_collection(obj)
         return (first.language if first else "") or ""
+
+    def get_collection_theeeme_colors(self, obj):
+        """The palette of the collection this viewer reads the thing through, so a
+        thing-only page (`ThingPage`, `RequestThingPage`, `EditThingPage`,
+        `DeleteThingPage`) paints with its group's colours without loading the
+        collection. Resolved like `collection_language`; `None` when there is no
+        viewable collection, and the page then paints with the app's own palette."""
+        first = self._viewable_collection(obj)
+        return theeeme_colors(first.theeeme) if first else None
+
+    def get_collection_koro(self, obj):
+        """The Koros wave of that same collection; `""` when there is none."""
+        first = self._viewable_collection(obj)
+        return (first.koro if first else "") or ""
 
     def _viewer_muted_collection_codes(self):
         """Codes of the collections whose digest this viewer has silenced — one

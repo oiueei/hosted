@@ -14,6 +14,7 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch } from '../services/api';
 import RequestThingPage from '../pages/RequestThingPage';
+import declarePalette from './declarePalette';
 
 function mockResponse(data, ok = true) {
   return { ok, status: ok ? 200 : 400, json: () => Promise.resolve(data) };
@@ -85,17 +86,14 @@ const dayDisabled = (iso) => dayCell(iso)?.getAttribute('aria-disabled') === 'tr
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
-  localStorage.setItem(
-    'theeemeColors',
-    JSON.stringify({
-      color_01: 'bus',
-      color_02: 'suomenlinna-light',
-      color_03: 'copper',
-      color_04: 'black',
-      color_05: 'white',
-      color_06: 'white',
-    })
-  );
+  declarePalette({
+    color_01: 'bus',
+    color_02: 'suomenlinna-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'white',
+  });
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
   // Freeze "today" on Monday 2026-06-01 so the picker opens on June 2026 and the
