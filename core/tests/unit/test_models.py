@@ -858,8 +858,8 @@ class TestUserModelEdgeCases:
         theeeme the old hardcoded list still named — but that was deleted — can
         never be assigned (which would be a dangling FK / IntegrityError)."""
         owner = User.objects.create(email="lala-owner@your-domain.test")
-        # Bussi stays: the retired `users.user_theeeme` column still defaults to it
-        # at the database level until the next release drops the column.
+        # Bussi stays: it is `DEFAULT_THEEEME_CODE`, what `random_theeeme` falls back to
+        # when the table is empty, so the table is never left without it.
         Theeeme.objects.exclude(code="BUU331").delete()
         Theeeme.objects.create(
             code="ZZZ999",
