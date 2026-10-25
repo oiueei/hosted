@@ -6,12 +6,13 @@ RSVP, what each email is told, which language it speaks, and how far the daily
 quota counter and the decision claim reach.
 """
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 import time_machine
 from django.core import mail
 from django.core.cache import caches
 from django.test import override_settings
-from django.utils import timezone
 
 from core.models import RSVP, Collection, InvitationProposal, User
 from core.models.notification import InAppNotification
@@ -70,12 +71,14 @@ class TestTheDailyQuotaCounter:
     @override_settings(**QUOTA_SETTINGS)
     def test_what_was_sent_is_still_counted_hours_later(self):
         caches["default"].clear()
-        now = timezone.now()
+        # A fixed mid-morning, not the clock: the quota key carries the date, so a run in
+        # the last hour of the day would see the +1 h cross into a fresh counter.
+        now = datetime(2026, 10, 26, 10, 0, tzinfo=UTC)
         with time_machine.travel(now, tick=False):
             svc._consume_invite_quota("DOWN01", 2)
             assert svc._invite_quota_left("DOWN01") == 3
         # The counter's own lifetime, not the cache's default few minutes.
-        with time_machine.travel(now + timezone.timedelta(hours=1), tick=False):
+        with time_machine.travel(now + timedelta(hours=1), tick=False):
             assert svc._invite_quota_left("DOWN01") == 3
 
 
