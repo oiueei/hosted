@@ -19,11 +19,13 @@ import { aboutPath, deploymentRoutes, faqPath, popInPath } from '../deployment';
  * localStorage, and a key that started tracking something non-essential would
  * look, from the outside, identical to one of the three below.
  *
- * Inventory as of 2026-09-07 (README §Privacy carries the dated copy):
+ * Inventory (README §Privacy carries the dated copy):
  *   - `userCode`     — which account is signed in, session bookkeeping
- *   - `theeemeColors`, `koro` — the signed-in user's own display preferences
- * All three are strictly necessary (session state or the visitor's own
- * preference, nothing observed about them) and none needs consent.
+ * It is strictly necessary (session state, nothing observed about the visitor) and
+ * needs no consent. `theeemeColors` and `koro`, the signed-in user's display
+ * preferences, were a second and third key until the palette moved to the
+ * collection (or to the app's own, served in the page): nothing writes them now, and
+ * `utils/retiredStorage.js` removes what older visits left behind.
  *
  * `sessionStorage` holds **one** key since 2026-09-29: `staleChunkReloadAt`, the
  * time of the last automatic reload after a deploy left a tab asking for a chunk
@@ -59,7 +61,7 @@ function sourceFiles(dir, found = []) {
   return found;
 }
 
-const EXPECTED_LOCAL_STORAGE_KEYS = new Set(['userCode', 'theeemeColors', 'koro']);
+const EXPECTED_LOCAL_STORAGE_KEYS = new Set(['userCode']);
 
 function storageKeys(source, method) {
   const pattern = new RegExp(`${method}\\.setItem\\(\\s*'([^']+)'`, 'g');
@@ -67,7 +69,7 @@ function storageKeys(source, method) {
 }
 
 describe('what this app writes to the browser (LSSI-CE art. 22.2)', () => {
-  test('every localStorage key written by app code is one of the three known ones', () => {
+  test('every localStorage key written by app code is the one known key', () => {
     // Vitest runs from the frontend root, so `src` resolves; a wrong cwd
     // throws here rather than quietly sweeping nothing.
     const files = sourceFiles('src');

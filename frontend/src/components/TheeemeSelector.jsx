@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { IconCheck } from 'hds-react';
 
-export default function TheeemeSelector({ theeemes, value, onChange }) {
+/**
+ * The palettes of the twelve, one button each. `value` is the code of the chosen one, or
+ * empty for none (a new collection draws one when none is picked, and `hint` says so).
+ */
+export default function TheeemeSelector({ theeemes, value, onChange, hint }) {
   const { t } = useTranslation();
 
   if (!theeemes || theeemes.length === 0) return null;
@@ -9,8 +13,9 @@ export default function TheeemeSelector({ theeemes, value, onChange }) {
   return (
     <div className="theeeme-selector">
       <span id="theeeme-selector-label" className="theeeme-selector-label">
-        {t('editProfile.theeemeLabel')}
+        {t('createCollection.theeemeLabel')}
       </span>
+      {hint && <p className="weekday-field-helper">{hint}</p>}
       <div className="theeeme-selector-grid" role="group" aria-labelledby="theeeme-selector-label">
         {theeemes.map((th) => {
           const selected = th.code === value;

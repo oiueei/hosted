@@ -37,7 +37,7 @@ def test_a_curator_gets_their_draft_rendered_as_members_will_see_it(
     assert "<li>Floor 2</li>" in html
     assert (
         '<a href="https://your-domain.test/rules" '
-        'style="color:#0000bf !important;text-decoration:underline !important;">'
+        'style="color:#191919 !important;text-decoration:underline !important;">'
         "Rules</a> (your-domain.test)" in html
     )
     assert "Test Collection" in sent.subject

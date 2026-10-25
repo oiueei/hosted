@@ -100,7 +100,7 @@ describe('the corner of a reader with no session', () => {
     expect(cornerLinks(container)).toEqual([]);
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
       'href',
-      '/login?next=%2Fcollections%2FCOL001'
+      '/collections/COL001/join'
     );
   });
 

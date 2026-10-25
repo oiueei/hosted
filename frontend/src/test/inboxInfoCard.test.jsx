@@ -16,6 +16,7 @@ import { apiFetch } from '../services/api';
 import i18n from '../i18n';
 import InboxNotifications from '../components/InboxNotifications';
 import { switchLanguage } from './settle';
+import declarePalette from './declarePalette';
 
 // What only informs folds into one card past three; what asks for an action stays a
 // card of its own, as it was.
@@ -60,7 +61,6 @@ beforeEach(() => {
 afterEach(async () => {
   await switchLanguage(i18n, 'en');
   localStorage.removeItem('i18nextLng');
-  localStorage.removeItem('theeemeColors');
 });
 
 describe('five updates and one question', () => {
@@ -118,16 +118,13 @@ describe('five updates and one question', () => {
   });
 
   test('the confirm button is the primary of the reader’s theeeme', async () => {
-    localStorage.setItem(
-      'theeemeColors',
-      JSON.stringify({
-        color_01: 'metro',
-        color_02: 'white',
-        color_03: 'fog',
-        color_04: 'black',
-        color_06: 'white',
-      })
-    );
+    declarePalette({
+      color_01: 'metro',
+      color_02: 'white',
+      color_03: 'fog',
+      color_04: 'black',
+      color_06: 'white',
+    });
     setApi([question, ...FIVE]);
     renderInbox();
     const panel = await openConfirm();

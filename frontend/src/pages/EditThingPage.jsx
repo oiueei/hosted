@@ -15,6 +15,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ThingForm from '../components/ThingForm';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
@@ -67,6 +68,9 @@ export default function EditThingPage() {
   // language under the editor's hands.
   const [loadedTexts, setLoadedTexts] = useState([]);
   useCollectionLanguage(thingCollectionLanguage, loadedTexts);
+  // The colours of the collection the thing is read through, as loaded.
+  const [thingPalette, setThingPalette] = useState(null);
+  useCollectionTheeeme(thingPalette?.colors, thingPalette?.koro);
 
   useEffect(() => {
     const fetchThing = async () => {
@@ -96,6 +100,10 @@ export default function EditThingPage() {
           setThingCollectionKind(data.collection_kind || '');
           setCollectionAllowedTypes(data.collection_allowed_thing_types || []);
           setThingCollectionLanguage(data.collection_language || '');
+          setThingPalette({
+            colors: data.collection_theeeme_colors,
+            koro: data.collection_koro,
+          });
           setLoadedTexts([data.headline, data.description]);
         } else {
           setToast({ type: 'error', messageKey: 'editThing.errorLoading' });

@@ -10,6 +10,8 @@ import ThingForm from '../components/ThingForm';
 import DemoNotice from '../components/DemoNotice';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
+import LoadingSpinner from '../components/LoadingSpinner';
 import useCapabilities, { isOfferable } from '../hooks/useCapabilities';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useLocalized, localizedCounter } from '../utils/localized';
@@ -60,6 +62,12 @@ export default function AddThingPage() {
   const [tags, setTags] = useState([]);
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, [collectionHeadline]);
+  // The form is the group's: it wears the group's colours and is not painted before the
+  // collection has answered (the app's palette would show for an instant). A collection
+  // that cannot be read settles with no palette, and the form stays on the app's.
+  const [palette, setPalette] = useState(null);
+  const [settled, setSettled] = useState(!userCode);
+  useCollectionTheeeme(palette?.colors, palette?.koro);
 
   // The verb the price makes, in the collection's kind, and whether this account may
   // offer it: the deployment's policy is asked about the verb the thing will take, not
@@ -91,8 +99,10 @@ export default function AddThingPage() {
         setIsOnboarding(!!data.is_onboarding);
         setCollectionTags(data.tags || []);
         setCollectionLanguage(data.language || '');
+        setPalette({ colors: data.theeeme_colors, koro: data.koro });
       })
-      .catch(() => setToast({ type: 'error', messageKey: 'common.connectionError' }));
+      .catch(() => setToast({ type: 'error', messageKey: 'common.connectionError' }))
+      .finally(() => setSettled(true));
   }, [userCode, code]);
 
   const computeErrors = () => {
@@ -170,6 +180,8 @@ export default function AddThingPage() {
 
   // Theeeme colors from localStorage (set by HomePage on login)
   const { tc, btnStyle } = useTheeeme();
+
+  if (!settled) return <LoadingSpinner />;
 
   return (
     <PageLayout backTo={`${base}`} backLabel={L(collectionHeadline) || t('common.collection')}>

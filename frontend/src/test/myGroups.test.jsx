@@ -451,29 +451,21 @@ describe('UserPage — My groups: every group the account is in', () => {
  * `useTheeeme`, which pins them.
  */
 describe('UserPage — the hero action buttons carry the full theeeme', () => {
-  const THEEEME = {
-    color_01: 'engel',
-    color_02: 'bus-medium-light',
-    color_03: 'copper',
-    color_04: 'black',
-    color_05: 'black',
-    color_06: 'black',
-  };
-
-  test('own profile: the buttons are themed from the fetched colours', async () => {
-    setApi({ profile: { ...ME, theeeme_colors: THEEEME } });
+  test("own profile: the buttons wear the app's palette, not colours from the profile", async () => {
+    // A profile is an app page. Even an answer that still carried colours would not
+    // repaint it (the server no longer sends them).
+    setApi({ profile: { ...ME, theeeme_colors: { color_01: 'engel', color_06: 'black' } } });
     renderOwn();
 
     const edit = await screen.findByRole('link', { name: /edit profile/i });
-    // engel is a light accent — white text on it is 1.22:1. The primary style
-    // pairs color_06 with color_01, the pairing paletteContrast.test.js pins at
-    // >= 4.5:1 for every palette.
-    expect(edit.style.getPropertyValue('--background-color')).toBe('var(--color-engel)');
-    expect(edit.style.getPropertyValue('--color')).toBe('var(--color-black)');
+    // The primary style pairs color_06 with color_01, the pairing the admin refuses a
+    // palette that fails at 4.5:1 (`Braaanding.clean`).
+    expect(edit.style.getPropertyValue('--background-color')).toBe('var(--color-braaanding-01)');
+    expect(edit.style.getPropertyValue('--color')).toBe('var(--color-braaanding-06)');
   });
 
   test('own profile: focus does not recolour a button — the *-focus tokens are pinned', async () => {
-    setApi({ profile: { ...ME, theeeme_colors: THEEEME } });
+    setApi({ profile: ME });
     renderOwn();
 
     const edit = await screen.findByRole('link', { name: /edit profile/i });

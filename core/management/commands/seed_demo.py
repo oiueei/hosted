@@ -203,8 +203,6 @@ class Command(BaseCommand):
                     "email": f"{data['email_local']}@{settings.SEED_EMAIL_DOMAIN}",
                     "name": data["name"],
                     "headline": data["headline"],
-                    "theeeme_id": data["theeeme_id"],
-                    "koro": data.get("koro", "basic"),
                     "photo": _seed_image(data.get("photo", "")),
                     "about": data.get("about", ""),
                     # Optional profile fields. `age_range` and `postal_code` are
@@ -235,6 +233,10 @@ class Command(BaseCommand):
                 "description": data["description"],
                 "status": "ACTIVE",
                 "kind": data["kind"],
+                # The collection's own palette (the characters have none): a
+                # demo collection looks the way its founder's always did.
+                "theeeme_id": data["theeeme_id"],
+                "koro": data.get("koro", "basic"),
                 "mode": data.get("mode", "PROPRIETARY"),
                 "visibility": data.get("visibility", "PRIVATE"),
                 "is_onboarding": data.get("is_onboarding", False),

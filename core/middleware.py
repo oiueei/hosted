@@ -23,9 +23,11 @@ class SecurityHeadersMiddleware:
 
     Two deliberate relaxations:
     - ``style-src 'unsafe-inline'`` stays in every environment: HDS components and
-      the per-user theeeme set inline ``style`` attributes throughout the React
-      app, so dropping it would break styling — the "remove unsafe-inline"
-      hardening is not viable for styles.
+      the palette in force (a collection's, or the app's own) set inline
+      ``style`` attributes throughout the React app, so dropping it would break
+      styling — the "remove unsafe-inline" hardening is not viable for styles.
+      (It is also what lets the server write the app's own palette into the page
+      as a ``<style>`` block, ``core.services.app_palette``.)
     - ``script-src`` gains ``'unsafe-inline'`` only under ``DEBUG`` so the dev-only
       DRF browsable API (inline scripts) keeps working; production stays strict.
 

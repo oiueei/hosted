@@ -300,8 +300,9 @@ def test_every_email_uses_exactly_the_three_named_sizes():
 
 
 def test_the_button_styles_use_the_body_size():
-    assert f"font-size:{email_service.EMAIL_BODY_SIZE};" in email_service.BTN_PRIMARY
-    assert f"font-size:{email_service.EMAIL_BODY_SIZE};" in email_service.BTN_SECONDARY
+    style = email_service.email_style()
+    assert f"font-size:{email_service.EMAIL_BODY_SIZE};" in style["btn_primary"]
+    assert f"font-size:{email_service.EMAIL_BODY_SIZE};" in style["btn_secondary"]
 
 
 @pytest.mark.django_db
@@ -310,7 +311,8 @@ def test_every_button_in_every_email_carries_the_class_its_phone_and_hover_rules
     rule are written against, so on a phone all of them fill the width of the text
     column. The rules live in the `<style>` and match nothing on their own: a
     button that loses its class keeps its resting look and quietly loses both."""
-    roles = {"btn-primary": email_service.BTN_PRIMARY, "btn-secondary": email_service.BTN_SECONDARY}
+    style = email_service.email_style()
+    roles = {"btn-primary": style["btn_primary"], "btn-secondary": style["btn_secondary"]}
     found = {lang: dict.fromkeys(roles, 0) for lang in LANGS}
 
     for message in _run("--lang", "all"):
@@ -329,7 +331,7 @@ def test_every_button_in_every_email_carries_the_class_its_phone_and_hover_rules
                 assert f".{cls}:hover {{" in css, message.subject
                 assert f".{cls}" in phone, message.subject
 
-    # A floor, or a BTN_PRIMARY that stopped matching the markup would pass with
+    # A floor, or a primary style that stopped matching the markup would pass with
     # zero buttons checked. Measured when this was written: per language, 25 primary buttons
     # and 5 secondary ones (the five `ctas` emails carry one of each; the other
     # twenty primaries are `cta` blocks). Asking for "at least one" of each rather
@@ -375,11 +377,11 @@ def test_every_email_names_a_real_parent_or_oiueei():
 def test_every_link_in_the_body_is_bus_blue_and_underlined():
     """The design rule: every plain text link — the CTA
     fallback link, "manage your preferences", the legal link, the viral
-    line's CTA — is bus blue and underlined, never the client's own default
+    line's CTA — is the accent colour, underlined, never the client's own default
     blue. Buttons are excluded on purpose: a button is not a text link (its
     own style carries no text-decoration at all, which is what keeps it from
     looking like one)."""
-    style = 'style="color:#0000bf !important;text-decoration:underline !important;"'
+    style = 'style="color:#191919 !important;text-decoration:underline !important;"'
     for message in _run("--lang", "all"):
         html = message.alternatives[0][0]
         plain_links = re.findall(r"<a href=[^>]*>", html)

@@ -7,6 +7,7 @@ import PageLayout from '../components/PageLayout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Toast from '../components/Toast';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
 import { useCollectionBase } from '../hooks/useCollectionBase';
@@ -37,6 +38,7 @@ export default function DeleteCollectionPage() {
   const [failedCode, setFailedCode] = useState(null);
   const error = failedCode === code;
   useCollectionLanguage(collection?.language, [collection?.headline]);
+  useCollectionTheeeme(collection?.theeeme_colors, collection?.koro);
 
   useDocumentTitle(
     collection

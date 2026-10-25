@@ -49,13 +49,32 @@ describe('detect-lang.js', () => {
   });
 
   test('a retired locale falls back to es, matching src/i18n/index.js', () => {
-    // pt/eu/gl map to es in the real i18n config's fallbackLng — the two must
+    // eu/gl map to es in the real i18n config's fallbackLng — the two must
     // agree, or the html[lang] the browser paints first disagrees with the
     // language i18next settles on once it loads.
-    expect(run({ navigatorLanguage: 'pt-BR' })).toBe('es');
     expect(run({ navigatorLanguage: 'eu' })).toBe('es');
     expect(run({ navigatorLanguage: 'gl-ES' })).toBe('es');
   });
+
+  test('Portuguese is not a retired locale: it falls back to en like any other unsupported language', () => {
+    expect(run({ navigatorLanguage: 'pt-BR' })).toBe('en');
+    expect(run({ navigatorLanguage: 'pt-PT' })).toBe('en');
+    expect(run({ navigatorLanguage: 'pt' })).toBe('en');
+    // …and a later supported entry of the browser's list still wins over it.
+    expect(run({ navigatorLanguages: ['pt-BR', 'ca-ES'], navigatorLanguage: 'pt-BR' })).toBe('ca');
+  });
+
+  test.each(['pt-BR', 'pt-PT', 'pt', 'eu', 'gl-ES', 'fr-FR'])(
+    'for %s the script and i18next fallbackLng give the same language',
+    async (code) => {
+      const { default: i18n } = await import('../i18n');
+      const fromI18next = i18n.services.languageUtils
+        .getFallbackCodes(i18n.options.fallbackLng, code)
+        .find((l) => ['en', 'es', 'ca'].includes(l));
+
+      expect(run({ navigatorLanguage: code })).toBe(fromI18next);
+    }
+  );
 
   test('an unsupported, non-retired language falls back to en', () => {
     expect(run({ navigatorLanguage: 'fr-FR' })).toBe('en');

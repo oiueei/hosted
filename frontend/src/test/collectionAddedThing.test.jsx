@@ -12,6 +12,7 @@ vi.mock('../services/api', () => ({
 
 import { apiFetch } from '../services/api';
 import CollectionPage from '../pages/CollectionPage';
+import declarePalette from './declarePalette';
 
 /**
  * After "Add thing", on a phone: the hero fills the screen and
@@ -172,17 +173,14 @@ describe('CollectionPage after adding a thing, on a phone', () => {
   });
 
   test('marks the card in the theeeme’s colour, for about two seconds', async () => {
-    localStorage.setItem(
-      'theeemeColors',
-      JSON.stringify({
-        color_01: 'copper',
-        color_02: 'suomenlinna-light',
-        color_03: 'copper',
-        color_04: 'black',
-        color_05: 'white',
-        color_06: 'white',
-      })
-    );
+    declarePalette({
+      color_01: 'copper',
+      color_02: 'suomenlinna-light',
+      color_03: 'copper',
+      color_04: 'black',
+      color_05: 'white',
+      color_06: 'white',
+    });
     renderArriving();
     await screen.findByText('Thing uploaded!');
     await effectHasRun();

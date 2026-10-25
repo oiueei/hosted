@@ -853,12 +853,14 @@ class TestThingModelEdgeCases:
 class TestUserModelEdgeCases:
     """Tests for User model edge cases."""
 
-    def test_random_theeeme_default_only_picks_existing_codes(self):
+    def test_a_collection_default_palette_only_picks_existing_codes(self):
         """C9: the default palette is drawn from the live Theeeme table, so a
         theeeme the old hardcoded list still named — but that was deleted — can
         never be assigned (which would be a dangling FK / IntegrityError)."""
-        # Reduce the table to a single code that was NOT in the old hardcoded list.
-        Theeeme.objects.all().delete()
+        owner = User.objects.create(email="lala-owner@your-domain.test")
+        # Bussi stays: the retired `users.user_theeeme` column still defaults to it
+        # at the database level until the next release drops the column.
+        Theeeme.objects.exclude(code="BUU331").delete()
         Theeeme.objects.create(
             code="ZZZ999",
             name="Solo",
@@ -868,32 +870,44 @@ class TestUserModelEdgeCases:
             color_04="black",
             color_05="white",
         )
-        for i in range(20):
-            user = User.objects.create(email=f"lele{i}@your-domain.test")
-            assert user.theeeme_id == "ZZZ999"
+        drawn = {
+            Collection.objects.create(code=f"PAL{i:03d}", owner=owner, headline="x").theeeme_id
+            for i in range(40)
+        }
+
+        assert drawn <= {"BUU331", "ZZZ999"}
+        assert "ZZZ999" in drawn
 
     def test_random_theeeme_falls_back_when_table_empty(self):
         """With no theeemes at all, fall back to the documented default code
         rather than raising (empty random.choice)."""
-        from core.models.user import _DEFAULT_THEEEME_CODE, _random_theeeme
+        from core.models.theeeme import DEFAULT_THEEEME_CODE, random_theeeme
 
         Theeeme.objects.all().delete()
-        assert _random_theeeme() == _DEFAULT_THEEEME_CODE
+        assert random_theeeme() == DEFAULT_THEEEME_CODE
 
     def test_random_theeeme_falls_back_when_table_missing(self):
-        """Before migrations exist (fresh CI checkout), Django's auth system
-        check instantiates User() and evaluates this default — it must fall
-        back instead of propagating the missing-table error."""
+        """Before migrations exist (fresh CI checkout), Django's system checks
+        instantiate models and evaluate this default — it must fall back
+        instead of propagating the missing-table error."""
         from django.db import OperationalError
 
-        from core.models.user import _DEFAULT_THEEEME_CODE, _random_theeeme
+        from core.models.theeeme import DEFAULT_THEEEME_CODE, random_theeeme
 
         with mock.patch.object(
             Theeeme.objects,
             "values_list",
             side_effect=OperationalError("no such table: theeemes"),
         ):
-            assert _random_theeeme() == _DEFAULT_THEEEME_CODE
+            assert random_theeeme() == DEFAULT_THEEEME_CODE
+
+    def test_a_user_no_longer_carries_a_palette(self):
+        """The theeeme and the koro are a collection's now."""
+        user = User.objects.create(email="lele-nopal@your-domain.test")
+
+        assert not hasattr(user, "theeeme")
+        assert not hasattr(user, "koro")
+        assert {f.name for f in User._meta.get_fields()}.isdisjoint({"theeeme", "koro"})
 
     def test_create_superuser(self):
         """Should create a superuser."""

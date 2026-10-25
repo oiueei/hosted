@@ -5,7 +5,17 @@ Django Admin configuration for OIUEEI.
 from django import forms
 from django.contrib import admin
 
-from core.models import FAQ, RSVP, Collection, DeviceDay, Report, Theeeme, Thing, User
+from core.models import (
+    FAQ,
+    RSVP,
+    Braaanding,
+    Collection,
+    DeviceDay,
+    Report,
+    Theeeme,
+    Thing,
+    User,
+)
 from core.models.booking import BookingPeriod
 
 
@@ -103,6 +113,24 @@ class ReportAdmin(admin.ModelAdmin):
 class TheeemeAdmin(admin.ModelAdmin):
     list_display = ["code", "name", "color_01", "color_02", "color_03", "color_04", "color_05"]
     search_fields = ["code", "name"]
+
+
+@admin.register(Braaanding)
+class BraaandingAdmin(admin.ModelAdmin):
+    """The app's own palette: one row, edited here and nowhere else.
+
+    Nothing is added or deleted (there is exactly one palette, and the pages and
+    the emails read it), and a palette that fails the contrast the twelve
+    collection palettes meet is refused on save (`Braaanding.clean`).
+    """
+
+    list_display = ["code", "color_01", "color_02", "color_03", "color_04", "color_05", "color_06"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(BookingPeriod)

@@ -549,8 +549,9 @@ describe('where a magic link lands', () => {
 
     expect(await screen.findByText('landed on /collections/COL001')).toBeInTheDocument();
     expect(localStorage.getItem('userCode')).toBe('USR002');
-    expect(JSON.parse(localStorage.getItem('theeemeColors')).color_01).toBe('bus');
-    expect(localStorage.getItem('koro')).toBe('beat');
+    // The palette is not the account's any more: nothing of it is kept.
+    expect(localStorage.getItem('theeemeColors')).toBeNull();
+    expect(localStorage.getItem('koro')).toBeNull();
   });
 
   test('a returning member with one group lands on it', async () => {

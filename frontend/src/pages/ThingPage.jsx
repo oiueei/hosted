@@ -23,6 +23,7 @@ import { onImageError } from '../utils/imageFallback';
 import { formatDate } from '../utils/rental';
 import { useLocalized } from '../utils/localized';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import useThingActions from '../hooks/useThingActions';
 import ButtonLink from '../components/ButtonLink';
 import RefusalWayOut from '../components/RefusalWayOut';
@@ -48,6 +49,9 @@ export default function ThingPage() {
   const L = useLocalized();
   const headline = L(thing?.headline);
   useCollectionLanguage(thing?.collection_language, [thing?.headline, thing?.description]);
+  // The colours of the collection this thing is read through (none when the reader has no
+  // collection to read it through: the standalone page then wears the app's palette).
+  useCollectionTheeeme(thing?.collection_theeeme_colors, thing?.collection_koro);
   useDocumentTitle(thing ? t('titles.thing', { headline }) : t('titles.thingDefault'));
 
   // The collection menu of the corner, when this page is read through a collection:

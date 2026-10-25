@@ -72,7 +72,6 @@ USERS = [
         "code": "La1aN1",
         "email_local": "lala",
         "name": "Lala",
-        "theeeme_id": "BUU331",
         "photo": "La1aPH",
         "postal_code": "08040",
         "age_range": "GEN_Y",
@@ -81,7 +80,6 @@ USERS = [
         "code": "L3L3oo",
         "email_local": "lele",
         "name": "Lele",
-        "theeeme_id": "K0P4R1",
         "photo": "L3L3PH",
         "postal_code": "08905",
         "age_range": "GEN_Z",
@@ -91,7 +89,6 @@ USERS = [
         "code": "l1l13S",
         "email_local": "lili",
         "name": "Lili",
-        "theeeme_id": "BUU331",
         "photo": "l1l1PH",
         "postal_code": "08038",
     },
@@ -99,7 +96,6 @@ USERS = [
         "code": "l0l0oh",
         "email_local": "lolo",
         "name": "Lolo",
-        "theeeme_id": "BUU331",
         "photo": "l0l0PH",
         "postal_code": "08901",
         "age_range": "GEN_X",
@@ -108,7 +104,6 @@ USERS = [
         "code": "1u1ucs",
         "email_local": "lulu",
         "name": "Lulu",
-        "theeeme_id": "BUU331",
         "photo": "1u1uPH",
         "postal_code": "08906",
         "age_range": "GEN_Z",
@@ -119,6 +114,8 @@ USERS = [
 COLLECTIONS = [
     {
         "code": "La1aC1",
+        "theeeme_id": "BUU331",
+        "koro": "basic",
         "owner_code": "La1aN1",
         "visibility": "PRIVATE",
         "invites": ["L3L3oo"],
@@ -129,6 +126,8 @@ COLLECTIONS = [
     },
     {
         "code": "l0l0C1",
+        "theeeme_id": "BUU331",
+        "koro": "beat",
         "owner_code": "l0l0oh",
         "visibility": "PUBLIC",
         "invites": ["La1aN1", "l1l13S", "L3L3oo", "1u1ucs"],
@@ -139,6 +138,8 @@ COLLECTIONS = [
     },
     {
         "code": "l1l1C1",
+        "theeeme_id": "BUU331",
+        "koro": "wave",
         "owner_code": "l1l13S",
         "visibility": "PUBLIC",
         "invites": ["La1aN1", "L3L3oo", "l0l0oh", "1u1ucs"],
@@ -164,6 +165,8 @@ COLLECTIONS = [
     },
     {
         "code": "1u1uC1",
+        "theeeme_id": "BUU331",
+        "koro": "calm",
         "owner_code": "1u1ucs",
         "mode": "COMMUNITY",
         "visibility": "PRIVATE",
@@ -195,6 +198,8 @@ COLLECTIONS = [
     },
     {
         "code": "L3L3C1",
+        "theeeme_id": "K0P4R1",
+        "koro": "pulse",
         "owner_code": "L3L3oo",
         "mode": "COMMUNITY",
         "visibility": "PRIVATE",
@@ -213,6 +218,8 @@ COLLECTIONS = [
         # carried away. RESERVE forces PROPRIETARY, holds only RESERVE things, and
         # reuses rental_weekdays as "days the space is open". Bookings auto-confirm.
         "code": "1u1uRe",
+        "theeeme_id": "BUU331",
+        "koro": "vibration",
         "owner_code": "1u1ucs",
         "mode": "PROPRIETARY",
         "visibility": "PRIVATE",

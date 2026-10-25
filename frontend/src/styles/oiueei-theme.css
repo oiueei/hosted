@@ -54,4 +54,24 @@
   /* Same black as the keyboard focus rings on the custom toggle chips
      (App.css, commit 026be78) — one focus-outline decision, not two. */
   --color-focus-outline: var(--color-black-90);
+
+  /* ================================================================
+   * THE APP'S OWN PALETTE ("Braaanding")
+   * ================================================================
+   * What paints every page that is not a collection's, and the emails. The
+   * values live in the database (the `Braaanding` row, edited in the Django
+   * admin) and the server writes them into index.html as `html:root { … }`, so
+   * what is declared here is only the fallback: the Vite dev server does not go
+   * through Django, and an index.html that was never filled in still paints.
+   * They are the values the migration seeds, and a backend test reads this file
+   * to keep the two from drifting apart. Hexadecimal, not HDS token names; the
+   * names `--color-braaanding-0N` are what the theeeme map of the app points at
+   * (see useTheeeme), so the ~50 places that paint with `var(--color-<token>)`
+   * need no change. */
+  --color-braaanding-01: #191919;
+  --color-braaanding-02: #f4e5dd;
+  --color-braaanding-03: #d77452;
+  --color-braaanding-04: #191919;
+  --color-braaanding-05: #191919;
+  --color-braaanding-06: #fafafa;
 }

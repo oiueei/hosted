@@ -173,8 +173,6 @@ import NotFoundPage from '../pages/NotFoundPage';
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
-  localStorage.setItem('theeemeColors', JSON.stringify(MOCK_USER.theeeme_colors));
-  localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
 });
 

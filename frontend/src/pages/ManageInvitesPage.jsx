@@ -19,6 +19,7 @@ import Toast from '../components/Toast';
 import TooltipButton from '../components/TooltipButton';
 import BulkInviteResult from '../components/BulkInviteResult';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
 import { useLocalized } from '../utils/localized';
 import { parseEmailList } from '../utils/emailList';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
@@ -46,6 +47,8 @@ export default function ManageInvitesPage() {
   const [collectionHeadline, setCollectionHeadline] = useState('');
   const [collectionLanguage, setCollectionLanguage] = useState('');
   useCollectionLanguage(collectionLanguage, [collectionHeadline]);
+  const [palette, setPalette] = useState(null);
+  useCollectionTheeeme(palette?.colors, palette?.koro);
   const headline = L(collectionHeadline);
   useDocumentTitle(headline ? t('titles.guests', { headline }) : t('titles.guestsDefault'));
   // The whole management UI — promoting/demoting a co-curator included, since
@@ -82,6 +85,7 @@ export default function ManageInvitesPage() {
         setProposals(data.pending_proposals || []);
         setCollectionHeadline(data.headline || '');
         setCollectionLanguage(data.language || '');
+        setPalette({ colors: data.theeeme_colors, koro: data.koro });
         setIsCurator(!!data.is_curator);
         setCoOwnerCodes(new Set((data.co_owners || []).map((u) => u.code)));
         setLoadError('');
@@ -459,6 +463,9 @@ export default function ManageInvitesPage() {
                                 // where the link goes. A literal here is truthy and
                                 // would beat that fallback to it, in English.
                                 backLabel: headline,
+                                // The group's colours, so the confirmation is painted with
+                                // them from the first frame (it reads no collection).
+                                palette,
                               },
                             })
                           }

@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import FAQ, RSVP, Collection, Theeeme, Thing, User
+from core.models.braaanding import braaanding, forget_braaanding
 from core.services import storage
 from core.throttles import reset_counters
 
@@ -55,6 +56,19 @@ def anonymous_api_counts_start_at_zero():
     reset_counters()
     yield
     reset_counters()
+
+
+@pytest.fixture(autouse=True)
+def the_apps_palette_is_known(db):
+    """The app's palette is remembered per process (`braaanding()`) and read by every
+    page and every email, so a worker has it after its first look: the steady state
+    every query budget and N+1 comparison in the suite is about. A test's rollback
+    fires no signal, so what one test saved would still be answered to the next;
+    forgetting first and reading once puts every test at the same, known start."""
+    forget_braaanding()
+    braaanding()
+    yield
+    forget_braaanding()
 
 
 @pytest.fixture(autouse=True)

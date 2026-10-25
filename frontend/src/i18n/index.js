@@ -46,14 +46,12 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    // Retired locales (pt-BR, pt-PT, eu, gl) fall back to es rather than the
-    // global default en — closer to the original translation, kept dormant
-    // (not deleted) in case they're reinstated. `pt` covers a bare navigator
-    // language of "pt" as well as the "pt-*" variants.
+    // Basque and Galician (eu, gl) were retired and fall back to es rather than
+    // the global default en — closer to the original translation, kept dormant
+    // (not deleted) in case they're reinstated. Portuguese is not mapped: a
+    // reader of pt gets en like any other unsupported language.
+    // `public/detect-lang.js` keeps the same map for the first paint.
     fallbackLng: {
-      'pt-BR': ['es'],
-      'pt-PT': ['es'],
-      pt: ['es'],
       eu: ['es'],
       gl: ['es'],
       default: ['en'],

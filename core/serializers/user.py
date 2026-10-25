@@ -4,7 +4,7 @@ User serializers for OIUEEI.
 
 from rest_framework import serializers
 
-from core.models import Language, Theeeme, User
+from core.models import Language, User
 from core.utils import asset_url
 from core.validators import ImageIdField, SafeHeadlineField, SafeTextField
 
@@ -15,12 +15,6 @@ class UserSerializer(serializers.ModelSerializer):
     own_collections = serializers.SerializerMethodField()
     invited_collections = serializers.SerializerMethodField()
     things = serializers.SerializerMethodField()
-    theeeme = serializers.SlugRelatedField(
-        slug_field="code",
-        queryset=Theeeme.objects.all(),
-        required=False,
-    )
-    theeeme_colors = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -38,9 +32,6 @@ class UserSerializer(serializers.ModelSerializer):
             "about",
             "photo",
             "photo_url",
-            "koro",
-            "theeeme",
-            "theeeme_colors",
             "notify_activity",
             "notify_news",
             "age_range",
@@ -55,7 +46,6 @@ class UserSerializer(serializers.ModelSerializer):
             "own_collections",
             "invited_collections",
             "things",
-            "theeeme",
         ]
 
     def get_photo_url(self, obj):
@@ -69,19 +59,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_things(self, obj):
         return list(obj.owned_things.values_list("code", flat=True))
-
-    def get_theeeme_colors(self, obj):
-        t = obj.theeeme
-        if not t:
-            return None
-        return {
-            "color_01": t.color_01,
-            "color_02": t.color_02,
-            "color_03": t.color_03,
-            "color_04": t.color_04,
-            "color_05": t.color_05,
-            "color_06": t.color_06,
-        }
 
 
 class UserPublicSerializer(serializers.ModelSerializer):
@@ -111,11 +88,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     headline = SafeHeadlineField(max_length=64, required=False, allow_blank=True)
     about = SafeTextField(max_length=2000, required=False, allow_blank=True)
     photo = ImageIdField(folder="oiueei/users", required=False, allow_blank=True)
-    theeeme = serializers.SlugRelatedField(
-        slug_field="code",
-        queryset=Theeeme.objects.all(),
-        required=False,
-    )
     age_range = serializers.ChoiceField(
         choices=User.AgeRange.choices, required=False, allow_blank=True
     )
@@ -130,8 +102,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "headline",
             "about",
             "photo",
-            "koro",
-            "theeeme",
             "notify_activity",
             "notify_news",
             "age_range",

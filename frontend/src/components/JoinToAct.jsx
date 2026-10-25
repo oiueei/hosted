@@ -1,11 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { TextInput, Button, Notification } from 'hds-react';
-import ButtonLink from './ButtonLink';
 import useTheeeme from '../hooks/useTheeeme';
 import useJoin from '../hooks/useJoin';
-import { loginPathFor } from '../utils/nextPath';
 import { joinActions } from '../utils/joinActions';
-import { collectionPath, collectionThingPath } from '../utils/collectionPath';
 
 /**
  * "Log in to act" body rendered by JoinPage for an anonymous visitor on a PUBLIC
@@ -20,19 +17,22 @@ import { collectionPath, collectionThingPath } from '../utils/collectionPath';
  * verbs, from the thing types it allows and its mode (`utils/joinActions.js`) —
  * and falls back to the generic sentence until the collection has loaded.
  *
+ * The form is the page's only action: a new address makes the account, one that
+ * exists is used, and a member is let back in, so there is no "already have an
+ * account?" door beside it. (`/share/:token` keeps its own, for a private group.)
+ *
  * The request itself lives in `useJoin`, shared with `MagicLinkJoinPage`
  * (`/share/:token`, and whatever door a deployment adds); only the presentation differs.
  */
 export default function JoinToAct({
   collectionCode,
-  collectionKind,
   collectionHeadline,
   thingCode,
   mode,
   allowedThingTypes,
 }) {
   const { t, i18n } = useTranslation();
-  const { btnStyle, btnSecondaryStyle } = useTheeeme();
+  const { btnStyle } = useTheeeme();
   const { email, setEmail, loading, status, message, submit } = useJoin({
     sentMessageKey: 'joinToAct.sentBody',
     errorMessageKey: 'joinToAct.error',
@@ -40,13 +40,6 @@ export default function JoinToAct({
       ? { collection_code: collectionCode, thing_code: thingCode }
       : { collection_code: collectionCode },
   });
-
-  // Someone with an account who pressed "Request" on a public group they are not
-  // in lands here and picks "already have an account": after the login they go
-  // back to the thing they were looking at, or the group, not to Home.
-  const returnPath = thingCode
-    ? collectionThingPath(collectionCode, collectionKind, thingCode)
-    : collectionPath(collectionCode, collectionKind);
 
   // No mode means the collection has not loaded (or a caller that never asks for
   // it): the generic sentence, not a guess at what is allowed.
@@ -109,15 +102,6 @@ export default function JoinToAct({
           </Button>
         </div>
       </form>
-      {/* A secondary button under the primary one, as wide as it is (the wrapper sets
-          the column, so no `.measure` here): someone who already has an account is one
-          button away from signing in, and the sign-in brings them back to what they came
-          for. */}
-      <div style={{ marginTop: 'var(--spacing-l)' }}>
-        <ButtonLink to={loginPathFor({ pathname: returnPath })} fullWidth style={btnSecondaryStyle}>
-          {t('joinToAct.alreadyHaveAccount')}
-        </ButtonLink>
-      </div>
     </>
   );
 

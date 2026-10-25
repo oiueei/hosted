@@ -20,6 +20,7 @@ vi.mock('../services/api', () => ({
 import { apiFetch, extractApiError } from '../services/api';
 import ThingLinkbox from '../components/ThingLinkbox';
 import ThingPage from '../pages/ThingPage';
+import declarePalette from './declarePalette';
 
 function mockResponse(data, ok = true, status = ok ? 200 : 400) {
   return { ok, status, json: () => Promise.resolve(data) };
@@ -102,17 +103,14 @@ function renderThingPage() {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('userCode', 'GUEST1');
-  localStorage.setItem(
-    'theeemeColors',
-    JSON.stringify({
-      color_01: 'bus',
-      color_02: 'suomenlinna-light',
-      color_03: 'copper',
-      color_04: 'black',
-      color_05: 'white',
-      color_06: 'white',
-    })
-  );
+  declarePalette({
+    color_01: 'bus',
+    color_02: 'suomenlinna-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'white',
+  });
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
   // clearAllMocks keeps implementations, so a test that gives the server a

@@ -5,8 +5,9 @@ import { Koros } from 'hds-react';
 import BackLink from '../components/BackLink';
 import JoinToAct from '../components/JoinToAct';
 import useTheeeme from '../hooks/useTheeeme';
+import useCollectionTheeeme from '../hooks/useCollectionTheeeme';
+import LoadingSpinner from '../components/LoadingSpinner';
 import AccountMenu from '../components/AccountMenu';
-import HeroPhoto from '../components/HeroPhoto';
 import { apiFetch } from '../services/api';
 import { useLocalized } from '../utils/localized';
 import useCollectionLanguage from '../hooks/useCollectionLanguage';
@@ -19,8 +20,8 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
  * lands here: they enter their email, the backend emails a magic link, and
  * pressing it joins them to that collection and drops them back on it — now a
  * member who can act. Standard `form-hero` + `Koros` layout, with the
- * collection's own photo (`HeroPhoto`, the same composition as its page) when
- * it has one.
+ * collection's image as its logo (an `<img class="hero-logo">` in a
+ * `form-hero--collection` hero, as on its own page) when it has one.
  */
 export default function JoinPage() {
   const { code } = useParams();
@@ -51,7 +52,7 @@ export default function JoinPage() {
   const base = useCollectionBase(code, kind);
   useCanonicalCollectionPath(kind);
   const [allowedThingTypes, setAllowedThingTypes] = useState([]);
-  // The collection's own photo, so the door looks like the page it leads to.
+  // The collection's image, shown as its logo so the door looks like the page it leads to.
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   // The raw headline, per-language map and all: the hook reads it, and it is resolved
   // here, at render, in whatever language the page is in by then. It used to be
@@ -60,6 +61,13 @@ export default function JoinPage() {
   // stayed in the one before. Until it arrives, the name the card handed over.
   const [ownerHeadline, setOwnerHeadline] = useState('');
   useCollectionLanguage(collectionLanguage, [ownerHeadline]);
+  // This is the door of that group, so it wears the group's colours — and does not
+  // paint its hero until the collection has answered, or the app's palette would show
+  // for an instant first. A collection that cannot be read (private, gone) settles
+  // with no palette and the page keeps the app's.
+  const [palette, setPalette] = useState(null);
+  const [settled, setSettled] = useState(!code);
+  useCollectionTheeeme(palette?.colors, palette?.koro);
   const headline = ownerHeadline ? L(ownerHeadline) : location.state?.collectionHeadline || '';
 
   // "Join {collection}", the words `/share/:token` already says:
@@ -83,10 +91,16 @@ export default function JoinPage() {
         setAllowedThingTypes(data?.allowed_thing_types || []);
         setThumbnailUrl(data?.thumbnail_url || '');
         setOwnerHeadline(data?.headline || '');
+        setPalette({ colors: data?.theeeme_colors, koro: data?.koro });
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setSettled(true);
+      });
     return () => controller.abort();
   }, [code]);
+
+  if (!settled) return <LoadingSpinner />;
 
   return (
     <div
@@ -94,7 +108,7 @@ export default function JoinPage() {
       style={tc.color_02 ? { backgroundColor: `var(--color-${tc.color_02})` } : undefined}
     >
       <div
-        className={`form-hero${thumbnailUrl ? ' form-hero--photo' : ''}`}
+        className="form-hero form-hero--collection"
         style={tc.color_03 ? { backgroundColor: `var(--color-${tc.color_03})` } : undefined}
       >
         <div className="form-hero-split">
@@ -102,16 +116,19 @@ export default function JoinPage() {
             className="form-hero-content"
             style={tc.color_05 ? { '--hero-text-color': `var(--color-${tc.color_05})` } : undefined}
           >
+            {/* No "Sign in" icon without a session: the email below serves a new
+                address, an account that exists and a member alike, so it is the
+                page's only action. With a session the menu is as ever. */}
             <span className="hero-corners">
-              <AccountMenu />
+              <AccountMenu offerSignIn={false} />
             </span>
             <BackLink to={base} label={headline || t('common.collection')} />
+            {/* The image is the collection's logo, not a backdrop, exactly as in
+                its own hero (the <h1> already names it, so no alt). */}
+            {thumbnailUrl && <img className="hero-logo" src={thumbnailUrl} alt="" />}
             <h1 className="form-hero-title">{heading}</h1>
           </div>
         </div>
-        {thumbnailUrl && (
-          <HeroPhoto photoUrl={thumbnailUrl} alt={headline} koroType={koro} color03={tc.color_03} />
-        )}
         <Koros
           className="form-hero-koros"
           type={koro}
@@ -121,7 +138,6 @@ export default function JoinPage() {
       <div className="page-container">
         <JoinToAct
           collectionCode={code}
-          collectionKind={kind}
           collectionHeadline={headline}
           thingCode={thingCode}
           mode={mode}

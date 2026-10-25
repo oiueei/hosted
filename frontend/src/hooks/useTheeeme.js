@@ -1,27 +1,27 @@
 import { useEffect, useMemo } from 'react';
 import { linkColorToken } from '../utils/linkColor';
+import { useDeclaredCollectionTheeeme } from './useCollectionTheeeme';
 
 /**
  * Theeeme-derived inline styles, centralised from the ~21 pages/components that
- * each re-parsed `theeemeColors` from localStorage and rebuilt the same button
- * style objects on every render.
+ * each rebuilt the same button style objects on every render.
  *
- * The resting colours are byte-identical to the previous inline versions; the
- * `*-focus` tokens are new (see the comment on them below). The raw localStorage
- * string is read on every
- * render (cheap) but the parse + style objects are memoised on it, so they only
- * recompute when the theeeme actually changes — which still happens (e.g. right
- * after the first login, when HomePage stores the freshly fetched colours).
+ * **Whose palette it is.** A page that belongs to a collection declares that
+ * collection's palette with `useCollectionTheeeme` and this hook answers with it;
+ * everywhere else — Home, the account pages, the front door, the legal text, the 404
+ * — it answers with **the app's own palette** (`Braaanding`, edited in the Django
+ * admin). Nothing is stored in the browser and nothing is chosen by the reader.
  *
- * Pass `overrideColors` (e.g. a freshly-fetched `user.theeeme_colors` from the API)
- * to derive the styles from those instead of localStorage — used where the
- * authoritative colours are already in hand and localStorage may lag. A nullish or
- * empty override falls back to localStorage, then to DEFAULT_COLORS.
+ * The app's palette is not HDS token names but six CSS variables of its own,
+ * `--color-braaanding-01` … `--color-braaanding-06` (the server writes their values
+ * into the page; `styles/oiueei-theme.css` holds the fallback), so its "token names"
+ * below are `braaanding-01` … `braaanding-06` and every `var(--color-<token>)` in
+ * the app resolves them with no change.
  *
  * Returns:
- * - `tc`: the raw theeeme colour map (`color_01`..`color_06`, HDS token names).
- * - `koro`: the user's Koros wave type (default `'basic'`).
- * - `btnStyle`: primary button (theeeme `color_01` background, `color_06` text).
+ * - `tc`: the raw colour map (`color_01`..`color_06`, token names).
+ * - `koro`: the Koros wave type (a collection's, or the app's served one).
+ * - `btnStyle`: primary button (`color_01` background, `color_06` text).
  * - `btnSecondaryStyle`: secondary button (white background, `color_01` border, `color_04` text).
  *
  * Both button styles pin the `*-focus` tokens to the resting colours, so keyboard
@@ -30,42 +30,43 @@ import { linkColorToken } from '../utils/linkColor';
  * - `tableTheme`: the `theme` of an HDS `Table` (header fill `color_03`, header text `color_05`).
  * - `uploadStyle`: the `--upload-*` CSS vars for the ImageUpload/GalleryUpload wrapper.
  */
-// Fallback palette for a viewer with no stored theeeme yet — e.g. an anonymous
-// visitor on a PUBLIC collection, or anyone before their first login. Without it
-// `tc` is `{}`, so `--hero-text-color` stays unset and the hero title falls back
-// to black-90 — invisible on the dark hero. It's a real, coherent theeeme row
-// (the "M&V" palette, code 5BC8W6: black hero + white text + summer/yellow
-// accents) rather than a hand-mixed set of tokens, so every surface matches.
-const DEFAULT_COLORS = {
-  color_01: 'summer',
-  color_02: 'black-5',
-  color_03: 'black',
-  color_04: 'black',
-  color_05: 'white',
-  color_06: 'black',
+
+/** The prefix of the app's own palette tokens (`braaanding-01` … `braaanding-06`). */
+export const APP_TOKEN_PREFIX = 'braaanding-';
+
+export const APP_COLORS = {
+  color_01: 'braaanding-01',
+  color_02: 'braaanding-02',
+  color_03: 'braaanding-03',
+  color_04: 'braaanding-04',
+  color_05: 'braaanding-05',
+  color_06: 'braaanding-06',
 };
 
-export default function useTheeeme(overrideColors) {
-  const raw = localStorage.getItem('theeemeColors') || '{}';
-  const koro = localStorage.getItem('koro') || 'basic';
-  // Stringify the override for a stable memo dependency (a caller may pass a fresh
-  // object reference each render, e.g. `user?.theeeme_colors`).
-  const overrideKey =
-    overrideColors && Object.keys(overrideColors).length > 0 ? JSON.stringify(overrideColors) : '';
+const KOROS = ['basic', 'beat', 'calm', 'pulse', 'vibration', 'wave'];
+
+/**
+ * The app's Koros wave, served in the page's `<head>` as
+ * `<meta name="braaanding-koro">` (a script reads it with no request; see
+ * `core/services/app_palette.py`). `basic` where the page was never filled in (the
+ * Vite dev server) or the value is not one of the six.
+ */
+export function appKoro() {
+  const value = document.querySelector('meta[name="braaanding-koro"]')?.getAttribute('content');
+  return KOROS.includes(value) ? value : 'basic';
+}
+
+export default function useTheeeme() {
+  const declared = useDeclaredCollectionTheeeme();
+  const tc = declared?.colors ?? APP_COLORS;
+  const koro = declared?.koro ?? appKoro();
+  // Stringified for a stable memo dependency (a collection's colours arrive as a
+  // fresh object every time its page fetches).
+  const colorsKey = JSON.stringify(tc);
 
   const result = useMemo(() => {
-    let tc;
-    if (overrideKey) {
-      tc = JSON.parse(overrideKey);
-    } else {
-      let parsed;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        parsed = null;
-      }
-      tc = parsed && Object.keys(parsed).length > 0 ? parsed : DEFAULT_COLORS;
-    }
+    const colors = JSON.parse(colorsKey);
+    const isApp = colors.color_01?.startsWith(APP_TOKEN_PREFIX);
     // The `*-focus` tokens repeat the resting colours on purpose. HDS repaints a
     // button when it takes focus — the `primary` variant declares
     // `--background-color-focus: var(--color-bus)` and `secondary` declares it
@@ -77,6 +78,7 @@ export default function useTheeeme(overrideColors) {
     // (1.75:1, WCAG 1.4.3 asks 4.5:1) exactly when the keyboard arrived at it.
     // So the focus state must recolour nothing: what marks focus is the
     // two-tone ring in App.css, not a change of fill.
+    const tc = colors;
     const primaryColor = tc.color_06 ? `var(--color-${tc.color_06})` : 'var(--color-white)';
     const secondaryColor = tc.color_04 ? `var(--color-${tc.color_04})` : undefined;
     // Outer band of that ring. HDS draws the button's own outline with a
@@ -87,7 +89,13 @@ export default function useTheeeme(overrideColors) {
     const btnStyle = tc.color_01
       ? {
           '--background-color': `var(--color-${tc.color_01})`,
-          '--background-color-hover': `var(--color-${tc.color_01}-dark)`,
+          // A collection's palette is HDS tokens, whose `-dark` shade is the hover. The app's
+          // own colours are free hexadecimal and have no derived shade, so its hover is the
+          // hero's pair (`color_03` with `color_05`), the one the emails' buttons use too.
+          '--background-color-hover': isApp
+            ? `var(--color-${tc.color_03})`
+            : `var(--color-${tc.color_01}-dark)`,
+          ...(isApp ? { '--color-hover': `var(--color-${tc.color_05})` } : {}),
           '--color': primaryColor,
           '--border-color': `var(--color-${tc.color_01})`,
           '--background-color-focus': `var(--color-${tc.color_01})`,
@@ -130,17 +138,19 @@ export default function useTheeeme(overrideColors) {
           ...(tc.color_05 ? { '--header-color': `var(--color-${tc.color_05})` } : {}),
         }
       : undefined;
-    return { tc, koro, btnStyle, btnSecondaryStyle, uploadStyle, tableTheme };
-  }, [raw, koro, overrideKey]);
+    // The colour of the text links in the page's content (`App.css` reads it).
+    const linkToken = linkColorToken(tc);
+    return { tc, koro, btnStyle, btnSecondaryStyle, uploadStyle, tableTheme, linkToken };
+  }, [colorsKey, koro]);
 
-  // The colour of the text links in the page's content (`App.css` reads it), on
-  // the root so every page gets it without passing it down.
-  const linkToken = linkColorToken(result.tc);
+  // On the root, so every page gets the link colour without passing it down.
+  const { linkToken } = result;
   useEffect(() => {
     const root = document.documentElement.style;
     if (linkToken) root.setProperty('--link-color', `var(--color-${linkToken})`);
     else root.removeProperty('--link-color');
   }, [linkToken]);
 
-  return result;
+  const { linkToken: _linkToken, ...styles } = result;
+  return styles;
 }

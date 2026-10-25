@@ -21,6 +21,7 @@ import EditCollectionPage from '../pages/EditCollectionPage';
 import { dropHdsStyles } from './dropHdsStyles';
 import { settle } from './settle';
 import en from '../i18n/locales/en.json';
+import declarePalette from './declarePalette';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
@@ -106,17 +107,14 @@ beforeEach(() => {
   dropHdsStyles(); // ByRole queries cost ~10x less without them; see the helper
   localStorage.clear();
   localStorage.setItem('userCode', 'ABC123');
-  localStorage.setItem(
-    'theeemeColors',
-    JSON.stringify({
-      color_01: 'bus',
-      color_02: 'suomenlinna-light',
-      color_03: 'copper',
-      color_04: 'black',
-      color_05: 'white',
-      color_06: 'white',
-    })
-  );
+  declarePalette({
+    color_01: 'bus',
+    color_02: 'suomenlinna-light',
+    color_03: 'copper',
+    color_04: 'black',
+    color_05: 'white',
+    color_06: 'white',
+  });
   localStorage.setItem('koro', 'basic');
   vi.clearAllMocks();
   setApi();

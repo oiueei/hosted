@@ -74,8 +74,7 @@
     "joining": "Enviando…",
     "sent": "Revisa tu correo",
     "sentBody": "Te hemos enviado un enlace mágico para unirte. Ábrelo en este dispositivo para empezar a participar.",
-    "error": "Algo ha ido mal. Inténtalo de nuevo.",
-    "alreadyHaveAccount": "¿Ya tienes cuenta?"
+    "error": "Algo ha ido mal. Inténtalo de nuevo."
   },
   "visibility": {
     "publicLabel": "Colección pública",
@@ -515,8 +514,6 @@
     "pageTitle": "Editar perfil",
     "nameLabel": "Nombre público",
     "bioLabel": "Presentación",
-    "theeemeLabel": "Theeeme",
-    "koroLabel": "Koro",
     "languageLabel": "Idioma",
     "languageAutomatic": "Automático",
     "maxName": "Máximo 32 caracteres.",
@@ -569,6 +566,9 @@
     "maxHeadline": "Máximo 64 caracteres por idioma.",
     "errorCreating": "Error al crear la colección.",
     "advancedTitle": "Más opciones",
+    "theeemeLabel": "Theeeme",
+    "koroLabel": "Koro",
+    "theeemeRandom": "Si no eliges ninguno, se elegirá uno al azar.",
     "tagsLabel": "Etiquetas",
     "tagsPlaceholder": "p. ej. Vintage, Cocina, Exterior",
     "tagsHelper": "Etiquetas opcionales para organizar las cosas de esta colección",

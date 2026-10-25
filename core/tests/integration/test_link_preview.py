@@ -21,7 +21,7 @@ MEDIA = "https://media.your-domain.test"
 
 
 @pytest.fixture
-def built(tmp_path):
+def built(tmp_path, db):
     dist = tmp_path / "frontend" / "dist"
     dist.mkdir(parents=True)
     (dist / "index.html").write_text(HEAD, encoding="utf-8")

@@ -460,17 +460,9 @@ describe('HomePage — invitations waiting for an answer', () => {
   // The answer is two buttons, as everywhere else something is
   // decided. They were two text links side by side. The destinations did not change.
   describe('the answer is two buttons', () => {
-    const WITH_THEEEME = {
-      ...USER,
-      theeeme_colors: {
-        color_01: 'bus',
-        color_02: 'white',
-        color_03: 'engel',
-        color_04: 'black',
-        color_05: 'black',
-        color_06: 'white',
-      },
-    };
+    // Home is an app page: it wears the app's own palette (`Braaanding`), whatever
+    // the account — the profile carries no colours any more.
+    const WITH_THEEEME = USER;
     const card = (headline) => screen.getByText(headline).closest('section');
     const accept = (within_) => within_.getByRole('link', { name: 'Accept invitation' });
     const decline = (within_) => within_.getByRole('link', { name: 'Decline invitation' });
@@ -488,11 +480,13 @@ describe('HomePage — invitations waiting for an answer', () => {
       expect(
         accept(inCard).compareDocumentPosition(decline(inCard)) & Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
-      // The theeeme's tokens: the primary is filled with the first colour, the secondary is
+      // The app palette's tokens: the primary is filled with the first colour, the secondary is
       // white with that colour as its border.
-      expect(background(accept(inCard))).toBe('var(--color-bus)');
+      expect(background(accept(inCard))).toBe('var(--color-braaanding-01)');
       expect(background(decline(inCard))).toBe('var(--color-white)');
-      expect(decline(inCard).style.getPropertyValue('--border-color')).toBe('var(--color-bus)');
+      expect(decline(inCard).style.getPropertyValue('--border-color')).toBe(
+        'var(--color-braaanding-01)'
+      );
     });
 
     test('they are buttons that are links, not text links', async () => {
@@ -529,7 +523,7 @@ describe('HomePage — invitations waiting for an answer', () => {
       expect(accept(books)).toHaveAttribute('href', '/verify/ACC002');
       expect(decline(books)).toHaveAttribute('href', '/verify/REJ002');
       expect(screen.getAllByRole('link', { name: 'Accept invitation' })).toHaveLength(2);
-      expect(background(accept(books))).toBe('var(--color-bus)');
+      expect(background(accept(books))).toBe('var(--color-braaanding-01)');
       expect(background(decline(books))).toBe('var(--color-white)');
     });
   });

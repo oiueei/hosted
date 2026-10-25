@@ -12,6 +12,7 @@ from django_otp.admin import OTPAdminSite
 from django_ratelimit.decorators import ratelimit
 
 from core.models import Collection
+from core.services.app_palette import inject_app_palette
 from core.services.link_preview import (
     inject_preview,
     preview_for_route,
@@ -76,6 +77,11 @@ def spa_index(request):
     the same bytes for all of them — its address is the site's, never the page's —
     which is what keeps a private collection indistinguishable from a code that
     names nothing, and it costs no query and spends no allowance.
+
+    **Every page also carries the app's own palette** (``core.services.app_palette``):
+    the six colours of the ``Braaanding`` row as CSS variables and its koro as a
+    ``<meta>``, so the first paint is right with no request. It costs no query in
+    steady state: a worker remembers the palette for a minute.
     """
     return _serve_index(request)
 
@@ -100,6 +106,9 @@ def _serve_index(request, allowed=None):
         html = inject_preview(html, preview, request.build_absolute_uri(request.path))
     else:
         html = inject_preview(html, site_preview(), request.build_absolute_uri("/"))
+    # The app's own palette goes into every page, whatever its card: a collection's
+    # page paints over it with its group's colours once it has loaded.
+    html = inject_app_palette(html)
     response = HttpResponse(html, content_type="text/html")
     response["Cache-Control"] = "no-cache"
     return response

@@ -7,6 +7,7 @@ expect.extend(toHaveNoViolations);
 
 import ApprovalNotice from '../components/ApprovalNotice';
 import { isOfferable } from '../hooks/useCapabilities';
+import declarePalette from './declarePalette';
 
 // This file is about what a deployment with no forms of its own hosted elsewhere shows
 // — the app's own contact page, `VITE_FEEDBACK_URL`, the server's request address. A
@@ -124,17 +125,14 @@ describe('a deployment that withholds something', () => {
     });
 
     test('it wears the theeeme’s primary tokens', async () => {
-      localStorage.setItem(
-        'theeemeColors',
-        JSON.stringify({
-          color_01: 'bus',
-          color_02: 'suomenlinna-light',
-          color_03: 'copper',
-          color_04: 'black',
-          color_05: 'white',
-          color_06: 'white',
-        })
-      );
+      declarePalette({
+        color_01: 'bus',
+        color_02: 'suomenlinna-light',
+        color_03: 'copper',
+        color_04: 'black',
+        color_05: 'white',
+        color_06: 'white',
+      });
       withRequestUrl();
       renderNotice();
 
