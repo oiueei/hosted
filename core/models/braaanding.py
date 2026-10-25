@@ -25,7 +25,7 @@ from django.db import models
 from django.db.models.signals import post_delete, post_save
 
 from core.models.theeeme import KORO_CHOICES
-from core.services.palette_contrast import HEX_RE, contrast_failures
+from core.services.palette_contrast import HEX_RE, contrast_failures, is_hex_colour
 
 # The one row's primary key. A fixed code rather than a generated one: there is
 # only ever this row, and the migration, the admin and `braaanding()` all name it.
@@ -98,7 +98,7 @@ class Braaanding(models.Model):
         """
         super().clean()
         colors = self.colors
-        if not all(HEX_RE.match(value or "") for value in colors.values()):
+        if not all(is_hex_colour(value) for value in colors.values()):
             return
         failures = contrast_failures(colors)
         if failures:

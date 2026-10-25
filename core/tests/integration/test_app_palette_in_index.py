@@ -99,7 +99,8 @@ class TestWhatIsServed:
 
 class TestNothingButAHexIsWrittenIntoMarkup:
     @pytest.mark.parametrize(
-        "bad", ["red", "#FFF", "url(x)", "#191919;}</style><script>x</script>", "", None, 7]
+        "bad",
+        ["red", "#FFF", "url(x)", "#191919;}</style><script>x</script>", "#191919\n", "", None, 7],
     )
     def test_a_value_that_is_not_a_hex_colour_is_replaced_by_its_seeded_default(self, bad):
         palette = {**DEFAULT_COLORS, "koro": "basic", "color_02": bad}

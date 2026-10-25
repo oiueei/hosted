@@ -11,6 +11,9 @@ Pure functions, no Django: the formula is WCAG 2.1's relative luminance.
 
 import re
 
+# Its pattern is serialised in the migration that created the colour columns, so it stays as it
+# is; code that decides what reaches markup asks `is_hex_colour`, because `$` also matches
+# before a trailing newline and only a whole-string match refuses "#191919\n".
 HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 WHITE = "#FFFFFF"
@@ -19,6 +22,10 @@ WHITE = "#FFFFFF"
 LOGIN_ALPHA = "#800E04"
 
 AA_NORMAL = 4.5
+
+
+def is_hex_colour(value):
+    return isinstance(value, str) and HEX_RE.fullmatch(value) is not None
 
 
 def _channel(hex_color, index):
