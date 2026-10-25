@@ -72,7 +72,7 @@ Users authenticate via magic link (passwordless). The `UserManager` handles user
 
 ### Theeeme Relationship
 
-- **A user has no palette.** `User.theeeme` and `User.koro` moved to the collection (migration `0165`). The two **columns** (`users.user_theeeme`, `users.koro`) are still in the database for one release, each with a database-level default (`BUU331` / `basic`), because the previous release's dynos name them in every User query and INSERT while the release phase runs; the field definitions are out of Django's state. The next release drops them (`0166`). Until then **Bussi (`BUU331`) must keep existing**: the retired column is a foreign key whose default points at it.
+- **A user has no palette.** `User.theeeme` and `User.koro` moved to the collection (migration `0165`) and their columns (`users.user_theeeme`, `users.koro`) were dropped one release later (`0166`, the pattern of `0152`/`0153`: the previous release's dynos named them in every User query while the release phase ran).
 - A collection has a FK to Theeeme with `on_delete=PROTECT` and `default=random_theeeme` (`core/models/theeeme.py`: a new collection gets a random theeeme, not a fixed one). `random_theeeme` reads the **live** Theeeme table (not a hardcoded list) and falls back to `DEFAULT_THEEEME_CODE` (BUU331) if it is empty, so deleting a theeeme can never assign a dangling FK.
 - This prevents deleting a Theeeme that is in use by a collection
 
@@ -205,7 +205,7 @@ The `Theeeme` model represents a colour palette a collection can be painted with
 ### Business Rules
 
 1. **Each collection has a theeeme** - A group's pages are painted with the palette its curators chose (`Collection.theeeme`); the viewer's own choice does not exist.
-2. **Default theeeme is a random one of those that exist** for a new collection; Bussi (code: `BUU331`) is the fallback if the table is empty, and must keep existing while the retired `users.user_theeeme` column does.
+2. **Default theeeme is a random one of those that exist** for a new collection; Bussi (code: `BUU331`) is the fallback if the table is empty.
 3. **Protected deletion** - Theeemes cannot be deleted if any collection references them (`on_delete=PROTECT`).
 4. **The twelve are the selector.** `TheeemeListView` serves exactly these rows; the app's own palette is the `Braaanding` table below, never a row here.
 
