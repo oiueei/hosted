@@ -14,4 +14,4 @@ class TheeemeListView(ListAPIView):
 
     permission_classes = [IsAuthenticated]
     serializer_class = TheeemeSerializer
-    queryset = Theeeme.objects.all()
+    queryset = Theeeme.objects.order_by("name", "code")

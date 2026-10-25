@@ -7,7 +7,10 @@ palettes a curator can pick. The app's own palette is a different table and is
 never reachable from here.
 """
 
+import warnings
+
 import pytest
+from django.core.paginator import UnorderedObjectListWarning
 from rest_framework import status
 
 from core.models import Collection, Theeeme, Thing
@@ -155,6 +158,19 @@ class TestTheSelectorStaysTheTwelve:
         codes = {row["code"] for row in rows}
         assert codes == set(Theeeme.objects.values_list("code", flat=True))
         assert "OIUEEI" not in codes
+
+    def test_the_list_is_ordered_by_name_so_a_page_never_depends_on_the_database(
+        self, authenticated_client
+    ):
+        with warnings.catch_warnings():
+            # A paginated list with no order is a warning: pages could repeat or skip rows.
+            warnings.simplefilter("error", UnorderedObjectListWarning)
+            response = authenticated_client.get("/api/v1/theeemes/")
+
+        assert response.status_code == status.HTTP_200_OK
+        rows = response.data["results"] if "results" in response.data else response.data
+        names = [row["name"] for row in rows]
+        assert names == sorted(names)
 
 
 @pytest.mark.django_db
