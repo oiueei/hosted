@@ -52,8 +52,6 @@ function storageKeys(source, method) {
 const PHRASES = {
   userCode: { es: 'código de usuario', ca: "codi d'usuari", en: 'user code' },
   i18nextLng: { es: 'idioma', ca: 'idioma', en: 'language' },
-  theeemeColors: { es: 'aspecto', ca: 'aspecte', en: 'appearance' },
-  koro: { es: 'aspecto', ca: 'aspecte', en: 'appearance' },
   [STALE_CHUNK_KEY]: {
     es: 'recarga automática',
     ca: 'recàrrega automàtica',
@@ -85,7 +83,11 @@ describe('the /legal cookies sentence names every key the app stores (hosted)', 
       const source = fs.readFileSync(file, 'utf8');
       for (const key of storageKeys(source, 'localStorage')) scanned.add(key);
     }
-    expect(scanned.size).toBeGreaterThanOrEqual(3);
+    // One key: `userCode`. It used to be three (`theeemeColors` and `koro`, the signed-in
+    // user's display preferences) until the palette moved to the collection, or to the
+    // app's own served in the page; nothing writes them now and they are removed from
+    // browsers that still have them (`utils/retiredStorage.js`, which only *removes*).
+    expect(scanned.size).toBeGreaterThanOrEqual(1);
 
     for (const key of [...scanned, STALE_CHUNK_KEY, 'i18nextLng']) {
       expect(
@@ -110,5 +112,19 @@ describe('the /legal cookies sentence names every key the app stores (hosted)', 
         `${lang} /legal does not name \`${key}\` in its cookies sentence`
       ).toContain(phrases[lang]);
     }
+  });
+
+  // The browser keeps no appearance preference any more (the palette is a collection's,
+  // or the app's own, and neither is stored), so the sentence must not claim one: a
+  // privacy text that lists what is not stored is a false inventory the other way.
+  test.each([
+    ['es', es, /aspecto/i],
+    ['ca', ca, /aspecte/i],
+    ['en', en, /appearance/i],
+  ])('%s: it no longer mentions an appearance preference', (lang, text, appearance) => {
+    const paragraph = cookiesParagraph(text, COOKIE_SENTENCE[lang]);
+    expect(paragraph, `${lang} /legal lost its cookies sentence`).not.toBe('');
+
+    expect(paragraph).not.toMatch(appearance);
   });
 });
