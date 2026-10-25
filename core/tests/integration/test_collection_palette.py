@@ -169,8 +169,10 @@ class TestTheSelectorStaysTheTwelve:
 
         assert response.status_code == status.HTTP_200_OK
         rows = response.data["results"] if "results" in response.data else response.data
-        names = [row["name"] for row in rows]
-        assert names == sorted(names)
+        # The database's own order, not Python's `sorted`: PostgreSQL collates by the
+        # language and ignores punctuation, so it ranks names differently from SQLite.
+        expected = list(Theeeme.objects.order_by("name", "code").values_list("code", flat=True))
+        assert [row["code"] for row in rows] == expected
 
 
 @pytest.mark.django_db
