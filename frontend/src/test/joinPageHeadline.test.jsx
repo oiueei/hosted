@@ -112,8 +112,9 @@ describe('JoinPage — the collection is named', () => {
 
     renderJoin(undefined);
 
-    await waitFor(() => expect(apiFetch).toHaveBeenCalled());
-    expect(screen.getByText(/Join to request, reserve/)).toBeInTheDocument();
+    // The page waits for the collection's answer before it paints: wait for the copy.
+    expect(await screen.findByText(/Join to request, reserve/)).toBeInTheDocument();
+    expect(apiFetch).toHaveBeenCalled();
   });
 
   test('a ?thing= from a "Reserve" click rides into the join request', async () => {
