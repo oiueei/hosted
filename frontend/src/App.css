@@ -10,6 +10,10 @@
    footer's and the corner row's right edge cannot disagree. */
 :root {
   --page-margin: var(--spacing-s);
+  /* The face of a code sample an owner copies (LocalizedInfo, BulkAddCsv). HDS
+     defines no monospace token, and a bare `monospace` gives each system its
+     own; this names the one the design kit draws with first. */
+  --font-mono: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   /* The columns of the card grid, and of the collection hero's logo that is one
      of them: 1, 2, 3, 4 at the HDS breakpoints. `--grid-column` is one of them
      as a width of the content column, with a gap of G between neighbours. */
@@ -2263,7 +2267,7 @@ caption:has(.sr-only:only-child) {
   margin: var(--spacing-2-xs) 0;
   padding: var(--spacing-2-xs);
   background: var(--color-black-5);
-  font-family: var(--font-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: var(--fontsize-body-s);
   overflow-wrap: anywhere;
   user-select: all;
@@ -2279,7 +2283,7 @@ caption:has(.sr-only:only-child) {
   background-color: var(--color-white);
   border: 1px solid var(--color-black-20);
   border-radius: 2px;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: var(--fontsize-body-s);
   line-height: 1.5;
   white-space: pre;
