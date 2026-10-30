@@ -500,6 +500,48 @@ describe('AddThingPage — the deposit field only exists in a library', () => {
   });
 });
 
+describe('EditThingPage — a network’s thing is placed by its pickup point', () => {
+  const networkThing = (over = {}) => ({
+    code: 'THG001',
+    type: 'LEND_THING',
+    collection_kind: 'LIBRARY',
+    collection_mode: 'NETWORK',
+    headline: 'Drill',
+    // The server shows none in a network; the column may still hold one.
+    location: '',
+    ...over,
+  });
+  const patchBody = () => {
+    const call = apiFetch.mock.calls.find(
+      (c) => c[0] === '/api/v1/things/THG001/' && c[1]?.method === 'PATCH'
+    );
+    return call && JSON.parse(call[1].body);
+  };
+
+  test('the form does not ask for a location and a save does not send one', async () => {
+    const { container } = await renderEdit({ thing: networkThing() });
+    await waitFor(() => expect(container.querySelector('#edit-thing-headline')).toBeTruthy());
+    expect(container.querySelector('#edit-thing-location')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patchBody()).toBeTruthy());
+    expect(patchBody()).not.toHaveProperty('location');
+  });
+
+  test('outside a network the location is asked and sent as ever', async () => {
+    const { container } = await renderEdit({
+      thing: networkThing({ collection_mode: 'PROPRIETARY', location: 'Gràcia' }),
+    });
+    await waitFor(() => expect(container.querySelector('#edit-thing-location')).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(patchBody()).toBeTruthy());
+    expect(patchBody().location).toBe('Gràcia');
+  });
+});
+
 describe('EditThingPage — deposit follows the type, explicitly', () => {
   test('a stored deposit pre-fills the field', async () => {
     const { container } = await renderEdit({

@@ -1114,7 +1114,8 @@
     "errorLoading": "No s'ha pogut carregar el punt de recollida.",
     "notANetwork": "Només una xarxa té punts de recollida.",
     "notADinamizador": "Només l'equip de la xarxa té un punt de recollida.",
-    "menuEntry": "El meu punt de recollida"
+    "menuEntry": "El meu punt de recollida",
+    "lentBy": "Ho presta {{name}}"
   },
   "closedDates": {
     "label": "Festius i tancaments",

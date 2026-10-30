@@ -1114,7 +1114,8 @@
     "errorLoading": "No se ha podido cargar el punto de recogida.",
     "notANetwork": "Solo una red tiene puntos de recogida.",
     "notADinamizador": "Solo el equipo de la red tiene un punto de recogida.",
-    "menuEntry": "Mi punto de recogida"
+    "menuEntry": "Mi punto de recogida",
+    "lentBy": "Lo presta {{name}}"
   },
   "closedDates": {
     "label": "Festivos y cierres",

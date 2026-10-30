@@ -1114,7 +1114,8 @@
     "errorLoading": "The pickup point could not be loaded.",
     "notANetwork": "Only a network has pickup points.",
     "notADinamizador": "Only the team of the network has a pickup point.",
-    "menuEntry": "My pickup point"
+    "menuEntry": "My pickup point",
+    "lentBy": "Lent by {{name}}"
   },
   "closedDates": {
     "label": "Holidays and closures",

@@ -9,6 +9,7 @@ import {
 } from 'hds-react';
 import { formatDate } from '../utils/rental';
 import { hasAmount } from '../constants/things';
+import NetworkPointLine from './NetworkPointLine';
 
 /**
  * The `thing-card-info` rows shared by ThingPage and ThingLinkbox: type, fee,
@@ -21,6 +22,8 @@ export default function ThingInfoRows({ thing, isDateBased, hideType = false, ch
   const { t } = useTranslation();
   return (
     <div className="thing-card-info">
+      {/* In a network: who lends it, where and when. */}
+      <NetworkPointLine point={thing.network_point} />
       {/* Type row — hidden when the collection allows only one thing type (redundant). */}
       {!hideType && (
         <div className="thing-card-info-row">
