@@ -131,12 +131,21 @@ class ThingViewSet(ModelViewSet):
 
     def _can_delete(self, thing, user_code):
         """A collection owner (any mode); a co-curator of a PROPRIETARY
-        collection it sits in; or the thing owner while it has never changed
-        hands."""
+        collection it sits in; the owner of a thing of a NETWORK who is a
+        dinamizador of it (always, lent or not: they run their things there as a
+        PROPRIETARY co-curator runs the catalogue); or the thing owner while it
+        has never changed hands."""
         is_curator = Q(owner_id=user_code) | Q(
             mode=Collection.Mode.PROPRIETARY, co_owners__code=user_code
         )
         if thing.collections.filter(is_curator).exists():
+            return True
+        if (
+            thing.is_owner(user_code)
+            and thing.collections.filter(
+                mode=Collection.Mode.NETWORK, co_owners__code=user_code
+            ).exists()
+        ):
             return True
         return thing.is_owner(user_code) and not thing.transfers.exists()
 

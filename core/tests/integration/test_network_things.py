@@ -15,7 +15,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import BookingPeriod, Collection, Thing, User
 from core.models.notification import InAppNotification
-from core.tests.factories import BookingPeriodFactory, CollectionFactory, ThingFactory
+from core.tests.factories import (
+    BookingPeriodFactory,
+    CollectionFactory,
+    ThingFactory,
+    ThingTransferFactory,
+)
 
 LEND, RENT = "LEND_THING", "RENT_THING"
 
@@ -137,6 +142,56 @@ class TestEachEntityRunsItsOwnThings:
         res = client_for(world["lili"]).post(f"/api/v1/things/{thing.code}/hide/")
 
         assert res.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+class TestDeletingAThing:
+    """A thing that has been lent has changed hands, and the owner's own right to delete
+    it ends there; a network's dinamizador keeps it, as a PROPRIETARY co-curator keeps it
+    over the catalogue they run. Another dinamizador's thing was never theirs to delete."""
+
+    def lent(self, thing, borrower):
+        ThingTransferFactory(thing=thing, from_user=thing.owner, to_user=borrower)
+
+    def test_a_dinamizador_deletes_their_own_thing_even_after_it_was_lent(self, world):
+        self.lent(world["leles"], world["lolo"])
+
+        res = client_for(world["lele"]).delete(f"/api/v1/things/{world['leles'].code}/")
+
+        assert res.status_code == status.HTTP_204_NO_CONTENT
+        assert not Thing.objects.filter(code=world["leles"].code).exists()
+
+    def test_a_dinamizador_cannot_delete_another_dinamizadors_thing(self, world):
+        self.lent(world["leles"], world["lolo"])
+
+        res = client_for(world["lili"]).delete(f"/api/v1/things/{world['leles'].code}/")
+
+        assert res.status_code == status.HTTP_403_FORBIDDEN
+        assert Thing.objects.filter(code=world["leles"].code).exists()
+
+    def test_a_member_who_is_not_a_dinamizador_cannot_delete_a_thing(self, world):
+        res = client_for(world["lolo"]).delete(f"/api/v1/things/{world['leles'].code}/")
+
+        assert res.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_the_founder_still_deletes_any_thing_of_the_network(self, world):
+        res = client_for(world["founder"]).delete(f"/api/v1/things/{world['leles'].code}/")
+
+        assert res.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_in_a_community_a_lent_thing_is_still_not_its_owners_to_delete(self, world):
+        community = CollectionFactory(
+            owner=world["founder"], mode=Collection.Mode.COMMUNITY, allowed_thing_types=[LEND, RENT]
+        )
+        community.invites.add(world["lele"])
+        thing = ThingFactory(owner=world["lele"], type=LEND)
+        community.things.add(thing)
+        self.lent(thing, world["lolo"])
+
+        res = client_for(world["lele"]).delete(f"/api/v1/things/{thing.code}/")
+
+        assert res.status_code == status.HTTP_403_FORBIDDEN
+        assert Thing.objects.filter(code=thing.code).exists()
 
 
 @pytest.mark.django_db
