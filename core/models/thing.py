@@ -162,6 +162,12 @@ class Thing(models.Model):
             for c in self.collections.all()
         )
 
+    def can_rescue(self, user_code):
+        """The founder of a network this thing sits in (``Collection.can_rescue``):
+        may reject a pending request on it and hide it, and nothing else. Apart
+        from ``can_manage`` on purpose — rescuing is not managing."""
+        return any(c.can_rescue(user_code) for c in self.collections.all())
+
     def managers(self):
         """Every ``User`` for whom ``can_manage`` is true — the thing owner,
         plus the curators (owner + co-curators) of every PROPRIETARY collection

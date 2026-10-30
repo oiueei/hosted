@@ -2162,6 +2162,36 @@ def send_thing_reported_email(thing, owner_email):
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
+def send_thing_hidden_by_founder_email(
+    thing, founder, group_headline, owner_email, collection=None
+):
+    """Tell the owner of a thing in a network that the founder hid it.
+
+    The founder's rescue power: the thing is still its owner's, who can show it
+    again. Names the founder by bare ``name`` ("A member" when there is none),
+    never their address.
+    """
+    user, lang = _recipient(owner_email, collection)
+    T, L = _texts(lang), _local(lang)
+    thing_url = _thing_url(thing, reader=user, collection=collection)
+    headline, group = L(thing.headline), L(group_headline)
+    who = _member_name(founder.name, lang)
+    subject = T("thing_hidden_subject").format(founder=who)
+    plain = T("thing_hidden_plain").format(founder=who, thing=headline, group=group, url=thing_url)
+    html = _render_email(
+        [
+            _para(T("thing_hidden_intro").format(founder=who, group=group)),
+            _para(T("thing_hidden_outro")),
+            _cta(thing_url, T("thing_hidden_cta"), T("cta_fallback")),
+        ],
+        lang=lang,
+        header=headline,
+    )
+    _send(
+        owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=headline
+    )
+
+
 def send_broadcast_email(
     owner_name, owner_email, collection_headline, collection_code, message, emails, collection=None
 ):

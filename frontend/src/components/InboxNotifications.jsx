@@ -339,7 +339,7 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
       case 'THING_HIDDEN':
         return t('home.thingHiddenBody', {
           thing_headline: p.thing_headline,
-          founder_name: p.founder_name,
+          founder_name: named(p.founder_name),
         });
       case 'FAQ_HIDDEN':
         return t('home.faqHiddenBody', {

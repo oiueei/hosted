@@ -19,7 +19,8 @@ from core.exceptions import RefusedField
 from core.models import Collection, Thing
 from core.models.collection import KIND_THING_TYPES
 from core.models.event import Event
-from core.permissions import IsThingManager
+from core.models.notification import InAppNotification
+from core.permissions import IsThingManager, IsThingManagerOrRescuer
 from core.serializers import (
     ThingBulkRowSerializer,
     ThingCreateSerializer,
@@ -33,6 +34,7 @@ from core.services.creator_policy import (
     thing_type_denial,
 )
 from core.services.deletion_events import deleting_as
+from core.services.email_service import send_thing_hidden_by_founder_email
 from core.utils import parse_localized
 from core.views._helpers import refusal_body, type_validity_error, verb_from_price, viewer_code
 
@@ -114,7 +116,10 @@ class ThingViewSet(ModelViewSet):
         return ThingSerializer
 
     def get_permissions(self):
-        if self.action in ("update", "partial_update", "activate", "hide"):
+        if self.action == "hide":
+            # A manager of the thing, or the founder of the network it sits in.
+            return [IsAuthenticated(), IsThingManagerOrRescuer()]
+        if self.action in ("update", "partial_update", "activate"):
             # IsThingManager: the thing owner, or a curator of a PROPRIETARY
             # collection it sits in — those curators run the catalogue.
             return [IsAuthenticated(), IsThingManager()]
@@ -327,7 +332,31 @@ class ThingViewSet(ModelViewSet):
             )
         thing.status = Thing.Status.INACTIVE
         thing.save(update_fields=["status"])
+        if not thing.is_owner(request.user.code):
+            self._tell_owner_of_rescue(thing, request.user)
         return Response(ThingSerializer(thing, context=self.get_serializer_context()).data)
+
+    @staticmethod
+    def _tell_owner_of_rescue(thing, founder):
+        """The founder of a network hid an entity's thing: its owner hears of it."""
+        collection = next((c for c in thing.collections.all() if c.can_rescue(founder.code)), None)
+        InAppNotification.objects.create(
+            user=thing.owner,
+            type=InAppNotification.Type.THING_HIDDEN,
+            payload={
+                "thing_headline": thing.headline,
+                "founder_name": founder.name,
+                "thing_code": thing.code,
+                "collection_code": collection.code if collection else "",
+            },
+        )
+        send_thing_hidden_by_founder_email(
+            thing,
+            founder,
+            collection.headline if collection else "",
+            thing.owner.email,
+            collection=collection,
+        )
 
 
 class ThingBulkCreateView(APIView):

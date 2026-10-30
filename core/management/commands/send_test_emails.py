@@ -397,6 +397,11 @@ def _(w):
     es.send_thing_reported_email(w.gift, w.to)
 
 
+@sample("thing_hidden_by_founder", "send_thing_hidden_by_founder_email")
+def _(w):
+    es.send_thing_hidden_by_founder_email(w.gift, w.owner, w.collection.headline, w.to)
+
+
 @sample("return_reminder_to_owner", "send_return_reminder_email")
 def _(w):
     es.send_return_reminder_email("Lele", w.lend, w.end, w.to)

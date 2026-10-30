@@ -264,6 +264,14 @@ TEXTS = {
         "We don't share who reported it. Please take a look and make sure everything is in order."
     ),
     "reported_review_cta": "Review the thing",
+    "thing_hidden_subject": "{founder} hid one of your things",
+    "thing_hidden_plain": (
+        "{founder} hid {thing} from {group}. It is still yours: you can show it again "
+        "whenever you like. {url}"
+    ),
+    "thing_hidden_intro": "{founder} hid this thing from {group}:",
+    "thing_hidden_outro": "It is still yours: you can show it again whenever you like.",
+    "thing_hidden_cta": "Review the thing",
     # Broadcast (owner → invitees)
     "email_note_test_subject": "Your email note, as members will see it — {collection}",
     "email_note_test_intro": (

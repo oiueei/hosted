@@ -275,6 +275,14 @@ TEXTS = {
         "No compartim qui l'ha denunciat. Dona-hi un cop d'ull i assegura't que tot està en ordre."
     ),
     "reported_review_cta": "Revisar la cosa",
+    "thing_hidden_subject": "{founder} ha amagat una de les teves coses",
+    "thing_hidden_plain": (
+        "{founder} ha amagat {thing} de {group}. Continua sent teva: pots tornar a "
+        "mostrar-la quan vulguis. {url}"
+    ),
+    "thing_hidden_intro": "{founder} ha amagat aquesta cosa de {group}:",
+    "thing_hidden_outro": "Continua sent teva: pots tornar a mostrar-la quan vulguis.",
+    "thing_hidden_cta": "Revisar la cosa",
     # Broadcast (owner → invitees)
     "email_note_test_subject": "La teva nota del correu, tal com la veuran — {collection}",
     "email_note_test_intro": (

@@ -265,6 +265,14 @@ TEXTS = {
         "No compartimos quién lo denunció. Échale un vistazo y asegúrate de que todo está en orden."
     ),
     "reported_review_cta": "Revisar la cosa",
+    "thing_hidden_subject": "{founder} ha ocultado una de tus cosas",
+    "thing_hidden_plain": (
+        "{founder} ha ocultado {thing} de {group}. Sigue siendo tuya: puedes volver a "
+        "mostrarla cuando quieras. {url}"
+    ),
+    "thing_hidden_intro": "{founder} ha ocultado esta cosa de {group}:",
+    "thing_hidden_outro": "Sigue siendo tuya: puedes volver a mostrarla cuando quieras.",
+    "thing_hidden_cta": "Revisar la cosa",
     # Broadcast (owner → invitees)
     "email_note_test_subject": "Tu nota del correo, tal como la verán — {collection}",
     "email_note_test_intro": (
