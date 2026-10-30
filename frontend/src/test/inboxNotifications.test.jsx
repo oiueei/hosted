@@ -319,7 +319,11 @@ describe('InboxNotifications — every type says something', () => {
         payload: { collection_headline: 'Toy network', collection_code: 'COL001', network: true },
         created: '2026-08-06T10:00:00Z',
       },
-      says: [/add your own things/i, /Toy network/, /founder keeps the settings/i],
+      says: [
+        /message the group, add your own things/i,
+        /Toy network/,
+        /founder keeps the settings/i,
+      ],
       links: '/collections/COL001',
     },
     {

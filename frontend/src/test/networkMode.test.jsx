@@ -193,8 +193,11 @@ describe('Managing the members of a network', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add to the team' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent(/add their own things and decide on them/i);
+    expect(dialog).toHaveTextContent(/message everyone and add their own things/i);
+    expect(dialog).toHaveTextContent(/member list \(with everyone's email\)/i);
     expect(dialog).toHaveTextContent(/cannot remove members/i);
+    expect(dialog).toHaveTextContent(/their things will be deleted with the role/i);
+    expect(dialog).not.toHaveTextContent(/reservations/i);
     expect(dialog).not.toHaveTextContent(/everything you can except delete/i);
   });
 
