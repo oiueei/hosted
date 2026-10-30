@@ -186,6 +186,29 @@ describe('Managing the members of a network', () => {
     expect(screen.getByRole('button', { name: 'Add to the team' })).toBeInTheDocument();
   });
 
+  test('naming a dinamizador in a network promises only their own things', async () => {
+    renderManage(NETWORK, 'FOUN01');
+    await screen.findByText(/Lolo/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the team' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(/add their own things and decide on them/i);
+    expect(dialog).toHaveTextContent(/cannot remove members/i);
+    expect(dialog).not.toHaveTextContent(/everything you can except delete/i);
+  });
+
+  test('naming a co-curator elsewhere keeps the full promise', async () => {
+    renderManage({ ...NETWORK, mode: 'PROPRIETARY' }, 'FOUN01');
+    await screen.findByText(/Lolo/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the team' }));
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent(
+      /everything you can except delete the collection/i
+    );
+  });
+
   test('demoting a dinamizador asks first and says how many things go', async () => {
     renderManage(NETWORK, 'FOUN01');
     await screen.findByText(/Lolo/);

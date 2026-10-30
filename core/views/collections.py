@@ -604,6 +604,8 @@ class CollectionCoOwnerView(APIView):
                 payload={
                     "collection_headline": collection.headline,
                     "collection_code": collection.code,
+                    # A dinamizador's reach is narrower in a network: the card says which.
+                    **({"network": True} if collection.is_network() else {}),
                 },
             )
 

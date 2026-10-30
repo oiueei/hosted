@@ -98,6 +98,30 @@ class TestNamingTheTeam:
         assert allowed.status_code == status.HTTP_200_OK
         assert g.co_owners.filter(code="ENTB01").exists()
 
+    def test_a_promotion_in_a_network_says_so_in_the_notice(self, network):
+        network["group"].invites.add(User.objects.create(code="NEWC01", email="n@your-domain.test"))
+        url = BASE.format(code=network["group"].code) + "co-owners/"
+
+        client_for(network["founder"]).post(url, {"user_code": "NEWC01"}, format="json")
+
+        notice = InAppNotification.objects.get(
+            user_id="NEWC01", type=InAppNotification.Type.PROMOTED_CO_OWNER
+        )
+        assert notice.payload["network"] is True
+
+    @pytest.mark.parametrize("mode", [Collection.Mode.PROPRIETARY, Collection.Mode.COMMUNITY])
+    def test_a_promotion_elsewhere_carries_no_network_flag(self, mode):
+        g, founder, _, _, lolo = _group(mode)
+
+        client_for(founder).post(
+            BASE.format(code=g.code) + "co-owners/", {"user_code": "MEMB01"}, format="json"
+        )
+
+        notice = InAppNotification.objects.get(
+            user=lolo, type=InAppNotification.Type.PROMOTED_CO_OWNER
+        )
+        assert "network" not in notice.payload
+
     def test_only_the_founder_demotes_a_dinamizador_in_a_network(self, network):
         url = BASE.format(code=network["group"].code) + "co-owners/"
 

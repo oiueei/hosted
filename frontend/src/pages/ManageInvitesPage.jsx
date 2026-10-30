@@ -558,7 +558,13 @@ export default function ManageInvitesPage() {
             title={t('manageInvites.promoteConfirmTitle', { name: promoteCandidate._name })}
           />
           <ThemedDialog.Content>
-            <p style={{ marginBottom: 0 }}>{t('manageInvites.promoteConfirmBody')}</p>
+            <p style={{ marginBottom: 0 }}>
+              {t(
+                isNetwork
+                  ? 'manageInvites.promoteConfirmNetworkBody'
+                  : 'manageInvites.promoteConfirmBody'
+              )}
+            </p>
           </ThemedDialog.Content>
           <ThemedDialog.ActionButtons>
             <Button

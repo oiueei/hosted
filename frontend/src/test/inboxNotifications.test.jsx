@@ -312,6 +312,17 @@ describe('InboxNotifications — every type says something', () => {
       links: '/collections/COL001',
     },
     {
+      what: 'a promotion in a network says they run their own things, not the whole group',
+      notification: {
+        code: 'NOTA12',
+        type: 'PROMOTED_CO_OWNER',
+        payload: { collection_headline: 'Toy network', collection_code: 'COL001', network: true },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/add your own things/i, /Toy network/, /founder keeps the settings/i],
+      links: '/collections/COL001',
+    },
+    {
       what: 'a demotion says the member is a regular member again',
       notification: {
         code: 'NOTA07',

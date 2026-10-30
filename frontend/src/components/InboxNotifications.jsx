@@ -437,7 +437,10 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           thing_headline: p.thing_headline,
         });
       case 'PROMOTED_CO_OWNER':
-        return t('home.promotedBody', { collection_headline: p.collection_headline });
+        // In a network a dinamizador runs their own things only: the body says so.
+        return t(p.network ? 'home.promotedNetworkBody' : 'home.promotedBody', {
+          collection_headline: p.collection_headline,
+        });
       case 'DEMOTED_CO_OWNER':
         // In a network the things the dinamizador ran went with the role: say so.
         return n.payload.things_deleted > 0
