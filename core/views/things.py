@@ -330,9 +330,12 @@ class ThingViewSet(ModelViewSet):
                 refusal_body("Only active things can be hidden.", code="thing_not_active"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # A rescue is hiding what you do not run but may rescue; a curator hiding
+        # another curator's thing in a PROPRIETARY collection is just managing it.
+        is_rescue = not thing.can_manage(request.user.code) and thing.can_rescue(request.user.code)
         thing.status = Thing.Status.INACTIVE
         thing.save(update_fields=["status"])
-        if not thing.is_owner(request.user.code):
+        if is_rescue:
             self._tell_owner_of_rescue(thing, request.user)
         return Response(ThingSerializer(thing, context=self.get_serializer_context()).data)
 

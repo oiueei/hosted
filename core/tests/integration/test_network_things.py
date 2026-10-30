@@ -207,6 +207,30 @@ class TestTheFoundersRescue:
         ).exists()
         assert mail.outbox == []
 
+    def test_a_co_curator_hiding_the_founders_thing_in_a_proprietary_collection_tells_nobody(
+        self, world
+    ):
+        shared = CollectionFactory(
+            owner=world["founder"],
+            mode=Collection.Mode.PROPRIETARY,
+            allowed_thing_types=[LEND, RENT],
+        )
+        shared.invites.add(world["lele"])
+        shared.co_owners.add(world["lele"])
+        thing = ThingFactory(owner=world["founder"], type=LEND)
+        shared.things.add(thing)
+        mail.outbox.clear()
+
+        res = client_for(world["lele"]).post(f"/api/v1/things/{thing.code}/hide/")
+
+        assert res.status_code == status.HTTP_200_OK
+        thing.refresh_from_db()
+        assert thing.status == Thing.Status.INACTIVE
+        assert not InAppNotification.objects.filter(
+            type=InAppNotification.Type.THING_HIDDEN
+        ).exists()
+        assert mail.outbox == []
+
     def test_the_founder_cannot_edit_another_entitys_thing(self, world):
         res = client_for(world["founder"]).patch(
             f"/api/v1/things/{world['leles'].code}/", {"headline": "Mine now"}, format="json"
