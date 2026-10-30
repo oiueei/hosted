@@ -508,6 +508,16 @@ Promote or demote a co-curator, **in either mode** (2026-09, co-curators in PROP
 { "user_code": "ABC123" }
 ```
 
+### CollectionPointView
+
+| | |
+|---|---|
+| **Endpoint** | `GET` / `PUT /api/v1/collections/{collection_code}/point/` |
+| **Permission** | `IsAuthenticated` + collection curator (`require_collection_curator`, the founder included) |
+| **Rate limit** | PUT: 30 requests/hour per user |
+
+The pickup point of the dinamizador asking, in a **network** (404 `not_a_network` elsewhere; 403 for a member who is not a dinamizador). GET returns it, or the empty fields when there is none yet; PUT upserts it through `NetworkPointWriteSerializer` (the collection's own widths, HTML rejection, localized conditions, `closed_dates` parsed as the collection's line). Each dinamizador reads and edits **only their own**; every point travels with the collection (`points` in `CollectionSerializer`, public, address included) except `email_note`, read back only by its dinamizador and the founder.
+
 ### CollectionJoinView
 
 | | |
@@ -654,7 +664,7 @@ Mails the acting curator — and nobody else — their `email_note` **draft** (`
 | **Permission** | `IsAuthenticated` + collection curator (owner or co-owner) |
 | **Rate limit** | 5 requests/day per user |
 
-Sends a broadcast email from the acting curator — the owner or a co-owner — to all invitees; the `Reply-To` and the name shown are whoever actually sent it, not necessarily the founding owner. Validates `message` (SafeTextField, max 256) via `CollectionBroadcastSerializer`; the subject is auto-generated as `Hey! {collection_headline}` (the owner does not provide one). Returns 400 if the collection has no invitees. Emails carry a `Reply-To` header (the owner) and a link to the collection (labelled "Open the group" — it read "I can help!", a leftover of the retired WISH_THING call-for-help flow, until 2026-09); the in-app `BROADCAST` notification carries `collection_code` so it can deep-link there too. The email send is dispatched off the request thread in production (`_send_broadcast` → daemon thread when `EMAIL_SEND_ASYNC`, mirroring `_send_bulk_invites`) so a large group's sequential SMTP can't exhaust the Heroku 30s window (H12); the in-app notifications are still written synchronously.
+Sends a broadcast email from the acting curator — the owner or a co-owner — to all invitees; the `Reply-To` and the name shown are whoever actually sent it, not necessarily the founding owner. **In a network it is signed with the `display_name` of the sender's pickup point** (the entity's name, else their own), by email and in the inbox notice. Validates `message` (SafeTextField, max 256) via `CollectionBroadcastSerializer`; the subject is auto-generated as `Hey! {collection_headline}` (the owner does not provide one). Returns 400 if the collection has no invitees. Emails carry a `Reply-To` header (the owner) and a link to the collection (labelled "Open the group" — it read "I can help!", a leftover of the retired WISH_THING call-for-help flow, until 2026-09); the in-app `BROADCAST` notification carries `collection_code` so it can deep-link there too. The email send is dispatched off the request thread in production (`_send_broadcast` → daemon thread when `EMAIL_SEND_ASYNC`, mirroring `_send_bulk_invites`) so a large group's sequential SMTP can't exhaust the Heroku 30s window (H12); the in-app notifications are still written synchronously.
 
 **Request body:**
 ```json

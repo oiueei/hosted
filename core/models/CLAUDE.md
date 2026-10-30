@@ -190,6 +190,27 @@ The `Collection` model represents a list of things (gifts, sales, orders) owned 
 
 ---
 
+## NetworkPoint
+
+The pickup point of one dinamizador of a **NETWORK** (`core/models/network_point.py`, table `network_points`): the entity they answer for (a cooperative, a neighbourhood association, a shop, a union), not their home. Public with the collection, address included. One row per `(collection, user)` (`one_point_per_curator`); the founder is a dinamizador too. It is optional: with none, a dinamizador lends under the collection's rules, and each condition left empty falls back to the collection's, field by field.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `collection` / `user` | FK, CASCADE | The network and the dinamizador. Deleted with either, and by `membership_service` when the dinamizador is demoted or removed (their things go in the same step) |
+| `entity_name` | CharField(64) | A proper name, plain text, not localized |
+| `address` | CharField(64) | Same width as `Thing.location`, which it replaces in a network |
+| `hours_note` | CharField(128) | Free text ("martes y jueves de 18 a 20") |
+| `contact` | CharField(64) | Web or phone of the entity; shown as typed, escaped, never made a link |
+| `weekdays` | JSONField (list) | One set for pickup **and** return, like `Collection.rental_weekdays` (0=Mon…6=Sun). Empty = the collection's |
+| `closed_dates` | JSONField (list) | The entity's own closures, ISO strings cleaned like `Collection.closed_dates` |
+| `deposit_policy` / `request_info` / `email_note` | CharField(1024 / 2048 / 2048) | The collection's fields with the collection's widths and serializers (visible limit per language 256 / 512 / 512) |
+
+`display_name` is `entity_name` or, when empty, the dinamizador's bare `name`: the one name the card, the request page, the emails, the broadcast and the future filter use, resolved once on the server.
+
+`Collection.point_for(user_code)` finds a dinamizador's point (`None` outside a network; one read per collection instance). `Collection.rental_rules_for(owner_code)` is the single answer to "which LEND/RENT rules govern a thing of this owner": the point's weekdays when it set any (else the collection's), the **union** of both closures, the collection's lengths. `rental_violation`, `Thing.availability_window` and the thing payload's `rental_weekdays` / `closed_dates` all read it, and `core/tests/integration/test_network_effective_rules.py` pins that the payload and the refusal agree on every day. `Collection.effective_text(field, owner_code)` is the same for the three conditions (the point's own, else the collection's). Horizon and per-member limit are the collection's only. `deposit_policy` has no reader on a member's side today; its effective value is there for when it has one.
+
+---
+
 ## Theeeme
 
 The `Theeeme` model represents a colour palette a collection can be painted with. Each theeeme has a name and 6 colours.
