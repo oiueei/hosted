@@ -383,18 +383,22 @@ def receives_booking_requests(user):
     True when they **own a thing** — a member of a COMMUNITY collection who has
     contributed one gets requests on it — or when they **run a PROPRIETARY
     collection**, as its founder or a co-curator, whose curators answer for every
-    thing in it. It is the reach of ``OwnerBookingsView`` read as a yes/no, and it
-    is asked of the server because the browser cannot know it: someone who only
-    joined a group has nothing to receive, and the account menu used to offer the
-    page to everybody. Two ``EXISTS`` queries, nothing loaded.
+    thing in it — or when they **founded a NETWORK**, whose founder can reject a
+    pending request on any entity's thing before having uploaded one (a network's
+    co-curators receive only their own things, which the first case covers).
+
+    It is the reach of ``OwnerBookingsView`` read as a yes/no, and it is asked of
+    the server because the browser cannot know it: someone who only joined a
+    group has nothing to receive, and the account menu used to offer the page to
+    everybody. Two ``EXISTS`` queries, nothing loaded.
     """
     if Thing.objects.filter(owner=user).exists():
         return True
-    return (
-        Collection.objects.filter(mode=Collection.Mode.PROPRIETARY)
-        .filter(Q(owner=user) | Q(co_owners=user))
-        .exists()
-    )
+    return Collection.objects.filter(
+        Q(mode=Collection.Mode.PROPRIETARY, owner=user)
+        | Q(mode=Collection.Mode.PROPRIETARY, co_owners=user)
+        | Q(mode=Collection.Mode.NETWORK, owner=user)
+    ).exists()
 
 
 def _clear_request_notifications(booking):
