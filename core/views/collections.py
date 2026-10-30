@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from core.models import RSVP, Collection, InvitationProposal, Thing, User
+from core.models import RSVP, Collection, InvitationProposal, NetworkPoint, Thing, User
 from core.models.collection import generate_share_token
 from core.models.event import Event
 from core.models.notification import InAppNotification
@@ -37,6 +37,7 @@ from core.serializers import (
     CollectionUpdateSerializer,
     EmailNoteTestSerializer,
 )
+from core.serializers.network_point import NetworkPointSerializer, NetworkPointWriteSerializer
 from core.serializers.theeeme import theeeme_colors
 from core.serializers.thing import optimise_thing_queryset
 from core.services.creator_policy import (
@@ -1670,3 +1671,54 @@ class CollectionBroadcastView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class CollectionPointView(APIView):
+    """
+    GET / PUT /api/v1/collections/{collection_code}/point/
+
+    The pickup point of the dinamizador asking, in a network: the entity they answer
+    for, where and when members collect and return, and the conditions of their own
+    loans. Each dinamizador reads and edits **only their own** (the founder is one too);
+    the points of the others are in the collection's payload, public with it.
+
+    No point yet is a 200 with the empty fields: setting one up is a first PUT. A
+    collection that is not a network has no points (404), and a member who is not a
+    dinamizador gets 403.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _resolve(self, request, collection_code):
+        collection = get_object_or_404(Collection, code=collection_code)
+        if not collection.is_network():
+            return collection, Response(
+                refusal_body("Only a network has pickup points.", code="not_a_network"),
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        denied = require_collection_curator(
+            collection, request.user.code, "Only a dinamizador can set up a pickup point"
+        )
+        return collection, denied
+
+    def get(self, request, collection_code):
+        collection, denied = self._resolve(request, collection_code)
+        if denied:
+            return denied
+        point = collection.points.filter(user=request.user).first()
+        if point is None:
+            point = NetworkPoint(collection=collection, user=request.user)
+        return Response(NetworkPointSerializer(point, context={"request": request}).data)
+
+    @method_decorator(ratelimit(key="user", rate="30/h", method="PUT", block=True))
+    def put(self, request, collection_code):
+        collection, denied = self._resolve(request, collection_code)
+        if denied:
+            return denied
+        point = collection.points.filter(user=request.user).first() or NetworkPoint(
+            collection=collection, user=request.user
+        )
+        serializer = NetworkPointWriteSerializer(point, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(NetworkPointSerializer(point, context={"request": request}).data)

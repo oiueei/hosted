@@ -1137,6 +1137,7 @@
     "curator_things_lent_out": "Algunas de sus cosas están prestadas ahora: {{things}}. Podrás hacerlo cuando terminen esos préstamos.",
     "member_holds_loans": "Tiene cosas en su poder ahora: {{things}}. Podrás hacerlo cuando terminen esos préstamos.",
     "network_founder_only": "En una red esto solo puede hacerlo quien la fundó.",
+    "not_a_network": "Solo una red tiene puntos de recogida.",
     "dates_taken": "Esas fechas ya están cogidas.",
     "no_longer_manages": "Ya no gestionas esta cosa, así que este enlace ya no puede decidir la solicitud.",
     "profile_not_yours": "Solo puedes editar tu propio perfil.",

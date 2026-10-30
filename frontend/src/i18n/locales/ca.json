@@ -1137,6 +1137,7 @@
     "curator_things_lent_out": "Algunes de les seves coses estan prestades ara: {{things}}. Ho podràs fer quan acabin aquests préstecs.",
     "member_holds_loans": "Té coses a les mans ara: {{things}}. Ho podràs fer quan acabin aquests préstecs.",
     "network_founder_only": "En una xarxa això només ho pot fer qui la va fundar.",
+    "not_a_network": "Només una xarxa té punts de recollida.",
     "dates_taken": "Aquestes dates ja estan agafades.",
     "no_longer_manages": "Ja no gestiones aquesta cosa, així que aquest enllaç ja no pot decidir la sol·licitud.",
     "profile_not_yours": "Només pots editar el teu propi perfil.",

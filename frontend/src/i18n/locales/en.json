@@ -1137,6 +1137,7 @@
     "curator_things_lent_out": "Some of their things are lent out right now: {{things}}. You can do this once those loans end.",
     "member_holds_loans": "They have things in hand right now: {{things}}. You can do this once those loans end.",
     "network_founder_only": "In a network only the founder can do this.",
+    "not_a_network": "Only a network has pickup points.",
     "dates_taken": "Those dates are already taken.",
     "no_longer_manages": "You no longer run this thing, so this link can no longer decide the request.",
     "profile_not_yours": "You can only edit your own profile.",
