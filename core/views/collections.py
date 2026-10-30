@@ -1637,6 +1637,11 @@ class CollectionBroadcastView(APIView):
         # owner makes knowingly; rendering it as their *name* in the body and in
         # every member's inbox is not the same thing, and is not what it means.
         owner_name = request.user.name
+        # In a network a dinamizador speaks for their entity: the message is signed
+        # with the name of their pickup point (its entity's, else their own).
+        point = collection.point_for(request.user.code)
+        if point is not None:
+            owner_name = point.display_name
 
         _send_broadcast(
             owner_name=owner_name,
