@@ -100,6 +100,18 @@ describe('NetworkPointPage', () => {
     expect(screen.getByLabelText(/Holidays and closures/)).toHaveValue('15/08/2030');
   });
 
+  test('speaks to the one dinamizador and says the days are for pickup and return alike', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        'You lend your things from your pickup point: the entity you answer for, where they are collected and returned, and when. Everyone who sees the network sees it.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('Pickup and return days')).toBeInTheDocument();
+    expect(screen.queryByText(/Days you lend and take back/)).toBeNull();
+  });
+
   test('saves exactly what was written, to the dinamizador’s own point', async () => {
     renderPage();
     fireEvent.change(await screen.findByLabelText(/Name of the entity/), {

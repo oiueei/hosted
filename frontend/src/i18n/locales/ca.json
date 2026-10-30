@@ -1096,7 +1096,7 @@
   },
   "networkPoint": {
     "pageTitle": "El meu punt de recollida",
-    "intro": "Cada dinamitzador presta des d'un punt de recollida propi: l'entitat de la qual respons, i on i quan es recull i es retorna. Ho veu tothom qui veu la xarxa.",
+    "intro": "Prestes les teves coses des del teu punt de recollida: l'entitat de la qual respons, on es recullen i es retornen, i quan. Ho veu tothom qui veu la xarxa.",
     "entityName": "Nom de l'entitat",
     "entityNameHelper": "Una cooperativa, una associació de barri, una botiga… Si el deixes buit, s'ensenya el teu nom.",
     "address": "Adreça",
@@ -1104,7 +1104,7 @@
     "hoursHelper": "Per exemple: dimarts i dijous de 18 a 20.",
     "contact": "Contacte de l'entitat (web o telèfon)",
     "contactHelper": "S'ensenya tal com l'escrius, no com a enllaç.",
-    "weekdaysLabel": "Dies en què prestes i reculls",
+    "weekdaysLabel": "Dies de recollida i retorn",
     "weekdaysHelper": "La recollida i el retorn cauen en aquests dies. Si el deixes buit, valen els de la xarxa.",
     "conditionsTitle": "Les teves condicions",
     "conditionsIntro": "El que deixis buit és el que diu la xarxa.",

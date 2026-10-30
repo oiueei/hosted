@@ -1096,7 +1096,7 @@
   },
   "networkPoint": {
     "pageTitle": "Mi punto de recogida",
-    "intro": "Cada dinamizador presta desde un punto de recogida propio: la entidad de la que respondes, y dónde y cuándo se recoge y se devuelve. Lo ve todo el que ve la red.",
+    "intro": "Prestas tus cosas desde tu punto de recogida: la entidad de la que respondes, dónde se recogen y se devuelven, y cuándo. Lo ve todo el que ve la red.",
     "entityName": "Nombre de la entidad",
     "entityNameHelper": "Una cooperativa, una asociación de barrio, una tienda… Si lo dejas vacío, se enseña tu nombre.",
     "address": "Dirección",
@@ -1104,7 +1104,7 @@
     "hoursHelper": "Por ejemplo: martes y jueves de 18 a 20.",
     "contact": "Contacto de la entidad (web o teléfono)",
     "contactHelper": "Se enseña tal cual lo escribes, no como enlace.",
-    "weekdaysLabel": "Días en que prestas y recoges",
+    "weekdaysLabel": "Días de recogida y devolución",
     "weekdaysHelper": "La recogida y la devolución caen en estos días. Si lo dejas vacío, valen los de la red.",
     "conditionsTitle": "Tus condiciones",
     "conditionsIntro": "Lo que dejes vacío es lo que dice la red.",

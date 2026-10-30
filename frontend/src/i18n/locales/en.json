@@ -1096,7 +1096,7 @@
   },
   "networkPoint": {
     "pageTitle": "My pickup point",
-    "intro": "Each member of the team lends from a pickup point of their own: the entity you answer for, and where and when members collect and return. Everyone who sees the network sees it.",
+    "intro": "You lend your things from your pickup point: the entity you answer for, where they are collected and returned, and when. Everyone who sees the network sees it.",
     "entityName": "Name of the entity",
     "entityNameHelper": "A cooperative, a neighbourhood association, a shop… Left empty, your own name is shown.",
     "address": "Address",
@@ -1104,7 +1104,7 @@
     "hoursHelper": "For example: Tuesdays and Thursdays, 6 to 8 pm.",
     "contact": "Contact of the entity (web or phone)",
     "contactHelper": "Shown as you write it, not as a link.",
-    "weekdaysLabel": "Days you lend and take back",
+    "weekdaysLabel": "Pickup and return days",
     "weekdaysHelper": "Pickup and return fall on these days. Left empty, the network's days apply.",
     "conditionsTitle": "Your conditions",
     "conditionsIntro": "Whatever you leave empty is what the network says.",
