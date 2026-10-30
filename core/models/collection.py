@@ -550,13 +550,16 @@ class Collection(models.Model):
         return (getattr(point, field, "") if point else "") or getattr(self, field)
 
     def can_rescue(self, user_code):
-        """The founder's rescue of a network: cancel any booking, hide any thing.
+        """The founder's rescue of a network: reject a pending request on any thing, hide any thing.
 
-        Only ``owner`` — not a co-curator — and only in a network. It is a method of
-        its own rather than a widening of ``Thing.can_manage``: the founder is
-        deliberately outside ``managers()`` (no day-to-day email) and cannot edit or
-        delete another entity's thing, so folding it into ``can_manage`` would hand
-        over both.
+        Only ``owner`` — not a co-curator — and only in a network. Rejecting is the
+        whole of it for requests: accepting stays the thing owner's, and an accepted
+        loan is not touched. It is a method of its own rather than a widening of
+        ``Thing.can_manage``: the founder is deliberately outside ``managers()`` (no
+        day-to-day email) and cannot edit or accept for another entity, so folding it
+        into ``can_manage`` would hand over both. Deleting is a different power and
+        not this one's: the owner of a collection deletes any thing of it in every
+        mode (``ThingViewSet._can_delete``).
         """
         return self.is_network() and self.is_owner(user_code)
 
