@@ -323,6 +323,23 @@ describe('InboxNotifications — every type says something', () => {
       links: '/collections/COL001',
     },
     {
+      what: 'a thing hidden by the founder of a network says who hid it and that it is still yours',
+      notification: {
+        code: 'NOTA10',
+        type: 'THING_HIDDEN',
+        payload: {
+          thing_headline: 'A mitre saw',
+          founder_name: 'Lala',
+          thing_code: 'THG010',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T09:00:00Z',
+      },
+      says: [/your thing was hidden/i, /Lala hid A mitre saw/i, /still yours/i],
+      links: '/collections/COL001/things/THG010',
+      linkName: /view thing/i,
+    },
+    {
       // The team-side record of a decision (2026-09-29): whoever made the call
       // reads their own trace, not a report of themselves in the third person.
       what: 'a decision you made yourself is your own trace, naming who asked',

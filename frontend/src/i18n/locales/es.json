@@ -271,6 +271,8 @@
     "faqAnsweredBody": "{{owner_name}} ha respondido tu pregunta sobre {{thing_headline}}.",
     "faqHiddenLabel": "Pregunta ocultada",
     "faqHiddenBody": "{{owner_name}} ha ocultado tu pregunta sobre {{thing_headline}}.",
+    "thingHiddenLabel": "Tu cosa se ha ocultado",
+    "thingHiddenBody": "{{founder_name}} ha ocultado {{thing_headline}} de la red. Sigue siendo tuya: puedes volver a mostrarla.",
     "inviteRejectedLabel": "Invitación rechazada",
     "inviteRejectedBody": "{{invitee_name}} ha rechazado la invitación a {{collection_headline}}.",
     "reportedLabel": "Han denunciado una publicación",

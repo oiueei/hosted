@@ -271,6 +271,8 @@
     "faqAnsweredBody": "{{owner_name}} ha respost la teva pregunta sobre {{thing_headline}}.",
     "faqHiddenLabel": "Pregunta amagada",
     "faqHiddenBody": "{{owner_name}} ha amagat la teva pregunta sobre {{thing_headline}}.",
+    "thingHiddenLabel": "La teva cosa s'ha amagat",
+    "thingHiddenBody": "{{founder_name}} ha amagat {{thing_headline}} de la xarxa. Continua sent teva: pots tornar a mostrar-la.",
     "inviteRejectedLabel": "Invitació rebutjada",
     "inviteRejectedBody": "{{invitee_name}} ha rebutjat la invitació a {{collection_headline}}.",
     "reportedLabel": "Han denunciat una publicació",

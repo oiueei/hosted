@@ -57,9 +57,11 @@ class Collection(models.Model):
     """
 
     # The ceiling on the co-curator set, enforced at the promote endpoint. The
-    # design intent is "owner + 1–2"; the 5 is the abuse ceiling, not the goal —
-    # a number, one line, for the owner to change whenever a real group asks.
-    MAX_CO_OWNERS = 5
+    # design intent is "owner + 1–2"; the 10 is the abuse ceiling, not the goal —
+    # a number, one line, for the owner to change whenever a real group asks. A
+    # network of libraries (``Mode.NETWORK``) is a founder plus one co-curator per
+    # entity, which is what sets it.
+    MAX_CO_OWNERS = 10
 
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
@@ -77,6 +79,9 @@ class Collection(models.Model):
     class Mode(models.TextChoices):
         PROPRIETARY = "PROPRIETARY", "Proprietary"
         COMMUNITY = "COMMUNITY", "Community"
+        # Libraries only (``kind == LIBRARY``), fixed at creation: several
+        # entities, each lending its own things from its own pickup point.
+        NETWORK = "NETWORK", "Network"
 
     class Visibility(models.TextChoices):
         PUBLIC = "PUBLIC", "Public"
@@ -491,6 +496,21 @@ class Collection(models.Model):
     def is_community(self):
         """Check if this is a community collection."""
         return self.mode == self.Mode.COMMUNITY
+
+    def is_network(self):
+        """Check if this is a network of libraries: every curator runs their own things."""
+        return self.mode == self.Mode.NETWORK
+
+    def can_rescue(self, user_code):
+        """The founder's rescue of a network: cancel any booking, hide any thing.
+
+        Only ``owner`` — not a co-curator — and only in a network. It is a method of
+        its own rather than a widening of ``Thing.can_manage``: the founder is
+        deliberately outside ``managers()`` (no day-to-day email) and cannot edit or
+        delete another entity's thing, so folding it into ``can_manage`` would hand
+        over both.
+        """
+        return self.is_network() and self.is_owner(user_code)
 
     def owner_member_rows(self, members=None):
         """Every member as **their owner** sees them, demographics gated by mode.
@@ -933,8 +953,9 @@ class Collection(models.Model):
         """Check if the given user can add things to this collection.
 
         Any curator (owner or co-curator) can always add — a PROPRIETARY
-        collection's catalogue is run by its curators collectively (2026-09).
-        Beyond that, an invited member can add in COMMUNITY mode.
+        collection's catalogue is run by its curators collectively (2026-09), and a
+        network's is run by its curators, each with their own things. Beyond that,
+        an invited member can add in COMMUNITY mode.
         """
         if self.is_curator(user_code):
             return True

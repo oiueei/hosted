@@ -25,6 +25,8 @@ from core.validators import (
 
 NO_MIXED_KINDS = "A collection holds one kind of thing: stall, library or shed."
 ONLY_PRICES = "A group can take prices or not; it can't take only prices."
+NETWORK_ONLY_LIBRARY = "Only a library can be a network."
+NETWORK_MODE_FIXED = "A network can't become another mode, nor another mode a network."
 
 
 class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
@@ -737,6 +739,8 @@ def normalize_allowed_thing_types(kind, mode, allowed_thing_types):
     invalid = [t for t in listed if t not in verbs]
     if invalid:
         raise serializers.ValidationError(f"These types are not allowed: {invalid}")
+    if mode == Collection.Mode.NETWORK and kind != Collection.Kind.LIBRARY:
+        raise serializers.ValidationError(NETWORK_ONLY_LIBRARY)
     if kind == Collection.Kind.SHED:
         if mode == Collection.Mode.COMMUNITY:
             raise serializers.ValidationError(
@@ -744,7 +748,11 @@ def normalize_allowed_thing_types(kind, mode, allowed_thing_types):
                 "be a community collection."
             )
         return list(verbs)
-    if mode == Collection.Mode.PROPRIETARY or not listed or set(listed) == set(verbs):
+    if (
+        mode in (Collection.Mode.PROPRIETARY, Collection.Mode.NETWORK)
+        or not listed
+        or set(listed) == set(verbs)
+    ):
         return list(verbs)
     free = verbs[0]
     if listed == [free]:
@@ -895,6 +903,11 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             instance.allowed_thing_types if instance else [],
         )
         mode = attrs.get("mode", instance.mode if instance else Collection.Mode.PROPRIETARY)
+        # A network is what a library is born as and stays: the mode is shown, not
+        # changed, in either direction (naming the one it already has is harmless).
+        if instance is not None and mode != instance.mode:
+            if Collection.Mode.NETWORK in (mode, instance.mode):
+                raise serializers.ValidationError(NETWORK_MODE_FIXED)
         # A reservations collection can never be switched to COMMUNITY, even if
         # the allowlist isn't being touched in this request.
         if (

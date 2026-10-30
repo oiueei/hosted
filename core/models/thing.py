@@ -144,7 +144,9 @@ class Thing(models.Model):
         catalogue: edit / hide / activate / delete any thing, answer any FAQ,
         decide any booking. COMMUNITY is deliberately excluded — there a member
         owns what they contribute and a curator's reach stops short of
-        editing it.
+        editing it. A NETWORK is excluded too: each entity runs its own things, so
+        a co-curator (and the founder) manages the thing's owner's things only
+        through the founder's rescue (``Collection.can_rescue``), never here.
 
         Iterates ``collections.all()`` (and ``is_curator`` iterates
         ``co_owners.all()``) rather than ``.filter().exists()`` so a view that
@@ -164,7 +166,9 @@ class Thing(models.Model):
         """Every ``User`` for whom ``can_manage`` is true — the thing owner,
         plus the curators (owner + co-curators) of every PROPRIETARY collection
         it sits in. Deduped by code. Used to fan a notice out to the whole
-        team that runs the thing (FAQ questions, reservation notices).
+        team that runs the thing (FAQ questions, reservation notices). In a
+        NETWORK it is just the thing's owner: the founder's rescue powers don't
+        make them a recipient of the day-to-day mail.
         Prefetch-aware via ``collections`` / ``co_owners`` like ``can_manage``.
         """
         from core.models.collection import Collection

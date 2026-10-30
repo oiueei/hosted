@@ -27,6 +27,7 @@ const ALERT_TYPES = new Set([
   'COLLECTION_REVOKED',
   'BOOKING_REJECTED',
   'FAQ_HIDDEN',
+  'THING_HIDDEN',
   'INVITE_REJECTED',
   'THING_REPORTED',
   'INVITE_PROPOSAL_DECLINED',
@@ -260,6 +261,8 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.faqAnsweredLabel');
       case 'FAQ_HIDDEN':
         return t('home.faqHiddenLabel');
+      case 'THING_HIDDEN':
+        return t('home.thingHiddenLabel');
       case 'INVITE_REJECTED':
         return t('home.inviteRejectedLabel');
       case 'THING_REPORTED':
@@ -332,6 +335,11 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.faqAnsweredBody', {
           thing_headline: p.thing_headline,
           owner_name: p.owner_name,
+        });
+      case 'THING_HIDDEN':
+        return t('home.thingHiddenBody', {
+          thing_headline: p.thing_headline,
+          founder_name: p.founder_name,
         });
       case 'FAQ_HIDDEN':
         return t('home.faqHiddenBody', {

@@ -277,6 +277,8 @@
     "faqAnsweredBody": "{{owner_name}} answered your question about {{thing_headline}}.",
     "faqHiddenLabel": "Question hidden",
     "faqHiddenBody": "{{owner_name}} hid your question about {{thing_headline}}.",
+    "thingHiddenLabel": "Your thing was hidden",
+    "thingHiddenBody": "{{founder_name}} hid {{thing_headline}} from the network. It is still yours: you can show it again.",
     "inviteRejectedLabel": "Invitation declined",
     "inviteRejectedBody": "{{invitee_name}} declined the invitation to {{collection_headline}}.",
     "reportedLabel": "A thing was reported",
