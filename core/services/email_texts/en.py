@@ -199,6 +199,12 @@ TEXTS = {
         "Your {action} request for '{thing}' {when} has been {decision}. View thing: {url}"
     ),
     "decision_plain": "Your {action} request for '{thing}' has been {decision}. View thing: {url}",
+    "decision_by_confirmed": "{who} has accepted your {action} request:",
+    "decision_by_declined": "{who} has declined your {action} request:",
+    "point_name_label": "Pickup point",
+    "point_address_label": "Address",
+    "point_hours_label": "Hours",
+    "point_contact_label": "Contact",
     "decision_intro": "Your {action} request has been {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Your invitation was rejected",

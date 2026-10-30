@@ -197,6 +197,12 @@ TEXTS = {
     "decision_plain": (
         "Tu solicitud de {action} de '{thing}' ha sido {decision}. Ver la publicación: {url}"
     ),
+    "decision_by_confirmed": "{who} ha aceptado tu solicitud de {action}:",
+    "decision_by_declined": "{who} ha rechazado tu solicitud de {action}:",
+    "point_name_label": "Punto de recogida",
+    "point_address_label": "Dirección",
+    "point_hours_label": "Horario",
+    "point_contact_label": "Contacto",
     "decision_intro": "Tu solicitud de {action} ha sido {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Tu invitación fue rechazada",

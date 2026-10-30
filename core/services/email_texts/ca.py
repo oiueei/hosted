@@ -205,6 +205,12 @@ TEXTS = {
     "decision_plain": (
         "La teva sol·licitud {action} de '{thing}' ha estat {decision}. Veure la publicació: {url}"
     ),
+    "decision_by_confirmed": "{who} ha acceptat la teva sol·licitud {action}:",
+    "decision_by_declined": "{who} ha rebutjat la teva sol·licitud {action}:",
+    "point_name_label": "Punt de recollida",
+    "point_address_label": "Adreça",
+    "point_hours_label": "Horari",
+    "point_contact_label": "Contacte",
     "decision_intro": "La teva sol·licitud {action} ha estat {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "S'ha rebutjat la teva invitació",

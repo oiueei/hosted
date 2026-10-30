@@ -543,7 +543,9 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
         ),
         payload=payload,
     )
-    send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
+    send_booking_decision_email(
+        booking, thing, accepted=accepted, collection=collection, decided_by=decider
+    )
     _clear_request_notifications(booking)
     _notify_team_of_decision(booking, team, collection, decider, accepted)
     if accepted:
