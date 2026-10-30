@@ -501,6 +501,17 @@ class Collection(models.Model):
         """Check if this is a network of libraries: every curator runs their own things."""
         return self.mode == self.Mode.NETWORK
 
+    def point_for(self, user_code):
+        """The pickup point ``user_code`` set up in this network, or ``None``.
+
+        Only a network has points; elsewhere (and for a dinamizador who has not set
+        one) the answer is ``None`` and the collection's own rules apply. Reads
+        ``points.all()`` so a caller that prefetched them pays no query.
+        """
+        if not self.is_network():
+            return None
+        return next((p for p in self.points.all() if p.user_id == user_code), None)
+
     def can_rescue(self, user_code):
         """The founder's rescue of a network: cancel any booking, hide any thing.
 

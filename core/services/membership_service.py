@@ -104,6 +104,8 @@ def demote_curator(collection, user, *, actor):
         for thing in leaving:
             thing.delete()
         collection.co_owners.remove(user)
+        # The entity they answered for goes with the role, like their things.
+        collection.points.filter(user=user).delete()
         group_headline = collection.headline
 
         def tell():
@@ -139,6 +141,7 @@ def end_membership(collection, user, *, actor):
         # separate door in): losing membership must never leave a stale co-owner
         # row behind. A no-op for anyone who was never promoted.
         collection.co_owners.remove(user)
+        collection.points.filter(user=user).delete()
 
         group_headline = collection.headline
 
