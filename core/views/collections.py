@@ -68,7 +68,12 @@ from core.services.invitation_service import (
     reject_proposal,
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
-from core.services.membership_service import end_membership, things_leaving_with
+from core.services.membership_service import (
+    demote_curator,
+    end_membership,
+    network_exit_block,
+    things_leaving_with,
+)
 from core.services.team import drop_team_notices_of
 from core.utils import get_client_ip, redact_email
 from core.validators import SafeHeadlineField
@@ -76,6 +81,7 @@ from core.views._helpers import (
     body_dict,
     refusal_body,
     require_collection_curator,
+    require_network_founder,
     viewer_code,
 )
 
@@ -283,6 +289,24 @@ class CollectionViewSet(ModelViewSet):
 # (the same switch the django-ratelimit decorators read, so dev and tests stay
 # consistent) and its DatabaseCache read-then-set shares base.py's
 # non-atomicity note.
+def _exit_blocked(code, headlines):
+    """The 409 that holds a network's removal or demotion back while a loan is in hand."""
+    sentences = {
+        "curator_things_lent_out": (
+            "Some of their things are lent out right now. It can be done once the loans end: "
+            "{things}."
+        ),
+        "member_holds_loans": (
+            "They have things in hand right now. It can be done once the loans end: {things}."
+        ),
+    }
+    things = ", ".join(headlines)
+    return Response(
+        refusal_body(sentences[code].format(things=things), code=code, things=things),
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
 class CollectionInviteView(APIView):
     """
     POST /api/v1/collections/{collection_code}/invite/
@@ -370,6 +394,8 @@ class CollectionInviteView(APIView):
 
         denied = require_collection_curator(
             collection, request.user.code, "Only the owner or a co-owner can remove invites"
+        ) or require_network_founder(
+            collection, request.user.code, "Only the founder of a network can remove members"
         )
         if denied:
             return denied
@@ -397,6 +423,9 @@ class CollectionInviteView(APIView):
             invited_user = None
 
         if invited_user:
+            blocked = network_exit_block(collection, invited_user, removing=True)
+            if blocked:
+                return _exit_blocked(*blocked)
             was_co_owner = collection.co_owners.filter(code=invited_user.code).exists()
             went_with_them = [t.headline for t in things_leaving_with(collection, invited_user)]
             things_deleted = end_membership(collection, invited_user, actor=request.user)
@@ -526,6 +555,8 @@ class CollectionCoOwnerView(APIView):
 
         denied = require_collection_curator(
             collection, request.user.code, "Only a curator can promote a co-curator"
+        ) or require_network_founder(
+            collection, request.user.code, "Only the founder of a network can name its team"
         )
         if denied:
             return denied
@@ -590,6 +621,8 @@ class CollectionCoOwnerView(APIView):
 
         denied = require_collection_curator(
             collection, request.user.code, "Only a curator can demote a co-curator"
+        ) or require_network_founder(
+            collection, request.user.code, "Only the founder of a network can name its team"
         )
         if denied:
             return denied
@@ -599,15 +632,27 @@ class CollectionCoOwnerView(APIView):
             return denied
 
         was_co_owner = collection.co_owners.filter(code=member.code).exists()
-        collection.co_owners.remove(member)
+        things_deleted = 0
+        if was_co_owner and collection.is_network():
+            # Stops being a dinamizador: the things they ran cannot stay (nobody else
+            # may decide them), and not while someone has one in hand.
+            blocked = network_exit_block(collection, member, removing=False)
+            if blocked:
+                return _exit_blocked(*blocked)
+            things_deleted = demote_curator(collection, member, actor=request.user)
+        else:
+            collection.co_owners.remove(member)
         if was_co_owner:
+            payload = {
+                "collection_headline": collection.headline,
+                "collection_code": collection.code,
+            }
+            if collection.is_network():
+                payload["things_deleted"] = things_deleted
             InAppNotification.objects.create(
                 user=member,
                 type=InAppNotification.Type.DEMOTED_CO_OWNER,
-                payload={
-                    "collection_headline": collection.headline,
-                    "collection_code": collection.code,
-                },
+                payload=payload,
             )
             # After the DEMOTED notice, so the one that tells them what happened is
             # never in the way: what goes is the team's requests and reservations of

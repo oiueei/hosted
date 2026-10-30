@@ -47,6 +47,75 @@ def _people_to_tell(leaving, user):
     return [(email, headline, holding) for (email, _), (headline, holding) in told.items()]
 
 
+def things_out_on_loan(collection, user):
+    """Headlines of ``user``'s things in ``collection`` that someone has in hand now: an
+    accepted loan or rental that has started and has not reached its end date."""
+    leaving = list(things_leaving_with(collection, user))
+    return [headline for _, headline, holding in _people_to_tell(leaving, user) if holding]
+
+
+def loans_in_hand(collection, user):
+    """Headlines of the things of ``collection`` that ``user`` has in hand now, whoever
+    lent them: an accepted loan or rental they asked for, already started, still running."""
+    today = timezone.localdate()
+    bookings = BookingPeriod.objects.filter(
+        BookingPeriod.blocking_filter(),
+        requester_code=user,
+        status=BookingPeriod.Status.ACCEPTED,
+        thing_type__in=RETURNABLE_TYPES,
+        start_date__lte=today,
+        thing_code__collections=collection,
+    ).select_related("thing_code")
+    return sorted({b.thing_code.headline for b in bookings})
+
+
+def network_exit_block(collection, user, *, removing):
+    """Why a dinamizador (or member) of a network cannot be taken out right now, or ``None``.
+
+    Their things go with them, and a thing someone has in hand cannot vanish: so the exit
+    waits for the loan to end (there is no "returned" state; the end date is the limit).
+    ``removing`` also looks at what they hold themselves, which only matters when the
+    person leaves the group; demoting keeps them a member, so only their things count.
+    Returns ``(code, headlines)`` or ``None``; always ``None`` outside a network.
+    """
+    if not collection.is_network():
+        return None
+    lent_out = things_out_on_loan(collection, user)
+    if lent_out:
+        return "curator_things_lent_out", lent_out
+    if removing:
+        held = loans_in_hand(collection, user)
+        if held:
+            return "member_holds_loans", held
+    return None
+
+
+def demote_curator(collection, user, *, actor):
+    """Take ``user`` out of ``co_owners`` in a network and delete the things they ran there.
+
+    A dinamizador who stops being one cannot keep things in the network (nobody else
+    may decide them), so demoting counts as leaving for their things. Whoever had a live
+    request on one is emailed once the transaction commits, as when a member leaves.
+    Returns how many things went.
+    """
+    with transaction.atomic(), deleting_as(actor):
+        leaving = list(things_leaving_with(collection, user))
+        to_tell = _people_to_tell(leaving, user)
+        for thing in leaving:
+            thing.delete()
+        collection.co_owners.remove(user)
+        group_headline = collection.headline
+
+        def tell():
+            for email, headline, holding in to_tell:
+                send_thing_left_with_owner_email(
+                    headline, group_headline, email, holding=holding, collection=collection
+                )
+
+        transaction.on_commit(tell)
+    return len(leaving)
+
+
 def end_membership(collection, user, *, actor):
     """Take ``user`` out of the group and delete their things there.
 

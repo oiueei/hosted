@@ -206,6 +206,10 @@ def _upcoming_bookings(collection, user=None):
     )
     if collection.mode == Collection.Mode.PROPRIETARY:
         return bookings
+    # A network's founder reads every entity's reservations; a co-curator only those of
+    # the things they run (below).
+    if user is not None and collection.can_rescue(user.code):
+        return bookings
     if user is None:
         return bookings.none()
     return bookings.filter(thing_code__owner=user)

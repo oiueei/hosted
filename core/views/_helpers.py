@@ -140,6 +140,20 @@ def type_validity_error(thing_type, collection):
     return None
 
 
+def require_network_founder(collection, user_code, message):
+    """In a NETWORK, return a 403 for anyone but the founder; ``None`` elsewhere.
+
+    The collection-level powers a co-curator has in every other mode are cut in a
+    network (naming dinamizadores, editing the settings, removing members): what
+    one entity does there reaches the others'. A coded body, so the SPA words it.
+    """
+    if collection.is_network() and not collection.is_owner(user_code):
+        return Response(
+            refusal_body(message, code="network_founder_only"), status=status.HTTP_403_FORBIDDEN
+        )
+    return None
+
+
 def require_collection_curator(collection, user_code, message):
     """Return a 403 ``{"error": message}`` Response if ``user_code`` is neither
     the collection owner nor a co-owner, else ``None``.

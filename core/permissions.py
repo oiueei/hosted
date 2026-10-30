@@ -54,4 +54,8 @@ class IsCollectionCurator(BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
+        # In a network the settings are the founder's alone: each dinamizador
+        # edits only their own point, through its own endpoint.
+        if obj.is_network():
+            return obj.is_owner(request.user.code)
         return obj.is_curator(request.user.code)
