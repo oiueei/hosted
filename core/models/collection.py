@@ -5,6 +5,7 @@ Collection model for OIUEEI.
 import enum
 import logging
 import secrets
+from collections import namedtuple
 from datetime import timedelta
 
 from django.conf import settings
@@ -48,6 +49,14 @@ def kind_for_thing_type(thing_type):
 def generate_share_token():
     """22-char URL-safe token for public share links. Bearer credential — must be unguessable."""
     return secrets.token_urlsafe(16)
+
+
+class RentalRules(namedtuple("RentalRules", "weekdays closed durations")):
+    """The LEND/RENT rules in force for one thing: allowed weekdays (0=Mon…6=Sun, empty
+    = any), closed days as ``date`` objects and the allowed lengths in days (empty =
+    free range). See ``Collection.rental_rules_for``."""
+
+    __slots__ = ()
 
 
 class Collection(models.Model):
@@ -510,7 +519,35 @@ class Collection(models.Model):
         """
         if not self.is_network():
             return None
-        return next((p for p in self.points.all() if p.user_id == user_code), None)
+        # One read per collection instance, not one per thing asked about.
+        by_user = self.__dict__.get("_points_by_user")
+        if by_user is None:
+            by_user = self._points_by_user = {p.user_id: p for p in self.points.all()}
+        return by_user.get(user_code)
+
+    def rental_rules_for(self, owner_code=None):
+        """The LEND/RENT rules that govern a thing of ``owner_code`` in this collection.
+
+        In a network the pickup point of the thing's owner refines the collection's:
+        the point's weekdays, when it set any, replace the collection's, and its
+        closures add to them; lengths (and the horizon and per-member limit, which
+        are not rental rules at all) stay the collection's. Without a point, and
+        everywhere outside a network, it is exactly the collection's own. The one
+        answer behind the server's refusal, the live availability and the rules the
+        thing's payload carries to the request page.
+        """
+        point = self.point_for(owner_code) if owner_code else None
+        weekdays = point.weekdays if point and point.weekdays else self.rental_weekdays
+        closed = self.closed_date_set() | (point.closed_date_set() if point else set())
+        return RentalRules(sorted(weekdays or []), closed, list(self.rental_durations or []))
+
+    def effective_text(self, field, owner_code=None):
+        """A condition of a loan — ``deposit_policy``, ``request_info`` or ``email_note`` —
+        as it applies to a thing of ``owner_code``: the pickup point's own when it wrote
+        one, else the collection's. Field by field, so a point can set its deposit and
+        leave the note to the network. Raw (possibly a ``{lang: text}`` map)."""
+        point = self.point_for(owner_code) if owner_code else None
+        return (getattr(point, field, "") if point else "") or getattr(self, field)
 
     def can_rescue(self, user_code):
         """The founder's rescue of a network: cancel any booking, hide any thing.
@@ -914,7 +951,7 @@ class Collection(models.Model):
         except Exception:  # pragma: no cover - defensive
             logger.exception("Capacity alarm email failed for collection %s", self.code)
 
-    def rental_violation(self, start_date, end_date):
+    def rental_violation(self, start_date, end_date, owner_code=None):
         """Return an error string if a LEND/RENT booking of ``[start, end]`` breaks
         this collection's rental rules, else ``None``.
 
@@ -926,7 +963,8 @@ class Collection(models.Model):
         satisfied.) Weekdays use Python's ``weekday()`` (0=Mon…6=Sun) and gate
         BOTH the pickup (start) and the return (end).
         """
-        durations = self.rental_durations or []
+        rules = self.rental_rules_for(owner_code)
+        durations = rules.durations
         if durations:
             span_days = (end_date - start_date).days
             if span_days not in durations:
@@ -936,7 +974,7 @@ class Collection(models.Model):
                     "rental_length_not_allowed",
                     allowed=allowed,
                 )
-        weekdays = self.rental_weekdays or []
+        weekdays = rules.weekdays
         if weekdays:
             if start_date.weekday() not in weekdays:
                 return Refusal(
@@ -949,7 +987,7 @@ class Collection(models.Model):
         # Holidays / closures: only the handoff days matter for a loan or a
         # rental — the item is already out in between, so an interior closure
         # stops nothing.
-        closed = self.closed_date_set()
+        closed = rules.closed
         if start_date in closed:
             return Refusal(
                 "The pickup day is a closure day for this collection.", "rental_pickup_closed"

@@ -61,6 +61,7 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
             "my_pending_booking",
             "pending_questions",
             "can_manage",
+            "network_point",
             "transfer_count",
             "deal",
             "created",

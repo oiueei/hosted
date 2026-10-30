@@ -278,12 +278,13 @@ class Thing(models.Model):
         if collection is None:
             collection = resolve_rental_collection(self)
 
+        rules = collection.rental_rules_for(self.owner_id) if collection else None
         available_today, next_available = compute_availability(
             blocked,
             horizon_days=horizon_days,
-            allowed_weekdays=collection.rental_weekdays if collection else None,
-            durations=collection.rental_durations if collection else None,
-            closed_dates=collection.closed_date_set() if collection else None,
+            allowed_weekdays=rules.weekdays if rules else None,
+            durations=rules.durations if rules else None,
+            closed_dates=rules.closed if rules else None,
         )
         self._availability_window_cache = {
             "available_today": available_today,

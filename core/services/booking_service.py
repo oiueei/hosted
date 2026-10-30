@@ -614,7 +614,9 @@ def resolve_rental_collection(thing, collection_code=None, requester=None):
             if collection.code == code and _readable_by(collection, requester):
                 return collection
     for collection in collections:
-        if collection.has_rental_rules():
+        # A network may set no rules of its own and still have them: its
+        # dinamizadores' pickup points carry theirs.
+        if collection.has_rental_rules() or collection.is_network():
             return collection
     return None
 
@@ -692,7 +694,9 @@ def request_date_based_booking(
     # Enforce the collection's rental rules (fixed durations + allowed pickup/
     # return weekdays). The frontend already prevents these — server-side backstop.
     if rental_collection:
-        violation = rental_collection.rental_violation(start_date, end_date)
+        violation = rental_collection.rental_violation(
+            start_date, end_date, owner_code=thing.owner_id
+        )
         if violation:
             raise BookingRequestError(violation)
 

@@ -115,6 +115,40 @@ class ThingComputedFieldsMixin(serializers.Serializer):
     available_today = serializers.SerializerMethodField()
     next_available = serializers.SerializerMethodField()
     can_manage = serializers.SerializerMethodField()
+    network_point = serializers.SerializerMethodField()
+
+    def get_network_point(self, obj):
+        """Who lends the thing and where, in a network: the pickup point of its owner
+        (``display_name`` is the entity's name, else the dinamizador's own — resolved
+        here, once, for the page, the request, the emails and the filter alike).
+        ``None`` outside a network. A dinamizador with no point still has a
+        ``display_name``; the rest is empty."""
+        collection = self._reading_collection(obj)
+        if collection is None or not collection.is_network():
+            return None
+        point = collection.point_for(obj.owner_id)
+        if point is None:
+            return {
+                "display_name": obj.owner.name,
+                "address": "",
+                "hours_note": "",
+                "contact": "",
+            }
+        return {
+            "display_name": point.display_name,
+            "address": point.address,
+            "hours_note": point.hours_note,
+            "contact": point.contact,
+        }
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # In a network the pickup point says where a thing is: the thing's own
+        # location is neither asked nor shown (the column is left as it is).
+        collection = self._reading_collection(instance)
+        if collection is not None and collection.is_network() and "location" in data:
+            data["location"] = ""
+        return data
 
     def _requested_collection_code(self):
         """The ``?collection=<code>`` the SPA sends when it reads a thing from
@@ -330,6 +364,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     deal = serializers.SlugRelatedField(slug_field="code", many=True, read_only=True)
     collection_code = serializers.SerializerMethodField()
     collection_kind = serializers.SerializerMethodField()
+    collection_mode = serializers.SerializerMethodField()
     collection_allowed_thing_types = serializers.SerializerMethodField()
     collection_headline = serializers.SerializerMethodField()
     collection_owner = serializers.SerializerMethodField()
@@ -381,8 +416,10 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "my_pending_booking",
             "pending_questions",
             "can_manage",
+            "network_point",
             "collection_code",
             "collection_kind",
+            "collection_mode",
             "collection_allowed_thing_types",
             "collection_headline",
             "collection_owner",
@@ -508,6 +545,13 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         first = self._viewable_collection(obj)
         return first.kind if first else None
 
+    def get_collection_mode(self, obj):
+        """The mode of the collection ``collection_code`` names: a network's things
+        are placed by their pickup point, so their form and page leave out the
+        thing's own location."""
+        first = self._viewable_collection(obj)
+        return first.mode if first else None
+
     def get_collection_allowed_thing_types(self, obj):
         """The verbs the collection ``collection_code`` names takes — the edit form needs
         to know whether members of a COMMUNITY group may set a price (both verbs of the
@@ -541,7 +585,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         resolves it client-side the same way. `""` when there is no viewable
         collection."""
         first = self._viewable_collection(obj)
-        return first.request_info if first else ""
+        return first.effective_text("request_info", obj.owner_id) if first else ""
 
     def get_collection_language(self, obj):
         """The collection's own language, resolved the same way as the four
@@ -663,7 +707,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
 
         Reused for RESERVE_THING as "days reservations are allowed"."""
         first = self._viewable_collection(obj)
-        return list(first.rental_weekdays) if first else []
+        return first.rental_rules_for(obj.owner_id).weekdays if first else []
 
     def get_reservation_max_days(self, obj):
         """The longest a RESERVE_THING may be booked for, from its reservations
@@ -688,7 +732,11 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         date picker greys these out and the request view refuses a handoff or a
         reservation span that touches one. ``[]`` when there is no collection."""
         first = self._viewable_collection(obj)
-        return list(first.closed_dates) if first else []
+        return (
+            sorted(d.isoformat() for d in first.rental_rules_for(obj.owner_id).closed)
+            if first
+            else []
+        )
 
     def get_reservation_unit(self, obj):
         """DAY or HOUR — which reservation flow ``RequestThingPage`` renders for
