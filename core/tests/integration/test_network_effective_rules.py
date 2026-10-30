@@ -340,3 +340,41 @@ class TestWhatThePageIsTold:
         cards = {t["code"]: t for t in res.data["things"]}
         assert cards[world["leles"].code]["network_point"]["display_name"] == "La Fusteria"
         assert cards[world["lilis"].code]["network_point"]["display_name"] == "Lili"
+
+
+class TestTheDepositPolicyReachesThePage:
+    """``deposit_policy`` is in the thing's payload, effective for its owner, so the page
+    can say how the deposit works next to the deposit itself."""
+
+    def read(self, world, thing):
+        res = client_for(world["lolo"]).get(
+            f"/api/v1/things/{thing.code}/?collection={world['network'].code}"
+        )
+        assert res.status_code == status.HTTP_200_OK
+        return res.data
+
+    def test_a_point_policy_wins_and_the_collections_is_the_fallback(self, world):
+        NetworkPoint.objects.create(
+            collection=world["network"], user=world["lele"], deposit_policy="entity deposit"
+        )
+
+        assert self.read(world, world["leles"])["deposit_policy"] == "entity deposit"
+        assert self.read(world, world["lilis"])["deposit_policy"] == "network deposit"
+
+    def test_a_point_with_no_policy_leaves_the_collections(self, world):
+        NetworkPoint.objects.create(collection=world["network"], user=world["lele"])
+
+        assert self.read(world, world["leles"])["deposit_policy"] == "network deposit"
+
+    def test_outside_a_network_it_is_the_collections(self, db):
+        founder, lolo = _user("FOUN01", "Lala"), _user("MEMB01", "Lolo")
+        group = CollectionFactory(
+            owner=founder, mode=Collection.Mode.PROPRIETARY, deposit_policy="50 € back"
+        )
+        group.invites.add(lolo)
+        thing = ThingFactory(owner=founder, type=LEND)
+        group.things.add(thing)
+
+        res = client_for(lolo).get(f"/api/v1/things/{thing.code}/?collection={group.code}")
+
+        assert res.data["deposit_policy"] == "50 € back"

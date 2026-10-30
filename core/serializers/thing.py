@@ -370,6 +370,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_owner = serializers.SerializerMethodField()
     collection_is_onboarding = serializers.SerializerMethodField()
     collection_request_info = serializers.SerializerMethodField()
+    deposit_policy = serializers.SerializerMethodField()
     collection_language = serializers.SerializerMethodField()
     collection_theeeme_colors = serializers.SerializerMethodField()
     collection_koro = serializers.SerializerMethodField()
@@ -425,6 +426,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_owner",
             "collection_is_onboarding",
             "collection_request_info",
+            "deposit_policy",
             "collection_language",
             "collection_theeeme_colors",
             "collection_koro",
@@ -586,6 +588,15 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         collection."""
         first = self._viewable_collection(obj)
         return first.effective_text("request_info", obj.owner_id) if first else ""
+
+    def get_deposit_policy(self, obj):
+        """How deposits work for this thing — the collection's policy or, in a network,
+        its owner's pickup point's own (``Collection.effective_text``). Raw (possibly a
+        ``{lang: text}`` map), like ``collection_request_info``; the page shows it under
+        the deposit, which only a thing with a deposit has. ``""`` with no viewable
+        collection."""
+        first = self._viewable_collection(obj)
+        return first.effective_text("deposit_policy", obj.owner_id) if first else ""
 
     def get_collection_language(self, obj):
         """The collection's own language, resolved the same way as the four
