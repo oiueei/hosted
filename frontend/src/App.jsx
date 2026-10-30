@@ -26,6 +26,7 @@ const CollectionPage = lazy(() => import('./pages/CollectionPage'));
 const AddThingPage = lazy(() => import('./pages/AddThingPage'));
 const ImportThingsPage = lazy(() => import('./pages/ImportThingsPage'));
 const ImportInvitesPage = lazy(() => import('./pages/ImportInvitesPage'));
+const NetworkPointPage = lazy(() => import('./pages/NetworkPointPage'));
 const EditThingPage = lazy(() => import('./pages/EditThingPage'));
 const ThingPage = lazy(() => import('./pages/ThingPage'));
 const CreateCollectionPage = lazy(() => import('./pages/CreateCollectionPage'));
@@ -81,6 +82,7 @@ const protectedCollectionRoutes = (prefix) =>
     ['things/:thingCode/request', <RequestThingPage />],
     ['things/:thingCode/delete', <DeleteThingPage />],
     ['invites/import', <ImportInvitesPage />],
+    ['point', <NetworkPointPage />],
     ['invites/remove', <RemoveGuestPage />],
   ].map(([sub, element]) => (
     <Route key={`${prefix}-${sub}`} path={`/${prefix}/:code/${sub}`} element={element} />

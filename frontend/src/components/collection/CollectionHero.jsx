@@ -175,6 +175,7 @@ export default function CollectionHero({
                 kind={collection.kind}
                 headline={headline}
                 isCurator={isCurator}
+                isNetwork={collection.mode === 'NETWORK'}
                 hasDateThings={hasDateThings}
                 downloads={downloads}
                 welcomeDocUrl={collection.welcome_doc_url || ''}

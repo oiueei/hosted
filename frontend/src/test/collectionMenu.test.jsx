@@ -204,6 +204,23 @@ beforeEach(() => {
  *   disappears with the panel, and the focus would fall to <body>.
  */
 describe('the collection menu in the CollectionPage hero corner', () => {
+  test('a dinamizador of a network finds their pickup point in the menu', async () => {
+    renderCollection({ ...COLLECTION, mode: 'NETWORK' });
+    await openMenu();
+
+    expect(within(panel()).getByRole('link', { name: 'My pickup point' })).toHaveAttribute(
+      'href',
+      '/collections/COL001/point'
+    );
+  });
+
+  test('a collection that is not a network has no pickup point entry', async () => {
+    renderCollection(COLLECTION);
+    await openMenu();
+
+    expect(within(panel()).queryByRole('link', { name: 'My pickup point' })).toBeNull();
+  });
+
   test('a curator gets the trigger; the panel holds both links and the three downloads', async () => {
     renderCollection(COLLECTION);
     await openMenu();
