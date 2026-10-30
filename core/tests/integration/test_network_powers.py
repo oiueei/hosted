@@ -170,6 +170,19 @@ class TestInvitingAndRemoving:
         assert allowed.status_code == status.HTTP_200_OK
         assert not network["group"].invites.filter(code="MEMB01").exists()
 
+    def test_a_dinamizador_cancels_a_pending_invitation_in_a_network(self, network):
+        url = BASE.format(code=network["group"].code) + "invite/"
+        invited = client_for(network["lele"]).post(
+            url, {"email": "lulu@your-domain.test"}, format="json"
+        )
+        pending = User.objects.get(email="lulu@your-domain.test")
+
+        res = client_for(network["lele"]).delete(url, {"user_code": pending.code}, format="json")
+
+        assert invited.status_code == status.HTTP_200_OK
+        assert res.status_code == status.HTTP_200_OK
+        assert not pending.rsvps.filter(target_code=network["group"].code).exists()
+
     def test_a_member_with_a_loan_in_hand_cannot_be_removed(self, network):
         _loan(network["leles"], network["lolo"])
         url = BASE.format(code=network["group"].code) + "invite/"

@@ -394,8 +394,6 @@ class CollectionInviteView(APIView):
 
         denied = require_collection_curator(
             collection, request.user.code, "Only the owner or a co-owner can remove invites"
-        ) or require_network_founder(
-            collection, request.user.code, "Only the founder of a network can remove members"
         )
         if denied:
             return denied
@@ -423,6 +421,13 @@ class CollectionInviteView(APIView):
             invited_user = None
 
         if invited_user:
+            # Cancelling a pending invitation undoes what any dinamizador may do
+            # (invite); removing a member is the founder's alone in a network.
+            denied = require_network_founder(
+                collection, request.user.code, "Only the founder of a network can remove members"
+            )
+            if denied:
+                return denied
             blocked = network_exit_block(collection, invited_user, removing=True)
             if blocked:
                 return _exit_blocked(*blocked)
