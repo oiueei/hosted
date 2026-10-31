@@ -59,15 +59,27 @@ const ContactPage = lazy(() => import('./pages/ContactPage'));
  * the tree is written once and cannot drift between them. A function returning
  * `<Route>` elements rather than a component, because `<Routes>` only reads its
  * own `<Route>` children.
+ *
+ * **Every sub-route is `caseSensitive`.** A code is six capitals and digits and the
+ * sub-routes `delete` and `import` are six letters: React Router matches paths
+ * without regard to case by default, so a member whose code is `DELETE` would open
+ * `/library/ABC123/DELETE` — the address of a dinamizador's filter of the collection
+ * — on the page that deletes it. Lowercase paths stay what they were.
  */
 const publicCollectionRoutes = (prefix) => [
   <Route key={`${prefix}-page`} path={`/${prefix}/:code`} element={<CollectionPage />} />,
   <Route
     key={`${prefix}-thing`}
+    caseSensitive
     path={`/${prefix}/:code/things/:thingCode`}
     element={<ThingPage />}
   />,
-  <Route key={`${prefix}-join`} path={`/${prefix}/:code/join`} element={<JoinPage />} />,
+  <Route
+    key={`${prefix}-join`}
+    caseSensitive
+    path={`/${prefix}/:code/join`}
+    element={<JoinPage />}
+  />,
 ];
 
 const protectedCollectionRoutes = (prefix) =>
@@ -85,7 +97,12 @@ const protectedCollectionRoutes = (prefix) =>
     ['point', <NetworkPointPage />],
     ['invites/remove', <RemoveGuestPage />],
   ].map(([sub, element]) => (
-    <Route key={`${prefix}-${sub}`} path={`/${prefix}/:code/${sub}`} element={element} />
+    <Route
+      key={`${prefix}-${sub}`}
+      caseSensitive
+      path={`/${prefix}/:code/${sub}`}
+      element={element}
+    />
   ));
 
 /**
