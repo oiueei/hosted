@@ -165,8 +165,10 @@ function RouteFocusReset() {
     // the history entry, and the page being returned to is a different place to arrive at.
     if (state?.keepFocus && navigationType !== 'POP') return;
     const main = document.getElementById('main');
-    if (main) main.focus();
-    window.scrollTo(0, 0);
+    // The page changes with a jump, not a glide: `html` smooths scrolling for the footer's
+    // "Back to top" anchor, and a page change must not inherit that.
+    if (main) main.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [pathname, state, navigationType]);
   return null;
 }

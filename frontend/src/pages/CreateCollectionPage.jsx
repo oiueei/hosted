@@ -99,11 +99,10 @@ function CreateCollectionForm({ kind }) {
   // The group's email language. Defaults to whatever the owner is reading the app
   // in; each member's own preference still wins over it.
   const [language, setLanguage] = useState(i18n.resolvedLanguage || i18n.language);
-  // Mirrors the model default (WEEKLY). The Create form used to omit this field
-  // entirely, which was survivable while the default was NONE — it is not now
-  // that a new collection mails its members on the owner's behalf. The owner has
-  // to be able to see and change it at the moment they create the group.
-  const [digestFrequency, setDigestFrequency] = useState('WEEKLY');
+  // Mirrors the model default (MONTHLY). A new collection mails its members on the
+  // owner's behalf, so the owner has to be able to see and change it at the moment
+  // they create the group.
+  const [digestFrequency, setDigestFrequency] = useState('MONTHLY');
   // The palette of the group's pages. None picked by default: the server draws one of the
   // twelve at random, and the selector says so. The koro starts as the basic wave.
   const [theeeme, setTheeeme] = useState('');

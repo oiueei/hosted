@@ -192,7 +192,7 @@ describe('Create — the body of a library with every optional field filled in',
       tags: [],
       thumbnail: '',
       language: 'en',
-      digest_frequency: 'WEEKLY',
+      digest_frequency: 'MONTHLY',
       // No palette picked: none is sent and the server draws one. The koro is the basic wave.
       koro: 'basic',
       welcome_doc: '',

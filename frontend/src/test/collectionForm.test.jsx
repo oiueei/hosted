@@ -215,7 +215,7 @@ describe('CreateCollectionPage', () => {
 
   // The Create form used to omit the digest field entirely. That was survivable
   // while `digest_frequency` defaulted to NONE; it stopped being survivable when
-  // the default became WEEKLY, because a group now mails its members from the
+  // the default became non-empty, because a group now mails its members from the
   // moment it exists. The owner has to see — and be able to change — that at the
   // moment they create it, which is exactly what these two pin.
   test('the digest field is on the Create form, folded into "More options"', async () => {
@@ -253,7 +253,7 @@ describe('CreateCollectionPage', () => {
     // Not "whatever the server defaults to": the value the owner was shown in
     // the form is the value that ships, so the field can never disagree with
     // the row it created.
-    await waitFor(() => expect(createBody()?.digest_frequency).toBe('WEEKLY'));
+    await waitFor(() => expect(createBody()?.digest_frequency).toBe('MONTHLY'));
   });
 
   test('turning the digest off at creation time is honoured', async () => {

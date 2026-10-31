@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router';
+import { IconArrowUp } from 'hds-react';
 import { useTranslation } from 'react-i18next';
 import useTheeeme from '../hooks/useTheeeme';
 import { aboutPath } from '../deployment';
@@ -64,6 +65,11 @@ import { externalFormUrl } from '../utils/externalForms';
  * Below that it is `display: none`, because on two lines it would hang at the end
  * of the first one. Upstream, with no about link, the line is "Privacy & legal ·
  * Contact us · Made with ♥︎ in …".
+ *
+ * **"Back to top" under 992px.** After the colophon, a plain anchor to `#main` (the target
+ * of the skip link, which starts at the hero) with an `aria-hidden` arrow: an anchor carries
+ * the focus up without JavaScript, which a `<button>` with `scrollTo` would not. App.css
+ * hides it from 992px and smooths the scroll only for `prefers-reduced-motion: no-preference`.
  */
 export default function SiteFooter() {
   const { pathname } = useLocation();
@@ -116,6 +122,10 @@ export default function SiteFooter() {
           {' · '}
         </span>
         {t('footer.madeIn')}
+        <a href="#main" className="site-footer-top">
+          {t('footer.backToTop')}
+          <IconArrowUp aria-hidden="true" />
+        </a>
       </div>
     </footer>
   );

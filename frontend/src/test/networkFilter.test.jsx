@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 window.scrollTo = vi.fn();
 
@@ -13,6 +13,7 @@ vi.mock('../deployment', async (orig) => ({ ...(await orig()), curatorGuidePath:
 import { apiFetch } from '../services/api';
 import CollectionPage from '../pages/CollectionPage';
 import declarePalette from './declarePalette';
+import { settle } from './settle';
 
 /**
  * A network's page filters by who lends: a second row of chips next to the tags, one
@@ -113,6 +114,14 @@ const shown = () =>
     .map((h) => h.textContent);
 const lenderRow = () => screen.getByRole('group', { name: 'Who lends' });
 const chip = (name) => within(lenderRow()).getByRole('button', { name: new RegExp(`^${name}`) });
+
+// The page asks for more than the collection (the inbox, for one), and a test that ends
+// on a synchronous assertion ends before those answers land: the state they set then
+// arrives outside `act`, which setup.js turns into a failure. Whatever the page asked,
+// the test waits for it.
+afterEach(async () => {
+  await settle(apiFetch);
+});
 
 beforeEach(() => {
   localStorage.clear();
