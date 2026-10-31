@@ -970,12 +970,12 @@ body :focus-visible {
   box-sizing: border-box;
 }
 
-/* Match the collection Linkbox heading to .thing-card-headline (heading-s / 700). */
+/* The title of a collection row follows HDS's heading-s (20px, line-height 1.5, no letter
+   spacing) with this app's bolder weight: only the size and the weight are declared, the
+   line-height and the spacing are HDS's own. */
 .collections-grid *[class*='Linkbox-module_heading'] {
   font-size: var(--fontsize-heading-s);
   font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.2px;
 }
 
 /* Spacers */
