@@ -1790,24 +1790,14 @@ figure[class*='Highlight-module_highlight'] {
   align-items: center;
 }
 
-/* Toggle-left: puts the toggle pill on the left of the label.
- * `flex-wrap: nowrap` + `flex-shrink: 0` on the pill keeps the pill on the
- * same row even when the label is multi-line (e.g. long helper text under
- * the title). `align-items: flex-start` aligns the pill with the title
- * rather than the vertical centre of a tall label. */
-.toggle-left [class*='toggleButtonContainerInlineVariant'] {
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  gap: var(--spacing-s);
-}
-.toggle-left [class*='toggleButtonContainerInlineVariant'] > button {
-  margin-left: 0 !important;
-  flex-shrink: 0;
+/* Explanation under an HDS ToggleButton (`ToggleWithHelp`): HDS has no helper text for it. */
+.toggle-help {
+  margin: var(--spacing-3-xs) 0 0;
+  font-size: var(--fontsize-body-s);
+  color: var(--color-black-70);
 }
 /* Disabled+checked toggle: darker grey than HDS default (black-10) */
-.toggle-left button[aria-pressed='true'][disabled] {
+.toggle-with-help button[aria-pressed='true'][disabled] {
   background-color: var(--color-black-90) !important;
   border-color: var(--color-black-90) !important;
 }

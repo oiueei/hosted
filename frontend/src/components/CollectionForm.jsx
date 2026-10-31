@@ -1,4 +1,4 @@
-import { ToggleButton } from 'hds-react';
+import ToggleWithHelp from './ToggleWithHelp';
 import { useTranslation } from 'react-i18next';
 import { hasPriceVerbs } from '../utils/collectionKind';
 
@@ -41,73 +41,38 @@ export default function CollectionForm({
 
   return (
     <>
-      <div className="toggle-left">
-        <ToggleButton
-          id={`${idPrefix}-visibility`}
-          label={
-            <>
-              {t('visibility.publicLabel')}
-              <br />
-              <span
-                style={{
-                  fontSize: 'var(--fontsize-body-s)',
-                  fontWeight: 400,
-                  color: 'var(--color-black-70)',
-                }}
-              >
-                {t('visibility.publicHelper')}
-              </span>
-            </>
-          }
-          checked={visibility === 'PUBLIC'}
-          onChange={(val) => setVisibility(val ? 'PRIVATE' : 'PUBLIC')}
-          variant="inline"
-          theme={toggleTheme}
-        />
-      </div>
+      <ToggleWithHelp
+        id={`${idPrefix}-visibility`}
+        label={t('visibility.publicLabel')}
+        help={t('visibility.publicHelper')}
+        checked={visibility === 'PUBLIC'}
+        onChange={(val) => setVisibility(val ? 'PRIVATE' : 'PUBLIC')}
+        theme={toggleTheme}
+      />
       {/* Whether members may recommend guests. The owner still decides on every
           one — this is whether they are willing to be asked at all, which a
           group with a waiting list or an admission process may not be. Sits
           with visibility because both answer "who can get in here". */}
-      <div className="toggle-left">
-        <ToggleButton
-          id={`${idPrefix}-allow-proposals`}
-          label={
-            <>
-              {t('recommend.settingLabel')}
-              <br />
-              <span
-                style={{
-                  fontSize: 'var(--fontsize-body-s)',
-                  fontWeight: 400,
-                  color: 'var(--color-black-70)',
-                }}
-              >
-                {t('recommend.settingHelper')}
-              </span>
-            </>
-          }
-          checked={allowProposals}
-          onChange={(val) => setAllowProposals(!val)}
-          variant="inline"
+      <ToggleWithHelp
+        id={`${idPrefix}-allow-proposals`}
+        label={t('recommend.settingLabel')}
+        help={t('recommend.settingHelper')}
+        checked={allowProposals}
+        onChange={(val) => setAllowProposals(!val)}
+        theme={toggleTheme}
+      />
+      {showMembersPrice && (
+        <ToggleWithHelp
+          id={`${idPrefix}-members-price`}
+          label={t(
+            kind === 'LIBRARY'
+              ? 'collectionForm.membersPriceLibrary'
+              : 'collectionForm.membersPriceStall'
+          )}
+          checked={membersPrice}
+          onChange={(val) => setMembersPrice(!val)}
           theme={toggleTheme}
         />
-      </div>
-      {showMembersPrice && (
-        <div className="toggle-left">
-          <ToggleButton
-            id={`${idPrefix}-members-price`}
-            label={t(
-              kind === 'LIBRARY'
-                ? 'collectionForm.membersPriceLibrary'
-                : 'collectionForm.membersPriceStall'
-            )}
-            checked={membersPrice}
-            onChange={(val) => setMembersPrice(!val)}
-            variant="inline"
-            theme={toggleTheme}
-          />
-        </div>
       )}
     </>
   );
