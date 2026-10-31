@@ -33,8 +33,8 @@ from core.services.creator_policy import (
     community_contribution_types,
     thing_type_denial,
 )
-from core.services.deletion_events import deleting_as
 from core.services.email_service import send_thing_hidden_by_founder_email
+from core.services.membership_service import delete_thing
 from core.utils import parse_localized
 from core.views._helpers import refusal_body, type_validity_error, verb_from_price, viewer_code
 
@@ -254,9 +254,8 @@ class ThingViewSet(ModelViewSet):
     def perform_destroy(self, instance):
         # The THING_REMOVED event is written by the model's delete receiver; the
         # actor is whoever deleted it (collection owner or thing owner), not
-        # necessarily the current owner.
-        with deleting_as(self.request.user):
-            super().perform_destroy(instance)
+        # necessarily the current owner. Whoever had a live request is emailed.
+        delete_thing(instance, actor=self.request.user)
 
     def perform_update(self, serializer):
         # The type stays editable, but a PATCH can't move a thing to a type its

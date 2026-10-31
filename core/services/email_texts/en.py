@@ -88,6 +88,10 @@ TEXTS = {
         "Your request or reservation for it no longer stands."
     ),
     "thing_left_holding": "If you have it with you, return it to them as you agreed.",
+    "thing_withdrawn_subject": "“{thing}” has been withdrawn from {group}",
+    "thing_withdrawn_intro": (
+        "“{thing}” has been withdrawn from {group}, and your request is cancelled."
+    ),
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Welcome to '{collection}'",
     "welcome_doc_plain": (

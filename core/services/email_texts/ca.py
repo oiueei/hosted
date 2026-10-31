@@ -90,6 +90,10 @@ TEXTS = {
         "La teva sol·licitud o reserva ja no és vigent."
     ),
     "thing_left_holding": "Si la tens tu, torna-la-hi com vau acordar.",
+    "thing_withdrawn_subject": "S'ha retirat «{thing}» de {group}",
+    "thing_withdrawn_intro": (
+        "S'ha retirat «{thing}» de {group}, i la teva sol·licitud queda anul·lada."
+    ),
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Et donem la benvinguda a '{collection}'",
     "welcome_doc_plain": (

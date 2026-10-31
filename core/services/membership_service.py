@@ -13,7 +13,10 @@ from django.utils import timezone
 from core.models import BookingPeriod, Thing
 from core.models.booking import RETURNABLE_TYPES
 from core.services.deletion_events import deleting_as
-from core.services.email_service import send_thing_left_with_owner_email
+from core.services.email_service import (
+    send_thing_left_with_owner_email,
+    send_thing_withdrawn_email,
+)
 
 
 def things_leaving_with(collection, user):
@@ -153,3 +156,37 @@ def end_membership(collection, user, *, actor):
 
         transaction.on_commit(tell)
     return len(leaving)
+
+
+def delete_thing(thing, *, actor):
+    """Delete ``thing`` and tell whoever had a live request or reservation on it.
+
+    Deleting is allowed whatever hangs from the thing (the bookings go with it); what
+    this adds is that nobody is left asking for something that is gone. The live
+    requests (``BookingPeriod.blocking_filter``) are read before the delete takes them,
+    and each requester gets one email once the transaction commits, never when it rolls
+    back — except ``actor``, who knows. Whoever has the thing in hand is told to return
+    it, and in a network is given the pickup point of its owner to return it to.
+    """
+    collection = next(iter(thing.collections.all()), None)
+    with transaction.atomic(), deleting_as(actor):
+        to_tell = _people_to_tell([thing], actor)
+        group_headline = collection.headline if collection else ""
+        point = collection.point_for(thing.owner_id) if collection else None
+        thing.delete()
+
+        def tell():
+            for email, headline, holding in to_tell:
+                send_thing_withdrawn_email(
+                    headline,
+                    group_headline,
+                    email,
+                    holding=holding,
+                    collection=collection,
+                    point=point if holding else None,
+                )
+
+        # A thing lives in one collection and always has: with none there is no group to
+        # name in the email, and nobody to have asked for it through one.
+        if collection is not None:
+            transaction.on_commit(tell)

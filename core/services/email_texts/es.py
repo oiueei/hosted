@@ -85,6 +85,8 @@ TEXTS = {
         "Tu solicitud o reserva ya no sigue en pie."
     ),
     "thing_left_holding": "Si la tienes tú, devuélvesela como acordasteis.",
+    "thing_withdrawn_subject": "Se ha retirado «{thing}» de {group}",
+    "thing_withdrawn_intro": "Se ha retirado «{thing}» de {group}, y tu solicitud queda anulada.",
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Te damos la bienvenida a '{collection}'",
     "welcome_doc_plain": (

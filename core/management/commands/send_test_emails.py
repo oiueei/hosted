@@ -293,6 +293,23 @@ def _(w):
     )
 
 
+@sample("thing_withdrawn_asked", "send_thing_withdrawn_email")
+def _(w):
+    es.send_thing_withdrawn_email("Escalera de mano", "Chalmercadillo", w.to, holding=False)
+
+
+@sample("thing_withdrawn_holding_in_a_network", "send_thing_withdrawn_email")
+def _(w):
+    es.send_thing_withdrawn_email(
+        "Taladro",
+        "Red de bibliotecas del barrio",
+        w.to,
+        holding=True,
+        collection=w.network,
+        point=w.network.point_for(w.member.code),
+    )
+
+
 @sample("thing_left_asked", "send_thing_left_with_owner_email")
 def _(w):
     es.send_thing_left_with_owner_email(

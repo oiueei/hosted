@@ -2378,6 +2378,36 @@ def send_thing_left_with_owner_email(
     )
 
 
+def send_thing_withdrawn_email(
+    thing_headline, group_headline, requester_email, *, holding, collection=None, point=None
+):
+    """Tell whoever had a live request on a thing that it was deleted and the request with it.
+
+    The thing is already gone, so it is named by headline. Whoever has it in hand now
+    (``holding``) is told to return it; in a network ``point`` (the pickup point of the
+    thing's owner) gives them where. Neither the address nor the name of whoever deleted
+    it appears: the requester is told the thing was withdrawn, not who did it.
+    """
+    user, lang = _recipient(requester_email, collection)
+    T, L = _texts(lang), _local(lang)
+    thing, group = L(thing_headline), L(group_headline)
+    subject = T("thing_withdrawn_subject").format(thing=thing, group=group)
+    intro = T("thing_withdrawn_intro").format(thing=thing, group=group)
+    paragraphs = [intro, T("thing_left_holding")] if holding else [intro]
+    point_blocks, point_lines = _point_details(point, lang) if holding else ([], [])
+    html = _render_email([*[_para(p) for p in paragraphs], *point_blocks], lang=lang, header=group)
+    _send(
+        requester_email,
+        subject,
+        "\n".join([" ".join(paragraphs), *point_lines]),
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=group,
+    )
+
+
 def send_return_due_email(owner_name, thing, end_date, requester_email):
     """Remind the **borrower** that they hand the thing back tomorrow.
 
