@@ -97,6 +97,39 @@ describe('DeleteThingPage', () => {
     expect(mutations()).toEqual([]);
   });
 
+  test('says how many people will be emailed: one', async () => {
+    mockApi({}, { ...THING, live_requesters_count: 1 });
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        'One person has a pending or accepted request for this thing: we will email them.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test('says how many people will be emailed: several', async () => {
+    mockApi({}, { ...THING, live_requesters_count: 3 });
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        '3 people have a pending or accepted request for this thing: we will email them.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  test.each([0, null, undefined])(
+    'says nothing about emails when the count is %s',
+    async (count) => {
+      mockApi({}, { ...THING, live_requesters_count: count });
+      renderPage();
+      await screen.findByText(/cannot be undone/);
+
+      expect(screen.queryByTestId('live-requesters')).toBeNull();
+    }
+  );
+
   test('the confirm is marked destructive by a trash icon, and Cancel by none', async () => {
     mockApi({}, THING);
     renderPage();

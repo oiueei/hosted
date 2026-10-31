@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 from core.models import RSVP, Collection, InvitationProposal, Theeeme, Thing
 from core.models.collection import KIND_THING_TYPES, kind_for_thing_type
+from core.serializers.network_point import NetworkPointSerializer
 from core.serializers.theeeme import theeeme_colors
 from core.serializers.thing import ThingComputedFieldsMixin
 from core.utils import Refusal, asset_url, doc_asset_url
@@ -25,6 +26,8 @@ from core.validators import (
 
 NO_MIXED_KINDS = "A collection holds one kind of thing: stall, library or shed."
 ONLY_PRICES = "A group can take prices or not; it can't take only prices."
+NETWORK_ONLY_LIBRARY = "Only a library can be a network."
+NETWORK_MODE_FIXED = "A network can't become another mode, nor another mode a network."
 
 
 class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
@@ -58,6 +61,7 @@ class CollectionThingSummarySerializer(ThingComputedFieldsMixin, serializers.Mod
             "my_pending_booking",
             "pending_questions",
             "can_manage",
+            "network_point",
             "transfer_count",
             "deal",
             "created",
@@ -110,6 +114,7 @@ class CollectionSerializer(serializers.ModelSerializer):
     is_member = serializers.SerializerMethodField()
     is_curator = serializers.SerializerMethodField()
     co_owners = serializers.SerializerMethodField()
+    points = serializers.SerializerMethodField()
     is_digest_muted = serializers.SerializerMethodField()
     pending_proposals = serializers.SerializerMethodField()
     email_note = serializers.SerializerMethodField()
@@ -172,6 +177,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "is_member",
             "is_curator",
             "co_owners",
+            "points",
             "is_digest_muted",
             "pending_proposals",
         ]
@@ -187,6 +193,7 @@ class CollectionSerializer(serializers.ModelSerializer):
             "is_member",
             "is_curator",
             "co_owners",
+            "points",
             "is_digest_muted",
             "pending_proposals",
             "email_note",
@@ -276,6 +283,15 @@ class CollectionSerializer(serializers.ModelSerializer):
         is someone the group's own page already names, not private roster
         data. Reads the prefetched M2M so this adds no query."""
         return [{"code": u.code, "name": u.name} for u in obj.co_owners.all()]
+
+    def get_points(self, obj):
+        """The pickup points of a network's dinamizadores — public with the collection,
+        address included: each answers for an entity, not for their home. ``[]`` and
+        no query outside a network."""
+        if not obj.is_network():
+            return []
+        points = obj.points.select_related("user", "collection").order_by("code")
+        return NetworkPointSerializer(points, many=True, context=self.context).data
 
     def get_is_member(self, obj):
         # True when the requester is an invited member, but not a curator
@@ -737,6 +753,8 @@ def normalize_allowed_thing_types(kind, mode, allowed_thing_types):
     invalid = [t for t in listed if t not in verbs]
     if invalid:
         raise serializers.ValidationError(f"These types are not allowed: {invalid}")
+    if mode == Collection.Mode.NETWORK and kind != Collection.Kind.LIBRARY:
+        raise serializers.ValidationError(NETWORK_ONLY_LIBRARY)
     if kind == Collection.Kind.SHED:
         if mode == Collection.Mode.COMMUNITY:
             raise serializers.ValidationError(
@@ -744,7 +762,11 @@ def normalize_allowed_thing_types(kind, mode, allowed_thing_types):
                 "be a community collection."
             )
         return list(verbs)
-    if mode == Collection.Mode.PROPRIETARY or not listed or set(listed) == set(verbs):
+    if (
+        mode in (Collection.Mode.PROPRIETARY, Collection.Mode.NETWORK)
+        or not listed
+        or set(listed) == set(verbs)
+    ):
         return list(verbs)
     free = verbs[0]
     if listed == [free]:
@@ -895,6 +917,11 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
             instance.allowed_thing_types if instance else [],
         )
         mode = attrs.get("mode", instance.mode if instance else Collection.Mode.PROPRIETARY)
+        # A network is what a library is born as and stays: the mode is shown, not
+        # changed, in either direction (naming the one it already has is harmless).
+        if instance is not None and mode != instance.mode:
+            if Collection.Mode.NETWORK in (mode, instance.mode):
+                raise serializers.ValidationError(NETWORK_MODE_FIXED)
         # A reservations collection can never be switched to COMMUNITY, even if
         # the allowlist isn't being touched in this request.
         if (

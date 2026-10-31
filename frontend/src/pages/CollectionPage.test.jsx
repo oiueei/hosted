@@ -1805,6 +1805,74 @@ describe("CollectionPage — a COMMUNITY member's own things and notifications",
   });
 });
 
+describe('CollectionPage — a network', () => {
+  const NETWORK = {
+    code: 'COL001',
+    headline: 'Kitchen Collection',
+    description: '',
+    status: 'ACTIVE',
+    visibility: 'PRIVATE',
+    kind: 'LIBRARY',
+    mode: 'NETWORK',
+    owner: 'FOUN01',
+    owner_name: 'The Founder',
+    is_curator: true,
+    is_member: false,
+    co_owners: [{ code: 'ABC123', name: 'Me' }],
+    thumbnail_url: '',
+    tags: [],
+    things: [],
+    invites: [{ code: 'ABC123', name: 'Me' }],
+    is_paused: false,
+    allowed_thing_types: ['LEND_THING', 'RENT_THING'],
+    digest_frequency: 'WEEKLY',
+    is_digest_muted: false,
+    allow_member_proposals: false,
+  };
+
+  async function renderAs(collection, userCode) {
+    localStorage.setItem('userCode', userCode);
+    apiFetch.mockImplementation((url) =>
+      url.startsWith('/api/v1/inbox/')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => [] })
+        : Promise.resolve({ ok: true, status: 200, json: async () => collection })
+    );
+    render(
+      <MemoryRouter initialEntries={['/library/COL001']}>
+        <Routes>
+          <Route path="/library/:code" element={<CollectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByRole('heading', { level: 1, name: /Kitchen Collection/ });
+    await settle(apiFetch);
+  }
+
+  test('says what a network is, to whoever lands on one', async () => {
+    await renderAs(NETWORK, 'ABC123');
+
+    expect(screen.getByText(en.collectionPage.networkNote)).toBeInTheDocument();
+  });
+
+  test('a library that is not a network says nothing of the sort', async () => {
+    await renderAs({ ...NETWORK, mode: 'PROPRIETARY' }, 'ABC123');
+
+    expect(screen.queryByText(en.collectionPage.networkNote)).toBeNull();
+  });
+
+  test('a dinamizador is not offered the settings of the group, the founder is', async () => {
+    await renderAs(NETWORK, 'ABC123');
+    expect(screen.queryByRole('link', { name: 'Edit collection' })).toBeNull();
+    expect(screen.getAllByRole('link', { name: 'Add thing' }).length).toBeGreaterThan(0);
+  });
+
+  test('the founder is offered them', async () => {
+    await renderAs({ ...NETWORK, is_curator: true }, 'FOUN01');
+
+    expect(screen.getByRole('link', { name: 'Edit collection' })).toBeInTheDocument();
+  });
+});
+
 describe('CollectionPage as a co-owner', () => {
   // A co-owner is not the founder (`owner`), but the server says `is_curator:
   // true` — that field, not the client-side owner comparison, is what now

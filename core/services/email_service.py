@@ -1187,6 +1187,53 @@ def _with_demo_note(collection, T, blocks, plain):
     return [_para(note), *blocks], f"{note}\n\n{plain}"
 
 
+def _network_point(thing, collection=None):
+    """``(network, point)`` for a thing that sits in a network, else ``(None, None)``.
+
+    ``collection`` is the one the caller resolved for this reader; without it (or when
+    it is not a network) the thing's own collections are looked at, which the daily
+    commands load with the thing. ``point`` is ``None`` for a dinamizador who set none.
+    """
+    if collection is None or not collection.is_network():
+        collection = next((c for c in thing.collections.all() if c.is_network()), None)
+    if collection is None:
+        return None, None
+    return collection, collection.point_for(thing.owner_id)
+
+
+def _point_name(thing, point):
+    """Who lends it, as the emails say it: the entity of the pickup point, else the
+    dinamizador's bare name (``""`` when they set none; the caller says "a member")."""
+    return (point.display_name if point else "") or thing.owner.name
+
+
+def _point_details(point, lang):
+    """The pickup point as email blocks and plain lines: name, address, hours, contact.
+
+    Only what is filled in; the values are autoescaped by the template like every field
+    (the contact is shown as typed, never made a link). Empty for no point."""
+    if point is None:
+        return [], []
+    T = _texts(lang)
+    rows = [
+        (T("point_name_label"), point.entity_name),
+        (T("point_address_label"), point.address),
+        (T("point_hours_label"), point.hours_note),
+        (T("point_contact_label"), point.contact),
+    ]
+    rows = [(label, value) for label, value in rows if value]
+    blocks = [_field(label, value) for label, value in rows]
+    return blocks, [f"{label}: {value}" for label, value in rows]
+
+
+def _loan_email_note(thing, collection):
+    """The owner's note for a requester's emails: in a network the pickup point's own,
+    else the collection's (``Collection.effective_text``); none without a collection."""
+    if collection is None:
+        return ""
+    return collection.effective_text("email_note", thing.owner_id)
+
+
 def _booking_detail_blocks(booking, lang=None):
     """Date/quantity detail blocks shared by the three booking emails."""
     if booking.start_date and booking.end_date:
@@ -1755,7 +1802,7 @@ def send_booking_request_email(requester, thing, booking, manager_email, accept_
     )
 
 
-def send_booking_decision_email(booking, thing, accepted=True, collection=None):
+def send_booking_decision_email(booking, thing, accepted=True, collection=None, decided_by=None):
     """Send booking accept/reject notification email to requester.
 
     ``collection`` feeds the owner's ``email_note`` on an accepted decision and
@@ -1764,9 +1811,19 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
     may read**. Without it there is no note: the thing's first collection may be
     a PRIVATE group the requester was never in, and its note is written for
     that group's members.
+
+    In a network the decision is the entity's: "{point} has accepted your loan", with
+    the pickup point (name, address, hours, contact) on an acceptance. When the
+    founder declines a request on another dinamizador's thing (the rescue), it is the
+    network that declines, not the entity of the thing's owner, who did not decide.
     """
     user, lang = _recipient(booking.requester_email)
     T, L = _texts(lang), _local(lang)
+    network, point = _network_point(thing, collection)
+    if network is not None:
+        return _send_network_decision_email(
+            booking, thing, accepted, collection, network, point, decided_by, user, lang
+        )
     decision_word = T("decision_confirmed") if accepted else T("decision_cancelled")
     action = _action_noun(thing, lang)
     headline = L(thing.headline)
@@ -1821,6 +1878,52 @@ def send_booking_decision_email(booking, thing, accepted=True, collection=None):
         user=user,
         lang=lang,
         header=header,
+    )
+
+
+def _send_network_decision_email(
+    booking, thing, accepted, collection, network, point, decided_by, user, lang
+):
+    """The decision email of a thing in a network (see ``send_booking_decision_email``)."""
+    T, L = _texts(lang), _local(lang)
+    action = _action_noun(thing, lang)
+    headline = L(thing.headline)
+    thing_url = _thing_url(thing, reader=user, collection=collection)
+    rescued = decided_by is not None and decided_by.code != thing.owner_id
+    who = L(network.headline) if rescued else _member_name(_point_name(thing, point), lang)
+    intro = T("decision_by_confirmed" if accepted else "decision_by_declined").format(
+        who=who, action=action
+    )
+    subject = T("decision_subject_confirmed") if accepted else T("decision_subject_cancelled")
+    detail_blocks = _booking_detail_blocks(booking, lang)
+    point_blocks, point_lines = _point_details(point, lang) if accepted else ([], [])
+    html_blocks = [
+        _para(intro),
+        *detail_blocks,
+        *point_blocks,
+        _cta(thing_url, T("view_thing_cta"), T("cta_fallback")),
+    ]
+    plain_lines = [intro, f"'{headline}'"]
+    if booking.start_date and booking.end_date:
+        dates = _fmt_dates(_fmt_date(booking.start_date), _fmt_date(booking.end_date))
+        plain_lines.append(f"{T('dates_label')}: {dates}")
+    plain = "\n".join([*plain_lines, *point_lines, "", thing_url])
+    if accepted:
+        note_plain, note_blocks = _note_blocks(L(_loan_email_note(thing, network)))
+        if note_plain:
+            plain += "\n\n" + note_plain
+            html_blocks.extend(note_blocks)
+    html_blocks, plain = _with_demo_note(network, T, html_blocks, plain)
+    html = _render_email(html_blocks, lang=lang, header=headline)
+    _send(
+        booking.requester_email,
+        subject,
+        plain,
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=headline,
     )
 
 
@@ -1888,7 +1991,7 @@ def send_booking_confirmation_email(requester, thing, booking, collection=None, 
             action=action, thing=headline, outro=f"{outro} {contact_shared}", url=thing_url
         )
 
-    note_plain, note_blocks = _note_blocks(L(collection.email_note) if collection else "")
+    note_plain, note_blocks = _note_blocks(L(_loan_email_note(thing, collection)))
     if note_plain:
         plain += "\n\n" + note_plain
 
@@ -2162,6 +2265,36 @@ def send_thing_reported_email(thing, owner_email):
     _send(owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=header)
 
 
+def send_thing_hidden_by_founder_email(
+    thing, founder, group_headline, owner_email, collection=None
+):
+    """Tell the owner of a thing in a network that the founder hid it.
+
+    The founder's rescue power: the thing is still its owner's, who can show it
+    again. Names the founder by bare ``name`` ("A member" when there is none),
+    never their address.
+    """
+    user, lang = _recipient(owner_email, collection)
+    T, L = _texts(lang), _local(lang)
+    thing_url = _thing_url(thing, reader=user, collection=collection)
+    headline, group = L(thing.headline), L(group_headline)
+    who = _member_name(founder.name, lang)
+    subject = T("thing_hidden_subject").format(founder=who)
+    plain = T("thing_hidden_plain").format(founder=who, thing=headline, group=group, url=thing_url)
+    html = _render_email(
+        [
+            _para(T("thing_hidden_intro").format(founder=who, group=group)),
+            _para(T("thing_hidden_outro")),
+            _cta(thing_url, T("thing_hidden_cta"), T("cta_fallback")),
+        ],
+        lang=lang,
+        header=headline,
+    )
+    _send(
+        owner_email, subject, plain, html, CATEGORY_ACTIVITY, user=user, lang=lang, header=headline
+    )
+
+
 def send_broadcast_email(
     owner_name, owner_email, collection_headline, collection_code, message, emails, collection=None
 ):
@@ -2245,6 +2378,36 @@ def send_thing_left_with_owner_email(
     )
 
 
+def send_thing_withdrawn_email(
+    thing_headline, group_headline, requester_email, *, holding, collection=None, point=None
+):
+    """Tell whoever had a live request on a thing that it was deleted and the request with it.
+
+    The thing is already gone, so it is named by headline. Whoever has it in hand now
+    (``holding``) is told to return it; in a network ``point`` (the pickup point of the
+    thing's owner) gives them where. Neither the address nor the name of whoever deleted
+    it appears: the requester is told the thing was withdrawn, not who did it.
+    """
+    user, lang = _recipient(requester_email, collection)
+    T, L = _texts(lang), _local(lang)
+    thing, group = L(thing_headline), L(group_headline)
+    subject = T("thing_withdrawn_subject").format(thing=thing, group=group)
+    intro = T("thing_withdrawn_intro").format(thing=thing, group=group)
+    paragraphs = [intro, T("thing_left_holding")] if holding else [intro]
+    point_blocks, point_lines = _point_details(point, lang) if holding else ([], [])
+    html = _render_email([*[_para(p) for p in paragraphs], *point_blocks], lang=lang, header=group)
+    _send(
+        requester_email,
+        subject,
+        "\n".join([" ".join(paragraphs), *point_lines]),
+        html,
+        CATEGORY_ACTIVITY,
+        user=user,
+        lang=lang,
+        header=group,
+    )
+
+
 def send_return_due_email(owner_name, thing, end_date, requester_email):
     """Remind the **borrower** that they hand the thing back tomorrow.
 
@@ -2260,6 +2423,9 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
+    network, point = _network_point(thing)
+    if network is not None:
+        owner_name = _point_name(thing, point)
     owner_name = _member_name(owner_name, lang, inline=True)
     headline = L(thing.headline)
     header = headline
@@ -2268,7 +2434,10 @@ def send_return_due_email(owner_name, thing, end_date, requester_email):
     end = _fmt_date(end_date)
     plain = T("return_due_plain").format(owner=owner_name, thing=headline, end=end)
     body = T("return_due_body").format(owner=owner_name, thing=headline, end=end)
-    blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
+    point_blocks, point_lines = _point_details(point, lang)
+    if point_lines:
+        plain += "\n" + "\n".join(point_lines)
+    blocks = [_para(body), *point_blocks, _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester_email,
@@ -2294,6 +2463,9 @@ def send_pickup_due_email(owner_name, thing, start_date, requester_email):
     """
     user, lang = _recipient(requester_email)
     T, L = _texts(lang), _local(lang)
+    network, point = _network_point(thing)
+    if network is not None:
+        owner_name = _point_name(thing, point)
     raw_owner_name = owner_name
     owner_name = _member_name(owner_name, lang, inline=True)
     headline = L(thing.headline)
@@ -2308,7 +2480,10 @@ def send_pickup_due_email(owner_name, thing, start_date, requester_email):
     body = _template(T, "pickup_due_body", lang, nameless=nameless, field="owner").format(
         owner=owner_name, thing=headline, start=start
     )
-    blocks = [_para(body), _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
+    point_blocks, point_lines = _point_details(point, lang)
+    if point_lines:
+        plain += "\n" + "\n".join(point_lines)
+    blocks = [_para(body), *point_blocks, _cta(thing_url, T("view_thing_cta"), T("cta_fallback"))]
     html = _render_email(blocks, lang=lang, header=header)
     _send(
         requester_email,

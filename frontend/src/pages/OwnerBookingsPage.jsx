@@ -249,6 +249,9 @@ export default function OwnerBookingsPage() {
     _when: formatBookingWhen(b),
     _created: b.created,
     _projectNote: b.project_note,
+    // The founder of a network sees every entity's requests and may only reject
+    // the ones that are not theirs; an older payload without the field decides.
+    _canDecide: b.can_decide !== false,
     _canRemindReturn: !!b.can_remind_return,
     _returnRemindedAt: b.return_reminded_at,
     _transfersOwnership: !DATE_TYPES.includes(b.thing_type) && !b.thing_is_endless,
@@ -368,13 +371,15 @@ export default function OwnerBookingsPage() {
       transform: (row) =>
         row._status === 'PENDING' ? (
           <div style={{ display: 'flex', gap: 'var(--spacing-xs)', justifyContent: 'flex-end' }}>
-            <TooltipButton
-              tooltip={t('ownerBookings.acceptTooltip')}
-              onClick={() => acceptRow(row)}
-              disabled={acting === row._code}
-            >
-              <IconCheck aria-hidden />
-            </TooltipButton>
+            {row._canDecide && (
+              <TooltipButton
+                tooltip={t('ownerBookings.acceptTooltip')}
+                onClick={() => acceptRow(row)}
+                disabled={acting === row._code}
+              >
+                <IconCheck aria-hidden />
+              </TooltipButton>
+            )}
             <TooltipButton
               tooltip={t('ownerBookings.rejectTooltip')}
               onClick={() => rejectRow(row)}
@@ -414,9 +419,15 @@ export default function OwnerBookingsPage() {
       cardTransform: (row) =>
         row._status === 'PENDING' ? (
           <div className="button-row-wide">
-            <Button style={btnStyle} onClick={() => acceptRow(row)} disabled={acting === row._code}>
-              {t('ownerBookings.acceptTooltip')}
-            </Button>
+            {row._canDecide && (
+              <Button
+                style={btnStyle}
+                onClick={() => acceptRow(row)}
+                disabled={acting === row._code}
+              >
+                {t('ownerBookings.acceptTooltip')}
+              </Button>
+            )}
             <Button
               variant="secondary"
               style={btnSecondaryStyle}

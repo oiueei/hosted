@@ -175,6 +175,7 @@ export default function CollectionHero({
                 kind={collection.kind}
                 headline={headline}
                 isCurator={isCurator}
+                isNetwork={collection.mode === 'NETWORK'}
                 hasDateThings={hasDateThings}
                 downloads={downloads}
                 welcomeDocUrl={collection.welcome_doc_url || ''}
@@ -223,6 +224,11 @@ export default function CollectionHero({
           </h1>
           {collection.description && (
             <MarkdownText text={L(collection.description)} className="form-hero-text" />
+          )}
+          {/* What a network is, for whoever lands on one: it shows rather than claims
+              (DESIGN §6) — who lends, and from where, is on each card. */}
+          {collection.mode === 'NETWORK' && (
+            <p className="form-hero-text">{t('collectionPage.networkNote')}</p>
           )}
           {/* Attribution. With co-curators, one line names the whole team,
                 founder first, everyone at the same level and shown to everyone
@@ -317,9 +323,13 @@ export default function CollectionHero({
                 <ButtonLink to={`${base}/add`} style={btnStyle}>
                   {t('collectionPage.addThing')}
                 </ButtonLink>
-                <ButtonLink to={`${base}/edit`} style={btnSecondaryStyle}>
-                  {t('collectionPage.editCollection')}
-                </ButtonLink>
+                {/* In a network the settings are the founder's: each dinamizador
+                    edits their own point (it has its own page), not the group. */}
+                {(collection.mode !== 'NETWORK' || isOwner) && (
+                  <ButtonLink to={`${base}/edit`} style={btnSecondaryStyle}>
+                    {t('collectionPage.editCollection')}
+                  </ButtonLink>
+                )}
                 {/* The third button of the row (it was a quiet line
                       under the row, "Your collection is taking shape. Now invite your
                       circle →"): secondary, like "Edit collection", so the row keeps its

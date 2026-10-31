@@ -57,6 +57,9 @@ class InAppNotification(models.Model):
         # one per sign-up, to the founder and each co-curator, never to the one
         # joining. Joining is neither blocked nor approved; the team is told.
         MEMBER_JOINED = "MEMBER_JOINED"
+        # The founder of a network hid one of an entity's things (the rescue
+        # power): a notice to the thing's owner, who runs it and did not do it.
+        THING_HIDDEN = "THING_HIDDEN"
 
     code = models.CharField(max_length=6, primary_key=True, default=generate_id)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="inbox_notifications")

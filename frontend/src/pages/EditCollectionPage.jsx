@@ -137,6 +137,9 @@ export default function EditCollectionPage() {
       value: 'COMMUNITY',
     },
   ];
+  // A network is fixed at creation: it is shown, not chosen, and no other collection
+  // can become one (the server refuses both). Its mode is a sentence, not a radio.
+  const isNetwork = savedMode === 'NETWORK';
   // `savedMode` — not `mode` — is the current value here: a collection opened
   // before this deployment narrowed still shows the mode it is in, and keeps
   // showing it while the owner tries the alternatives. The server only judges a
@@ -389,7 +392,12 @@ export default function EditCollectionPage() {
             }
           }}
         />
-        {!isReservations && (
+        {isNetwork && (
+          <p className="form-hero-text" id="edit-collection-network-note">
+            {t('editCollection.networkFixed')}
+          </p>
+        )}
+        {!isReservations && !isNetwork && (
           <CollectionModeField
             idPrefix="edit-collection"
             label={t('editCollection.modeLabel')}

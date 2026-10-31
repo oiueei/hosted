@@ -122,6 +122,11 @@ function CreateCollectionForm({ kind }) {
       description: t('createCollection.modeCommunityDesc'),
       value: 'COMMUNITY',
     },
+    {
+      label: t('createCollection.modeNetwork'),
+      description: t('createCollection.modeNetworkDesc'),
+      value: 'NETWORK',
+    },
   ];
   // Both modes upstream. A deployment that withholds one drops it from the
   // group rather than disabling it — an unchoosable radio is noise — and
@@ -134,7 +139,11 @@ function CreateCollectionForm({ kind }) {
   // too, but a gift or a sale completes from the card and never reaches it, so the
   // note for that page, the closed days and the rental rules are for the other two.
   const hasRequestPage = kind !== 'STALL';
-  const MODE_OPTIONS = ALL_MODE_OPTIONS.filter((opt) =>
+  // A network is a way for a library to be run: no other kind offers it.
+  const KIND_MODE_OPTIONS = ALL_MODE_OPTIONS.filter(
+    (opt) => opt.value !== 'NETWORK' || kind === 'LIBRARY'
+  );
+  const MODE_OPTIONS = KIND_MODE_OPTIONS.filter((opt) =>
     isOfferable(capabilities, 'collection_modes', opt.value)
   );
 
@@ -269,7 +278,7 @@ function CreateCollectionForm({ kind }) {
             idPrefix="create-collection"
             label={t('createCollection.modeLabel')}
             options={MODE_OPTIONS}
-            catalogue={ALL_MODE_OPTIONS}
+            catalogue={KIND_MODE_OPTIONS}
             value={mode}
             onChange={handleModeChange}
           />

@@ -63,6 +63,8 @@ export default function ThingForm({
   setCondition,
   location,
   setLocation,
+  // A network's things are placed by their dinamizador's pickup point: no location asked.
+  askLocation = true,
   collectionTags = [],
   tags,
   setTags,
@@ -208,15 +210,17 @@ export default function ThingForm({
             onChange={(sel) => setCondition(sel.length > 0 ? sel[0].value : '')}
             clearable
           />
-          <TextInput
-            id={`${idPrefix}-location`}
-            label={t('addThing.locationLabel')}
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            helperText={`${location.length}/64`}
-            invalid={!!errors.location}
-            errorText={errors.location}
-          />
+          {askLocation && (
+            <TextInput
+              id={`${idPrefix}-location`}
+              label={t('addThing.locationLabel')}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              helperText={`${location.length}/64`}
+              invalid={!!errors.location}
+              errorText={errors.location}
+            />
+          )}
         </>
       )}
       {collectionTags.length > 0 && (

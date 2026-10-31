@@ -30,6 +30,8 @@ import useDocumentTitle from '../hooks/useDocumentTitle';
 import useHourlyReservation from '../hooks/useHourlyReservation';
 import JoinGroupNudge from '../components/request/JoinGroupNudge';
 import RequestSuccess from '../components/request/RequestSuccess';
+import NetworkPointLine from '../components/NetworkPointLine';
+import DepositPolicy from '../components/DepositPolicy';
 import ConstrainedRentalFields from '../components/request/ConstrainedRentalFields';
 import DayReservationFields from '../components/request/DayReservationFields';
 import HourlyReservationFields from '../components/request/HourlyReservationFields';
@@ -466,12 +468,20 @@ export default function RequestThingPage() {
         />
       ) : (
         <>
+          <NetworkPointLine point={thing.network_point} className="" />
           {hasAmount(thing.fee) && (
             <p>
               <strong>{t('request.priceLabel')}</strong>{' '}
               {t('request.priceValue', { fee: thing.fee })}
             </p>
           )}
+          {hasAmount(thing.deposit) && (
+            <p>
+              <strong>{t('thingPage.depositLabel')}</strong> {thing.deposit} €{' '}
+              {t('thingPage.depositRefundableNote')}
+            </p>
+          )}
+          <DepositPolicy thing={thing} />
           <div className="spacer-m" />
           {isDateBased && (
             <>

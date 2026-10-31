@@ -38,3 +38,12 @@ export function kindOfPrefix(prefix) {
   const kind = String(prefix || '').toUpperCase();
   return COLLECTION_KINDS.includes(kind) ? kind : undefined;
 }
+
+/**
+ * Whether a path segment has the shape of a code (of a user, a collection, a thing):
+ * six capitals and digits, what the server makes (`generate_id`). Not that it names
+ * anybody — only that it could, which is what the address of a network filtered by a
+ * dinamizador (`/library/ABC123/:curatorCode`) needs to tell a code that is nobody's
+ * from a path that is no page at all.
+ */
+export const isCodeShaped = (segment) => /^[A-Z0-9]{6}$/.test(String(segment ?? ''));

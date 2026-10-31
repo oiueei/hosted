@@ -232,6 +232,27 @@ COLLECTIONS = [
         "rental_weekdays": [0, 1, 2, 3, 4],
         "thumbnail": "1u1uC1",
     },
+    {
+        # The demo's one network: Lulu founds it and, with Lele and Lolo, runs it. Each
+        # of the three lends its own things from a pickup point of its own (see
+        # NETWORK_POINTS): Lulu's and Lele's answer for an invented entity, with days
+        # of their own and a closure; Lolo set no entity, so the network shows him by his
+        # own name. A network is always a library: it holds loans and rentals.
+        "code": "N3t0C1",
+        "theeeme_id": "BUU331",
+        "koro": "calm",
+        "owner_code": "1u1ucs",
+        "mode": "NETWORK",
+        "visibility": "PRIVATE",
+        "invites": ["La1aN1", "l1l13S", "L3L3oo", "l0l0oh"],
+        "co_owners": ["L3L3oo", "l0l0oh"],
+        "is_onboarding": True,
+        "kind": "LIBRARY",
+        "allowed_thing_types": ["LEND_THING", "RENT_THING"],
+        # The network's own days; a point's replace them where it sets some.
+        "rental_weekdays": [0, 1, 2, 3, 4],
+        "tags": [TAG_BRICOLAJE, TAG_JARDIN, TAG_COCINA],
+    },
 ]
 
 THINGS = [
@@ -909,6 +930,67 @@ THINGS = [
         "thumbnail": "1u1uC1",
         "location": "Taller de Lulu, racó de reunions",
     },
+    {
+        "code": "N3t001",
+        "type": "LEND_THING",
+        "owner_code": "1u1ucs",
+        "collections": ["N3t0C1"],
+        "condition": "GOOD",
+        "tags": [TAG_BRICOLAJE],
+    },
+    {
+        "code": "N3t002",
+        "type": "RENT_THING",
+        "owner_code": "1u1ucs",
+        "collections": ["N3t0C1"],
+        "fee": "3.00",
+        "condition": "GOOD",
+        "tags": [TAG_BRICOLAJE],
+    },
+    {
+        "code": "N3t003",
+        "type": "LEND_THING",
+        "owner_code": "L3L3oo",
+        "collections": ["N3t0C1"],
+        "deposit": "20.00",
+        "condition": "USED",
+        "tags": [TAG_JARDIN],
+    },
+    {
+        "code": "N3t004",
+        "type": "RENT_THING",
+        "owner_code": "L3L3oo",
+        "collections": ["N3t0C1"],
+        "fee": "2.00",
+        "deposit": "20.00",
+        "condition": "GOOD",
+        "tags": [TAG_COCINA],
+    },
+    {
+        "code": "N3t005",
+        "type": "LEND_THING",
+        "owner_code": "L3L3oo",
+        "collections": ["N3t0C1"],
+        "deposit": "20.00",
+        "condition": "GOOD",
+        "tags": [TAG_JARDIN],
+    },
+    {
+        "code": "N3t006",
+        "type": "LEND_THING",
+        "owner_code": "l0l0oh",
+        "collections": ["N3t0C1"],
+        "condition": "GOOD",
+        "tags": [TAG_COCINA],
+    },
+    {
+        "code": "N3t007",
+        "type": "LEND_THING",
+        "owner_code": "l0l0oh",
+        "collections": ["N3t0C1"],
+        "condition": "USED",
+        "tags": [TAG_BRICOLAJE],
+    },
 ]
 
 FAQS = [
@@ -1046,4 +1128,43 @@ PENDING_INVITATIONS = [
     ("INV001", "La1aC1", "l1l13S", 2),
     ("INV002", "La1aC1", "l0l0oh", 5),
     ("INV003", "La1aC1", "1u1ucs", 9),
+]
+
+
+# The pickup points of the demo network (`NetworkPoint`): one per dinamizador, each
+# answering for an entity that does not exist (the names and streets are invented).
+# Structure only; the hours of each point and the conditions it writes (deposit, request
+# note, email note) are text, in the per-language files. Lolo sets no entity so the
+# network shows him by his own name; he sets no days either, so the network's apply.
+NETWORK_POINTS = [
+    {
+        "code": "N3tP01",
+        "collection_code": "N3t0C1",
+        "user_code": "1u1ucs",
+        "entity_name": "Cooperativa Brúixola Menuda",
+        "address": "Carrer del Rellotge Aturat 7",
+        "contact": "",
+        "weekdays": [1, 3],
+        "closed_dates": ["2026-12-24", "2026-12-31"],
+    },
+    {
+        "code": "N3tP02",
+        "collection_code": "N3t0C1",
+        "user_code": "L3L3oo",
+        "entity_name": "Associació del Passatge dels Gats Sords",
+        "address": "Passatge dels Gats Sords 3",
+        "contact": "www.gatssords.example",
+        "weekdays": [5],
+        "closed_dates": ["2026-12-26", "2027-01-02"],
+    },
+    {
+        "code": "N3tP03",
+        "collection_code": "N3t0C1",
+        "user_code": "l0l0oh",
+        "entity_name": "",
+        "address": "Plaça de l'Arbre Fosc 2",
+        "contact": "",
+        "weekdays": [],
+        "closed_dates": [],
+    },
 ]

@@ -85,6 +85,8 @@ TEXTS = {
         "Tu solicitud o reserva ya no sigue en pie."
     ),
     "thing_left_holding": "Si la tienes tú, devuélvesela como acordasteis.",
+    "thing_withdrawn_subject": "Se ha retirado «{thing}» de {group}",
+    "thing_withdrawn_intro": "Se ha retirado «{thing}» de {group}, y tu solicitud queda anulada.",
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Te damos la bienvenida a '{collection}'",
     "welcome_doc_plain": (
@@ -197,6 +199,12 @@ TEXTS = {
     "decision_plain": (
         "Tu solicitud de {action} de '{thing}' ha sido {decision}. Ver la publicación: {url}"
     ),
+    "decision_by_confirmed": "{who} ha aceptado tu solicitud de {action}:",
+    "decision_by_declined": "{who} ha rechazado tu solicitud de {action}:",
+    "point_name_label": "Punto de recogida",
+    "point_address_label": "Dirección",
+    "point_hours_label": "Horario",
+    "point_contact_label": "Contacto",
     "decision_intro": "Tu solicitud de {action} ha sido {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Tu invitación fue rechazada",
@@ -265,6 +273,14 @@ TEXTS = {
         "No compartimos quién lo denunció. Échale un vistazo y asegúrate de que todo está en orden."
     ),
     "reported_review_cta": "Revisar la cosa",
+    "thing_hidden_subject": "{founder} ha ocultado una de tus cosas",
+    "thing_hidden_plain": (
+        "{founder} ha ocultado {thing} de {group}. Sigue siendo tuya: puedes volver a "
+        "mostrarla cuando quieras. {url}"
+    ),
+    "thing_hidden_intro": "{founder} ha ocultado esta cosa de {group}:",
+    "thing_hidden_outro": "Sigue siendo tuya: puedes volver a mostrarla cuando quieras.",
+    "thing_hidden_cta": "Revisar la cosa",
     # Broadcast (owner → invitees)
     "email_note_test_subject": "Tu nota del correo, tal como la verán — {collection}",
     "email_note_test_intro": (

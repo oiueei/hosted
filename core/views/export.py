@@ -107,7 +107,9 @@ class CollectionDataExportView(APIView):
         if denied:
             return denied
 
-        response = _download(build_collection_export(collection), collection.code)
+        response = _download(
+            build_collection_export(collection, user=request.user), collection.code
+        )
         security_logger.info(
             f"Collection {collection.code} exported by {request.user.code} "
             f"({len(response.content)} bytes)"

@@ -62,6 +62,7 @@ export default function EditThingPage() {
   const [toast, setToast] = useState(null);
   const [thingCollectionCode, setThingCollectionCode] = useState(code || '');
   const [thingCollectionKind, setThingCollectionKind] = useState('');
+  const [isNetwork, setIsNetwork] = useState(false);
   const [thingCollectionHeadline, setThingCollectionHeadline] = useState('');
   const [thingCollectionLanguage, setThingCollectionLanguage] = useState('');
   // The texts as loaded, not the live draft: typing must not flip the page's
@@ -98,6 +99,7 @@ export default function EditThingPage() {
           if (!code && data.collection_code) setThingCollectionCode(data.collection_code);
           if (data.collection_headline) setThingCollectionHeadline(data.collection_headline);
           setThingCollectionKind(data.collection_kind || '');
+          setIsNetwork(data.collection_mode === 'NETWORK');
           setCollectionAllowedTypes(data.collection_allowed_thing_types || []);
           setThingCollectionLanguage(data.collection_language || '');
           setThingPalette({
@@ -182,7 +184,8 @@ export default function EditThingPage() {
       // hint — clear any value a previous verb left stored so a dormant
       // "IMMEDIATE" can't outlive what it belonged to.
       body.availability = DATE_TYPES.includes(type) ? '' : availability || '';
-      body.location = location.trim();
+      // In a network the column is left as it is: the pickup point says where.
+      if (!isNetwork) body.location = location.trim();
       body.condition = condition || '';
     }
     body.gallery = gallery.map((g) => g.publicId);
@@ -246,6 +249,7 @@ export default function EditThingPage() {
           setCondition={setCondition}
           location={location}
           setLocation={setLocation}
+          askLocation={!isNetwork}
           collectionTags={collectionTags}
           tags={tags}
           setTags={setTags}

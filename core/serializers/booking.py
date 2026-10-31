@@ -40,6 +40,9 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
     # since). The once-a-day cap is not in it: `return_reminded_at` says when it
     # last went and the client greys the action out until tomorrow.
     can_remind_return = serializers.SerializerMethodField()
+    # Whether this reader may accept the request, or only reject it: the founder
+    # of a network sees every entity's requests but decides none of them.
+    can_decide = serializers.SerializerMethodField()
 
     class Meta:
         model = BookingPeriod
@@ -64,8 +67,15 @@ class BookingPeriodSerializer(serializers.ModelSerializer):
             "status",
             "project_note",
             "can_remind_return",
+            "can_decide",
             "return_reminded_at",
         ]
+
+    def get_can_decide(self, obj):
+        request = self.context.get("request")
+        if request is None or not request.user.is_authenticated:
+            return False
+        return obj.thing_code.can_manage(request.user.code)
 
     def get_can_remind_return(self, obj):
         request = self.context.get("request")

@@ -88,6 +88,10 @@ TEXTS = {
         "Your request or reservation for it no longer stands."
     ),
     "thing_left_holding": "If you have it with you, return it to them as you agreed.",
+    "thing_withdrawn_subject": "“{thing}” has been withdrawn from {group}",
+    "thing_withdrawn_intro": (
+        "“{thing}” has been withdrawn from {group}, and your request is cancelled."
+    ),
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Welcome to '{collection}'",
     "welcome_doc_plain": (
@@ -199,6 +203,12 @@ TEXTS = {
         "Your {action} request for '{thing}' {when} has been {decision}. View thing: {url}"
     ),
     "decision_plain": "Your {action} request for '{thing}' has been {decision}. View thing: {url}",
+    "decision_by_confirmed": "{who} has accepted your {action} request:",
+    "decision_by_declined": "{who} has declined your {action} request:",
+    "point_name_label": "Pickup point",
+    "point_address_label": "Address",
+    "point_hours_label": "Hours",
+    "point_contact_label": "Contact",
     "decision_intro": "Your {action} request has been {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "Your invitation was rejected",
@@ -264,6 +274,14 @@ TEXTS = {
         "We don't share who reported it. Please take a look and make sure everything is in order."
     ),
     "reported_review_cta": "Review the thing",
+    "thing_hidden_subject": "{founder} hid one of your things",
+    "thing_hidden_plain": (
+        "{founder} hid {thing} from {group}. It is still yours: you can show it again "
+        "whenever you like. {url}"
+    ),
+    "thing_hidden_intro": "{founder} hid this thing from {group}:",
+    "thing_hidden_outro": "It is still yours: you can show it again whenever you like.",
+    "thing_hidden_cta": "Review the thing",
     # Broadcast (owner → invitees)
     "email_note_test_subject": "Your email note, as members will see it — {collection}",
     "email_note_test_intro": (

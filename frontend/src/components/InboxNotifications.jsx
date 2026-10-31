@@ -27,6 +27,7 @@ const ALERT_TYPES = new Set([
   'COLLECTION_REVOKED',
   'BOOKING_REJECTED',
   'FAQ_HIDDEN',
+  'THING_HIDDEN',
   'INVITE_REJECTED',
   'THING_REPORTED',
   'INVITE_PROPOSAL_DECLINED',
@@ -260,6 +261,8 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.faqAnsweredLabel');
       case 'FAQ_HIDDEN':
         return t('home.faqHiddenLabel');
+      case 'THING_HIDDEN':
+        return t('home.thingHiddenLabel');
       case 'INVITE_REJECTED':
         return t('home.inviteRejectedLabel');
       case 'THING_REPORTED':
@@ -332,6 +335,11 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
         return t('home.faqAnsweredBody', {
           thing_headline: p.thing_headline,
           owner_name: p.owner_name,
+        });
+      case 'THING_HIDDEN':
+        return t('home.thingHiddenBody', {
+          thing_headline: p.thing_headline,
+          founder_name: named(p.founder_name),
         });
       case 'FAQ_HIDDEN':
         return t('home.faqHiddenBody', {
@@ -429,9 +437,18 @@ export default function InboxNotifications({ collection, reloadKey = 0, onNetwor
           thing_headline: p.thing_headline,
         });
       case 'PROMOTED_CO_OWNER':
-        return t('home.promotedBody', { collection_headline: p.collection_headline });
+        // In a network a dinamizador runs their own things only: the body says so.
+        return t(p.network ? 'home.promotedNetworkBody' : 'home.promotedBody', {
+          collection_headline: p.collection_headline,
+        });
       case 'DEMOTED_CO_OWNER':
-        return t('home.demotedBody', { collection_headline: p.collection_headline });
+        // In a network the things the dinamizador ran went with the role: say so.
+        return n.payload.things_deleted > 0
+          ? t('home.demotedNetworkBody', {
+              count: n.payload.things_deleted,
+              collection_headline: p.collection_headline,
+            })
+          : t('home.demotedBody', { collection_headline: p.collection_headline });
       default:
         return t('home.broadcastBody', { message: p.message });
     }

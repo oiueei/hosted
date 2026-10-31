@@ -62,6 +62,11 @@ COLLECTIONS = [
         "headline": "DEMO · Lulu's workshop — book a spot",
         "description": "Reserve a bench or the meeting corner to use here in the workshop. It's yours for the day (or up to three), nothing leaves the room, and the booking is confirmed straight away. Open Monday to Friday.",
     },
+    {
+        "code": "N3t0C1",
+        "headline": "DEMO · The Borrowing Network: each group lends its own",
+        "description": "Several groups lend from one shared shelf. Each keeps its own things, its own pickup point and its own hours: look for who lends what, and collect it where they tell you.",
+    },
 ]
 
 THINGS = [
@@ -407,6 +412,41 @@ THINGS = [
         "headline": "The meeting corner",
         "description": "Table, six chairs and a screen for a small meeting or a class. Free to book, up to three days. Please leave it as you found it.",
     },
+    {
+        "code": "N3t001",
+        "headline": "Cordless drill with a set of bits",
+        "description": "A light cordless drill with its charger and a case of bits for wood, wall and metal. Handy for shelves and curtain rails.",
+    },
+    {
+        "code": "N3t002",
+        "headline": "Steam cleaner for floors and windows",
+        "description": "Steam cleaner with the three nozzles: floors, windows and corners. Fill it with tap water and leave it to heat for five minutes.",
+    },
+    {
+        "code": "N3t003",
+        "headline": "Petrol hedge trimmer",
+        "description": "A 60 cm hedge trimmer, well used and still sharp. Goggles and gloves are lent with it; the first tank of fuel is on us.",
+    },
+    {
+        "code": "N3t004",
+        "headline": "Pressure cooker, 8 litres",
+        "description": "An 8-litre pressure cooker with a spare gasket. Good for pulses, stews and the big family lunch.",
+    },
+    {
+        "code": "N3t005",
+        "headline": "Garden hose with sprayers",
+        "description": "Twenty metres of hose with a spray gun and three fittings. Please empty it before bringing it back.",
+    },
+    {
+        "code": "N3t006",
+        "headline": "Stand mixer with dough hook",
+        "description": "A stand mixer with whisk, paddle and dough hook. Bread, cakes and meringues without the sore arms.",
+    },
+    {
+        "code": "N3t007",
+        "headline": "Folding ladder, 3 metres",
+        "description": "A three-metre aluminium ladder that folds into itself. Light enough for one person to carry.",
+    },
 ]
 
 FAQS = [
@@ -434,5 +474,31 @@ FAQS = [
         "thing_code": "La1a05",
         "question": "Can I pick it up at the end of the month?",
         "answer": "Abso-bloody-lutely!",
+    },
+]
+
+# The pickup points of the demo network: the hours (plain text, follows --lang) and the
+# conditions each point writes (localized like every owner text).
+NETWORK_POINTS = [
+    {
+        "code": "N3tP01",
+        "hours_note": "Tuesdays and Thursdays, 6 to 8 pm",
+        "deposit_policy": "",
+        "request_info": "",
+        "email_note": "",
+    },
+    {
+        "code": "N3tP02",
+        "hours_note": "Saturdays, 10 am to 1 pm",
+        "deposit_policy": "A 20 € deposit for each thing, handed over at pickup and given back as soon as it returns clean.",
+        "request_info": "Bring your member card. We only open on Saturdays; if you can't come, ask a neighbour to collect it for you.",
+        "email_note": "Ring the bell twice: we are in the basement, down the steps on the left.",
+    },
+    {
+        "code": "N3tP03",
+        "hours_note": "Weekday evenings, by arrangement",
+        "deposit_policy": "",
+        "request_info": "",
+        "email_note": "",
     },
 ]

@@ -3,7 +3,7 @@ Thing views for OIUEEI.
 """
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import prefetch_related_objects
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
@@ -19,7 +19,8 @@ from core.exceptions import RefusedField
 from core.models import Collection, Thing
 from core.models.collection import KIND_THING_TYPES
 from core.models.event import Event
-from core.permissions import IsThingManager
+from core.models.notification import InAppNotification
+from core.permissions import IsThingManager, IsThingManagerOrRescuer
 from core.serializers import (
     ThingBulkRowSerializer,
     ThingCreateSerializer,
@@ -32,7 +33,8 @@ from core.services.creator_policy import (
     community_contribution_types,
     thing_type_denial,
 )
-from core.services.deletion_events import deleting_as
+from core.services.email_service import send_thing_hidden_by_founder_email
+from core.services.membership_service import delete_thing
 from core.utils import parse_localized
 from core.views._helpers import refusal_body, type_validity_error, verb_from_price, viewer_code
 
@@ -114,7 +116,10 @@ class ThingViewSet(ModelViewSet):
         return ThingSerializer
 
     def get_permissions(self):
-        if self.action in ("update", "partial_update", "activate", "hide"):
+        if self.action == "hide":
+            # A manager of the thing, or the founder of the network it sits in.
+            return [IsAuthenticated(), IsThingManagerOrRescuer()]
+        if self.action in ("update", "partial_update", "activate"):
             # IsThingManager: the thing owner, or a curator of a PROPRIETARY
             # collection it sits in — those curators run the catalogue.
             return [IsAuthenticated(), IsThingManager()]
@@ -124,24 +129,16 @@ class ThingViewSet(ModelViewSet):
             return [AllowAny()]
         return [IsAuthenticated()]
 
-    def _can_delete(self, thing, user_code):
-        """A collection owner (any mode); a co-curator of a PROPRIETARY
-        collection it sits in; or the thing owner while it has never changed
-        hands."""
-        is_curator = Q(owner_id=user_code) | Q(
-            mode=Collection.Mode.PROPRIETARY, co_owners__code=user_code
-        )
-        if thing.collections.filter(is_curator).exists():
-            return True
-        return thing.is_owner(user_code) and not thing.transfers.exists()
-
     def get_object(self):
         obj = get_object_or_404(Thing, code=self.kwargs[self.lookup_field])
         if self.action == "retrieve":
             if not obj.can_view(viewer_code(self.request)):
                 self.permission_denied(self.request)
+            # The thing's collections and their co-owners, once: `can_manage`, the
+            # collection menu and `live_requesters_count` all ask who curates them.
+            prefetch_related_objects([obj], "collections__co_owners")
         elif self.action == "destroy":
-            if not self._can_delete(obj, self.request.user.code):
+            if not obj.can_delete(self.request.user.code):
                 self.permission_denied(self.request)
         else:
             self.check_object_permissions(self.request, obj)
@@ -240,9 +237,8 @@ class ThingViewSet(ModelViewSet):
     def perform_destroy(self, instance):
         # The THING_REMOVED event is written by the model's delete receiver; the
         # actor is whoever deleted it (collection owner or thing owner), not
-        # necessarily the current owner.
-        with deleting_as(self.request.user):
-            super().perform_destroy(instance)
+        # necessarily the current owner. Whoever had a live request is emailed.
+        delete_thing(instance, actor=self.request.user)
 
     def perform_update(self, serializer):
         # The type stays editable, but a PATCH can't move a thing to a type its
@@ -325,9 +321,36 @@ class ThingViewSet(ModelViewSet):
                 refusal_body("Only active things can be hidden.", code="thing_not_active"),
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # A rescue is hiding what you do not run but may rescue; a curator hiding
+        # another curator's thing in a PROPRIETARY collection is just managing it.
+        is_rescue = not thing.can_manage(request.user.code) and thing.can_rescue(request.user.code)
         thing.status = Thing.Status.INACTIVE
         thing.save(update_fields=["status"])
+        if is_rescue:
+            self._tell_owner_of_rescue(thing, request.user)
         return Response(ThingSerializer(thing, context=self.get_serializer_context()).data)
+
+    @staticmethod
+    def _tell_owner_of_rescue(thing, founder):
+        """The founder of a network hid an entity's thing: its owner hears of it."""
+        collection = next((c for c in thing.collections.all() if c.can_rescue(founder.code)), None)
+        InAppNotification.objects.create(
+            user=thing.owner,
+            type=InAppNotification.Type.THING_HIDDEN,
+            payload={
+                "thing_headline": thing.headline,
+                "founder_name": founder.name,
+                "thing_code": thing.code,
+                "collection_code": collection.code if collection else "",
+            },
+        )
+        send_thing_hidden_by_founder_email(
+            thing,
+            founder,
+            collection.headline if collection else "",
+            thing.owner.email,
+            collection=collection,
+        )
 
 
 class ThingBulkCreateView(APIView):

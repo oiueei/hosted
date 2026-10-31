@@ -4,7 +4,15 @@ import 'hds-core/lib/base.css';
 import './fonts/oiueei-fonts.css';
 import './styles/oiueei-theme.css';
 import { useEffect, useRef, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigationType,
+  useParams,
+} from 'react-router';
 import { useTranslation } from 'react-i18next';
 import i18n, { SUPPORTED_LANGUAGES } from './i18n';
 import RequireAuth from './components/RequireAuth';
@@ -12,7 +20,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import SiteFooter from './components/SiteFooter';
 import NewVersionNotice from './components/NewVersionNotice';
 import { deploymentRoutes } from './deployment';
-import { COLLECTION_PREFIXES, COLLECTION_KINDS } from './utils/collectionPath';
+import { COLLECTION_PREFIXES, COLLECTION_KINDS, isCodeShaped } from './utils/collectionPath';
 import './App.css';
 
 // Pages are lazy-loaded so each route ships as its own chunk: the initial bundle
@@ -26,6 +34,7 @@ const CollectionPage = lazy(() => import('./pages/CollectionPage'));
 const AddThingPage = lazy(() => import('./pages/AddThingPage'));
 const ImportThingsPage = lazy(() => import('./pages/ImportThingsPage'));
 const ImportInvitesPage = lazy(() => import('./pages/ImportInvitesPage'));
+const NetworkPointPage = lazy(() => import('./pages/NetworkPointPage'));
 const EditThingPage = lazy(() => import('./pages/EditThingPage'));
 const ThingPage = lazy(() => import('./pages/ThingPage'));
 const CreateCollectionPage = lazy(() => import('./pages/CreateCollectionPage'));
@@ -58,15 +67,48 @@ const ContactPage = lazy(() => import('./pages/ContactPage'));
  * the tree is written once and cannot drift between them. A function returning
  * `<Route>` elements rather than a component, because `<Routes>` only reads its
  * own `<Route>` children.
+ *
+ * **Every sub-route is `caseSensitive`.** A code is six capitals and digits and the
+ * sub-routes `delete` and `import` are six letters: React Router matches paths
+ * without regard to case by default, so a member whose code is `DELETE` would open
+ * `/library/ABC123/DELETE` — the address of a dinamizador's filter of the collection
+ * — on the page that deletes it. Lowercase paths stay what they were.
  */
+/**
+ * The collection's page, or the collection filtered by one of a network's
+ * dinamizadores (`/:curatorCode`). The optional segment is a user's code: six capitals
+ * and digits. Anything else there is not a page of the app (`/library/ABC123/foo`) and
+ * gets the usual "not found"; a code that names nobody shows the collection as it is.
+ */
+function CollectionRoute() {
+  const { curatorCode } = useParams();
+  if (curatorCode !== undefined && !isCodeShaped(curatorCode)) return <NotFoundPage />;
+  return <CollectionPage />;
+}
+
 const publicCollectionRoutes = (prefix) => [
-  <Route key={`${prefix}-page`} path={`/${prefix}/:code`} element={<CollectionPage />} />,
+  // One route for the collection and for the collection filtered by one of a network's
+  // dinamizadores (`/:curatorCode`, optional): a single route so that moving between
+  // filters keeps the page, and does not load the collection again. Its static sibling
+  // routes (all case-sensitive) outrank the optional segment; a code that names nobody
+  // shows the collection as it is.
+  <Route
+    key={`${prefix}-page`}
+    path={`/${prefix}/:code/:curatorCode?`}
+    element={<CollectionRoute />}
+  />,
   <Route
     key={`${prefix}-thing`}
+    caseSensitive
     path={`/${prefix}/:code/things/:thingCode`}
     element={<ThingPage />}
   />,
-  <Route key={`${prefix}-join`} path={`/${prefix}/:code/join`} element={<JoinPage />} />,
+  <Route
+    key={`${prefix}-join`}
+    caseSensitive
+    path={`/${prefix}/:code/join`}
+    element={<JoinPage />}
+  />,
 ];
 
 const protectedCollectionRoutes = (prefix) =>
@@ -81,9 +123,15 @@ const protectedCollectionRoutes = (prefix) =>
     ['things/:thingCode/request', <RequestThingPage />],
     ['things/:thingCode/delete', <DeleteThingPage />],
     ['invites/import', <ImportInvitesPage />],
+    ['point', <NetworkPointPage />],
     ['invites/remove', <RemoveGuestPage />],
   ].map(([sub, element]) => (
-    <Route key={`${prefix}-${sub}`} path={`/${prefix}/:code/${sub}`} element={element} />
+    <Route
+      key={`${prefix}-${sub}`}
+      caseSensitive
+      path={`/${prefix}/:code/${sub}`}
+      element={element}
+    />
   ));
 
 /**
@@ -95,9 +143,13 @@ const protectedCollectionRoutes = (prefix) =>
  * would make the skip link — which precedes `<main>` — unreachable by the first
  * forward Tab, defeating its purpose. On a fresh load focus stays at the top so
  * the skip link is the first tab stop.
+ *
+ * A navigation carrying `state.keepFocus` (the network filter's) leaves focus and scroll
+ * alone, unless it is a return to a history entry (`POP`); the path is still remembered.
  */
 function RouteFocusReset() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
+  const navigationType = useNavigationType();
   // Seed with the initial path so the first mount is a no-op. Comparing the
   // path (rather than a "first render" boolean) is also robust to StrictMode's
   // double effect-invocation in dev, which re-runs the effect with the same
@@ -106,10 +158,16 @@ function RouteFocusReset() {
   useEffect(() => {
     if (prevPath.current === pathname) return;
     prevPath.current = pathname;
+    // A move that is only the same page showing another slice of itself (a network's
+    // filter by dinamizador) asks to keep the reader where they are: the button they
+    // pressed keeps the focus and the list does not jump to the top.
+    // Not when coming *back* to such an entry (Back, Forward): the state travels with
+    // the history entry, and the page being returned to is a different place to arrive at.
+    if (state?.keepFocus && navigationType !== 'POP') return;
     const main = document.getElementById('main');
     if (main) main.focus();
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [pathname, state, navigationType]);
   return null;
 }
 
