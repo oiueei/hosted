@@ -96,6 +96,31 @@ describe('the network’s filter keeps the reader where they are', () => {
     expect(window.history.length).toBe(before);
   });
 
+  test('coming back to a filtered address from another page brings the focus to the main content', async () => {
+    await openApp();
+    const group = screen.getByRole('group', { name: 'Who lends' });
+    fireEvent.click(
+      Array.from(group.querySelectorAll('button')).find((b) => b.textContent.startsWith('Lele'))
+    );
+    // A real move within the app, from the footer: a new history entry after the filter.
+    fireEvent.click(screen.getByRole('link', { name: /Privacy & legal/ }));
+    // The move has landed once the app has taken the focus to the page (the address
+    // changes first; the page itself loads lazily).
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('main')));
+    expect(window.location.pathname).toBe('/legal');
+    document.getElementById('main').blur();
+    window.scrollTo.mockClear();
+
+    await act(async () => {
+      window.history.back();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    await waitFor(() => expect(window.location.pathname).toBe('/library/COL001/ENTA01'));
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('main')));
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+  });
+
   test('going to another page still brings the focus to the main content', async () => {
     await openApp();
 

@@ -4,7 +4,15 @@ import 'hds-core/lib/base.css';
 import './fonts/oiueei-fonts.css';
 import './styles/oiueei-theme.css';
 import { useEffect, useRef, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigationType,
+  useParams,
+} from 'react-router';
 import { useTranslation } from 'react-i18next';
 import i18n, { SUPPORTED_LANGUAGES } from './i18n';
 import RequireAuth from './components/RequireAuth';
@@ -137,10 +145,11 @@ const protectedCollectionRoutes = (prefix) =>
  * the skip link is the first tab stop.
  *
  * A navigation carrying `state.keepFocus` (the network filter's) leaves focus and scroll
- * alone; the path is still remembered.
+ * alone, unless it is a return to a history entry (`POP`); the path is still remembered.
  */
 function RouteFocusReset() {
   const { pathname, state } = useLocation();
+  const navigationType = useNavigationType();
   // Seed with the initial path so the first mount is a no-op. Comparing the
   // path (rather than a "first render" boolean) is also robust to StrictMode's
   // double effect-invocation in dev, which re-runs the effect with the same
@@ -152,11 +161,13 @@ function RouteFocusReset() {
     // A move that is only the same page showing another slice of itself (a network's
     // filter by dinamizador) asks to keep the reader where they are: the button they
     // pressed keeps the focus and the list does not jump to the top.
-    if (state?.keepFocus) return;
+    // Not when coming *back* to such an entry (Back, Forward): the state travels with
+    // the history entry, and the page being returned to is a different place to arrive at.
+    if (state?.keepFocus && navigationType !== 'POP') return;
     const main = document.getElementById('main');
     if (main) main.focus();
     window.scrollTo(0, 0);
-  }, [pathname, state]);
+  }, [pathname, state, navigationType]);
   return null;
 }
 
