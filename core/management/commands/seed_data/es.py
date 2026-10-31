@@ -65,6 +65,11 @@ COLLECTIONS = [
         "headline": "DEMO · El taller de Lulu — reserva un sitio",
         "description": "Reserva un banco o el rincón de reuniones para usarlo aquí, en el taller. Es tuyo por un día (o hasta tres), nada sale de la sala y la reserva se confirma al momento. Abierto de lunes a viernes.",
     },
+    {
+        "code": "N3t0C1",
+        "headline": "DEMO · La Red de Préstamo: cada entidad presta lo suyo",
+        "description": "Varias entidades prestan desde una misma estantería. Cada una guarda sus cosas, su punto de recogida y su horario: busca quién presta qué y recógelo donde te indiquen.",
+    },
 ]
 
 THINGS = [
@@ -410,6 +415,41 @@ THINGS = [
         "headline": "El rincón de reuniones",
         "description": "Mesa, seis sillas y una pantalla para una reunión pequeña o una clase. Reservarlo es gratis, hasta tres días. Déjalo como lo encontraste, por favor.",
     },
+    {
+        "code": "N3t001",
+        "headline": "Taladro inalámbrico con juego de brocas",
+        "description": "Un taladro ligero con su cargador y un estuche de brocas para madera, pared y metal. Útil para estantes y barras de cortina.",
+    },
+    {
+        "code": "N3t002",
+        "headline": "Vaporeta para suelos y cristales",
+        "description": "Vaporeta con las tres boquillas: suelos, cristales y rincones. Se llena con agua del grifo y se deja calentar cinco minutos.",
+    },
+    {
+        "code": "N3t003",
+        "headline": "Cortasetos de gasolina",
+        "description": "Un cortasetos de 60 cm, muy usado y todavía afilado. Se presta con gafas y guantes; el primer depósito de combustible corre de nuestra cuenta.",
+    },
+    {
+        "code": "N3t004",
+        "headline": "Olla a presión de 8 litros",
+        "description": "Una olla a presión de 8 litros con junta de repuesto. Va bien para legumbres, guisos y la comida grande de familia.",
+    },
+    {
+        "code": "N3t005",
+        "headline": "Manguera de jardín con pistolas",
+        "description": "Veinte metros de manguera con pistola de riego y tres conectores. Por favor, vacíala antes de devolverla.",
+    },
+    {
+        "code": "N3t006",
+        "headline": "Batidora de pie con gancho de amasar",
+        "description": "Una batidora de pie con varillas, pala y gancho de amasar. Pan, bizcochos y merengues sin dolor de brazos.",
+    },
+    {
+        "code": "N3t007",
+        "headline": "Escalera plegable de 3 metros",
+        "description": "Una escalera de aluminio de tres metros que se pliega sobre sí misma. Tan ligera que la puede llevar una sola persona.",
+    },
 ]
 
 FAQS = [
@@ -437,5 +477,31 @@ FAQS = [
         "thing_code": "La1a05",
         "question": "¿Puedo recogerlo a fin de mes?",
         "answer": "¡Claro que sí, majo!",
+    },
+]
+
+# The pickup points of the demo network: the hours (plain text, follows --lang) and the
+# conditions each point writes (localized like every owner text).
+NETWORK_POINTS = [
+    {
+        "code": "N3tP01",
+        "hours_note": "Martes y jueves de 18 a 20 h",
+        "deposit_policy": "",
+        "request_info": "",
+        "email_note": "",
+    },
+    {
+        "code": "N3tP02",
+        "hours_note": "Sábados de 10 a 13 h",
+        "deposit_policy": "20 € de fianza por cosa, que se entregan al recoger y se devuelven en cuanto vuelve limpia.",
+        "request_info": "Trae el carné de socio. Solo abrimos los sábados; si no puedes venir, pídele a un vecino que la recoja por ti.",
+        "email_note": "Llama dos veces al timbre: estamos en el sótano, bajando los escalones de la izquierda.",
+    },
+    {
+        "code": "N3tP03",
+        "hours_note": "Tardes entre semana, por acuerdo",
+        "deposit_policy": "",
+        "request_info": "",
+        "email_note": "",
     },
 ]

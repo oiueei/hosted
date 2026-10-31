@@ -67,6 +67,11 @@ COLLECTIONS = [
         "headline": "DEMO · El taller de la Lulu — reserva un lloc",
         "description": "Reserva un banc o el racó de reunions per usar-lo aquí, al taller. És teu per un dia (o fins a tres), res no surt de la sala i la reserva es confirma a l'instant. Obert de dilluns a divendres.",
     },
+    {
+        "code": "N3t0C1",
+        "headline": "DEMO · La Xarxa de Préstec: cada entitat presta el que és seu",
+        "description": "Diverses entitats presten des d'un mateix prestatge. Cada una té les seves coses, el seu punt de recollida i el seu horari: mira qui presta què i recull-ho on t'indiquin.",
+    },
 ]
 
 THINGS = [
@@ -412,6 +417,41 @@ THINGS = [
         "headline": "El racó de reunions",
         "description": "Taula, sis cadires i una pantalla per a una reunió petita o una classe. Reservar-lo és gratis, fins a tres dies. Deixa'l com el vas trobar, si us plau.",
     },
+    {
+        "code": "N3t001",
+        "headline": "Trepant sense cable amb joc de broques",
+        "description": "Un trepant lleuger amb el seu carregador i un estoig de broques per a fusta, paret i metall. Va bé per a prestatges i barres de cortina.",
+    },
+    {
+        "code": "N3t002",
+        "headline": "Vaporeta per a terres i vidres",
+        "description": "Vaporeta amb les tres boquilles: terres, vidres i racons. S'omple amb aigua de l'aixeta i es deixa escalfar cinc minuts.",
+    },
+    {
+        "code": "N3t003",
+        "headline": "Talla-sebs de gasolina",
+        "description": "Un talla-sebs de 60 cm, molt fet servir i encara esmolat. Es presta amb ulleres i guants; el primer dipòsit de combustible el posem nosaltres.",
+    },
+    {
+        "code": "N3t004",
+        "headline": "Olla a pressió de 8 litres",
+        "description": "Una olla a pressió de 8 litres amb junta de recanvi. Va bé per a llegums, guisats i el dinar gran de família.",
+    },
+    {
+        "code": "N3t005",
+        "headline": "Mànega de jardí amb pistoles",
+        "description": "Vint metres de mànega amb pistola de reg i tres connectors. Si us plau, buida-la abans de tornar-la.",
+    },
+    {
+        "code": "N3t006",
+        "headline": "Batedora de peu amb ganxo de pastar",
+        "description": "Una batedora de peu amb vareta, pala i ganxo de pastar. Pa, pastissos i merengues sense mal de braços.",
+    },
+    {
+        "code": "N3t007",
+        "headline": "Escala plegable de 3 metres",
+        "description": "Una escala d'alumini de tres metres que es plega sobre ella mateixa. Tan lleugera que la porta una sola persona.",
+    },
 ]
 
 FAQS = [
@@ -439,5 +479,31 @@ FAQS = [
         "thing_code": "La1a05",
         "question": "Puc recollir-ho a final de mes?",
         "answer": "És clar que sí, maco!",
+    },
+]
+
+# The pickup points of the demo network: the hours (plain text, follows --lang) and the
+# conditions each point writes (localized like every owner text).
+NETWORK_POINTS = [
+    {
+        "code": "N3tP01",
+        "hours_note": "Dimarts i dijous de 18 a 20 h",
+        "deposit_policy": "",
+        "request_info": "",
+        "email_note": "",
+    },
+    {
+        "code": "N3tP02",
+        "hours_note": "Dissabtes de 10 a 13 h",
+        "deposit_policy": "20 € de fiança per cosa, que es lliuren en recollir i es retornen tan bon punt torna neta.",
+        "request_info": "Porta el carnet de soci. Només obrim els dissabtes; si no pots venir, demana a un veí que la reculli per tu.",
+        "email_note": "Truca dues vegades al timbre: som al soterrani, baixant els esglaons de l'esquerra.",
+    },
+    {
+        "code": "N3tP03",
+        "hours_note": "Tardes entre setmana, per acord",
+        "deposit_policy": "",
+        "request_info": "",
+        "email_note": "",
     },
 ]

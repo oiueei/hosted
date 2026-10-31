@@ -81,7 +81,7 @@ class TestDemoCollectionsSayTheyAreDemos:
 class TestSeedFileParity:
     """Every language file must translate the same rows and the same fields."""
 
-    @pytest.mark.parametrize("entity", ["USERS", "COLLECTIONS", "THINGS", "FAQS"])
+    @pytest.mark.parametrize("entity", ["USERS", "COLLECTIONS", "THINGS", "FAQS", "NETWORK_POINTS"])
     def test_same_rows_and_fields_in_every_language(self, entity):
         key = _MERGE_KEYS[entity]
         reference = {row[key]: set(row) for row in getattr(LANG_MODULES["en"], entity)}
@@ -100,6 +100,11 @@ class TestSeedFileParity:
                 assert len(row.get("headline", "")) <= HEADLINE_LIMIT, (code, row)
             for row in module.FAQS:
                 assert len(row["question"]) <= 64 and len(row["answer"]) <= 256, (code, row)
+            for row in module.NETWORK_POINTS:
+                assert len(row["hours_note"]) <= 128, (code, row)
+                assert len(row["deposit_policy"]) <= 256, (code, row)
+                assert len(row["request_info"]) <= 512, (code, row)
+                assert len(row["email_note"]) <= 512, (code, row)
 
 
 class TestMergedSeedData:
@@ -262,3 +267,141 @@ class TestRelaunchingTheSeedLeavesEveryoneElseWhereTheyAre:
         call_command("seed_demo", lang="en", verbosity=0)
 
         assert snapshot() == first
+
+
+@pytest.mark.django_db
+class TestTheDemoNetwork:
+    """One network in the demo, with the three dinamizadores' pickup points: entities that
+    do not exist, days of their own, a closure, one with its own deposit and contact, and
+    one with no entity so the person's name shows."""
+
+    NETWORK = "N3t0C1"
+
+    @staticmethod
+    def _points():
+        from core.models import NetworkPoint
+
+        return {p.user_id: p for p in NetworkPoint.objects.filter(collection_id="N3t0C1")}
+
+    def test_it_is_a_network_run_by_three_dinamizadores(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        network = Collection.objects.get(code=self.NETWORK)
+        assert network.mode == Collection.Mode.NETWORK
+        assert network.kind == Collection.Kind.LIBRARY
+        assert {network.owner_id, *network.co_owners.values_list("code", flat=True)} == {
+            "1u1ucs",
+            "L3L3oo",
+            "l0l0oh",
+        }
+        assert set(self._points()) == {"1u1ucs", "L3L3oo", "l0l0oh"}
+
+    def test_every_thing_of_it_belongs_to_a_dinamizador_with_a_point(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        owners = set(
+            Collection.objects.get(code=self.NETWORK).things.values_list("owner_id", flat=True)
+        )
+        assert owners == set(self._points())
+
+    def test_the_points_differ_in_their_days_and_one_of_them_closes(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+        points = self._points()
+
+        assert points["1u1ucs"].weekdays == [1, 3]
+        assert points["L3L3oo"].weekdays == [5]
+        assert points["l0l0oh"].weekdays == []
+        assert points["L3L3oo"].closed_dates
+        assert points["1u1ucs"].closed_dates
+
+    def test_one_point_has_no_entity_and_the_persons_name_shows(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+        points = self._points()
+
+        assert points["l0l0oh"].entity_name == ""
+        assert points["l0l0oh"].display_name == "Lolo"
+        assert points["L3L3oo"].display_name == "Associació del Passatge dels Gats Sords"
+
+    def test_one_point_has_its_own_deposit_and_contact_and_they_reach_its_things(self):
+        call_command("seed_demo", lang="en", verbosity=0)
+        network = Collection.objects.get(code=self.NETWORK)
+        lele = self._points()["L3L3oo"]
+
+        assert lele.contact and lele.deposit_policy
+        policy = parse_localized(network.effective_text("deposit_policy", "L3L3oo"))
+        assert set(policy) == {"es", "ca", "en"}
+        assert network.effective_text("deposit_policy", "1u1ucs") == ""
+        assert Thing.objects.filter(owner_id="L3L3oo", collections=network, deposit__gt=0).exists()
+
+    def test_the_deposit_of_that_point_is_on_the_page_of_its_things(self):
+        from rest_framework.test import APIClient
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        call_command("seed_demo", lang="en", verbosity=0)
+        client = APIClient()
+        member = User.objects.get(code="l1l13S")
+        client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(member).access_token}"
+        )
+
+        mine = client.get(f"/api/v1/things/N3t003/?collection={self.NETWORK}").data
+        other = client.get(f"/api/v1/things/N3t001/?collection={self.NETWORK}").data
+
+        assert str(mine["deposit"]) == "20.00"
+        assert parse_localized(mine["deposit_policy"])["en"].startswith("A 20 € deposit")
+        assert mine["network_point"]["display_name"] == "Associació del Passatge dels Gats Sords"
+        assert other["deposit_policy"] == ""
+
+    def test_the_hours_follow_the_language_asked_and_the_conditions_carry_all_three(self):
+        call_command("seed_demo", lang="ca", verbosity=0)
+        lele = self._points()["L3L3oo"]
+
+        assert lele.hours_note == "Dissabtes de 10 a 13 h"
+        assert set(parse_localized(lele.request_info)) == {"es", "ca", "en"}
+
+    def test_the_seeded_points_are_what_the_api_would_accept(self):
+        from core.serializers.network_point import NetworkPointWriteSerializer
+
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        for user_code, point in self._points().items():
+            serializer = NetworkPointWriteSerializer(
+                data={
+                    "entity_name": point.entity_name,
+                    "address": point.address,
+                    "hours_note": point.hours_note,
+                    "contact": point.contact,
+                    "weekdays": point.weekdays,
+                    "closed_dates": ",".join(
+                        d.strftime("%d/%m/%Y") for d in sorted(point.closed_date_set())
+                    ),
+                    "deposit_policy": point.deposit_policy,
+                    "request_info": point.request_info,
+                    "email_note": point.email_note,
+                }
+            )
+            assert serializer.is_valid(), (user_code, serializer.errors)
+
+    def test_running_it_again_leaves_the_same_points(self):
+        from core.models import NetworkPoint
+
+        call_command("seed_demo", lang="en", verbosity=0)
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        assert NetworkPoint.objects.count() == 3
+
+    def test_a_point_of_a_character_the_seed_no_longer_places_goes_and_a_real_ones_stays(self):
+        from core.models import NetworkPoint
+
+        call_command("seed_demo", lang="en", verbosity=0)
+        network = Collection.objects.get(code=self.NETWORK)
+        stray = NetworkPoint.objects.create(collection=network, user_id="La1aN1")
+        real = User.objects.create(code="REAL01", email="real@your-domain.test", name="Real")
+        network.invites.add(real)
+        network.co_owners.add(real)
+        kept = NetworkPoint.objects.create(collection=network, user=real, entity_name="Real Co-op")
+
+        call_command("seed_demo", lang="en", verbosity=0)
+
+        assert not NetworkPoint.objects.filter(pk=stray.pk).exists()
+        assert NetworkPoint.objects.filter(pk=kept.pk).exists()
