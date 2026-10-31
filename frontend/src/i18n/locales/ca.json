@@ -1115,7 +1115,8 @@
     "notANetwork": "Només una xarxa té punts de recollida.",
     "notADinamizador": "Només l'equip de la xarxa té un punt de recollida.",
     "menuEntry": "El meu punt de recollida",
-    "lentBy": "Ho presta {{name}}"
+    "lentBy": "Ho presta {{name}}",
+    "filterLabel": "Qui presta"
   },
   "closedDates": {
     "label": "Festius i tancaments",

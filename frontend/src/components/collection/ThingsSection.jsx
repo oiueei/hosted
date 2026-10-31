@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'hds-react';
 import ThingLinkbox from '../ThingLinkbox';
 import useTheeeme from '../../hooks/useTheeeme';
 import { useLocalized } from '../../utils/localized';
+import { collectionPath } from '../../utils/collectionPath';
 
 /**
  * Cards mounted before the "Show more" button appears.
@@ -22,6 +24,29 @@ import { useLocalized } from '../../utils/localized';
 const CARDS_PER_PAGE = 24;
 
 /**
+ * The dinamizadores of a network with at least one visible thing: their code, the name
+ * of their pickup point and how many things they show, by name. A thing carries the
+ * name its server resolved (`network_point.display_name`).
+ */
+function lendersOf(collection, visibleThings, t) {
+  const curators = new Set([collection.owner, ...(collection.co_owners || []).map((c) => c.code)]);
+  const byCode = new Map();
+  for (const thing of visibleThings) {
+    if (!curators.has(thing.owner)) continue;
+    const known = byCode.get(thing.owner);
+    if (known) known.count += 1;
+    else {
+      byCode.set(thing.owner, {
+        code: thing.owner,
+        name: thing.network_point?.display_name || thing.owner_name || t('common.aMember'),
+        count: 1,
+      });
+    }
+  }
+  return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
  * The collection's things: the tag chips, the grid of active cards with its
  * "Show more", and what an empty group or an empty tag says. `onUpdateThing` and
  * `onJoinedGroup` are the page's own (stable) callbacks, handed straight to the
@@ -38,6 +63,10 @@ export default function ThingsSection({
   const { t } = useTranslation();
   const { btnSecondaryStyle } = useTheeeme();
   const L = useLocalized();
+  const navigate = useNavigate();
+  // The dinamizador of a network the page is filtered by lives in the address
+  // (`/library/:code/:curatorCode`), so a filtered view can be shared.
+  const { curatorCode } = useParams();
   const [activeTag, setActiveTag] = useState(null);
   const [shownCount, setShownCount] = useState(CARDS_PER_PAGE);
   const userCode = localStorage.getItem('userCode');
@@ -50,9 +79,25 @@ export default function ThingsSection({
   const visibleThings = collection.things.filter((thg) => thg.status !== 'INACTIVE');
   const collectionTags = collection.tags || [];
   const effectiveTag = activeTag && collectionTags.includes(activeTag) ? activeTag : null;
-  const matchingThings = effectiveTag
-    ? visibleThings.filter((thg) => (thg.tags || []).includes(effectiveTag))
-    : visibleThings;
+
+  // A network's dinamizadores that have something to show, each by the name of their
+  // pickup point (the entity's, else their own — resolved by the server on the thing).
+  // Only a dinamizador of this network counts, and only with a visible thing.
+  const lenders = collection.mode === 'NETWORK' ? lendersOf(collection, visibleThings, t) : [];
+  // An address naming anybody else (not a dinamizador, not a network) is the collection
+  // as it is, with no error.
+  const effectiveLender = lenders.some((l) => l.code === curatorCode) ? curatorCode : null;
+  const base = collectionPath(code, collection.kind);
+  const chooseLender = (lenderCode) => {
+    setShownCount(CARDS_PER_PAGE);
+    navigate(lenderCode ? `${base}/${lenderCode}` : base);
+  };
+
+  const matchingThings = visibleThings.filter(
+    (thg) =>
+      (!effectiveTag || (thg.tags || []).includes(effectiveTag)) &&
+      (!effectiveLender || thg.owner === effectiveLender)
+  );
   // Newest first, then capped at what's actually been asked for. Sorting before
   // the slice is what makes "Show more" append older things rather than reshuffle.
   const sortedThings = [...matchingThings].sort(
@@ -107,6 +152,30 @@ export default function ThingsSection({
               </button>
             );
           })}
+        </div>
+      )}
+      {/* The same chips, by who lends: a second row that combines with the tags. */}
+      {visibleThings.length > 0 && lenders.length > 0 && (
+        <div className="tag-filter-bar" role="group" aria-label={t('networkPoint.filterLabel')}>
+          <button
+            type="button"
+            className="tag-chip"
+            aria-pressed={!effectiveLender}
+            onClick={() => chooseLender(null)}
+          >
+            {t('collectionPage.allTags')} ({visibleThings.length})
+          </button>
+          {lenders.map((lender) => (
+            <button
+              key={lender.code}
+              type="button"
+              className="tag-chip"
+              aria-pressed={effectiveLender === lender.code}
+              onClick={() => chooseLender(effectiveLender === lender.code ? null : lender.code)}
+            >
+              {lender.name} ({lender.count})
+            </button>
+          ))}
         </div>
       )}
       {visibleThings.length === 0 ? (

@@ -67,7 +67,16 @@ const ContactPage = lazy(() => import('./pages/ContactPage'));
  * — on the page that deletes it. Lowercase paths stay what they were.
  */
 const publicCollectionRoutes = (prefix) => [
-  <Route key={`${prefix}-page`} path={`/${prefix}/:code`} element={<CollectionPage />} />,
+  // One route for the collection and for the collection filtered by one of a network's
+  // dinamizadores (`/:curatorCode`, optional): a single route so that moving between
+  // filters keeps the page, and does not load the collection again. Its static sibling
+  // routes (all case-sensitive) outrank the optional segment; a code that names nobody
+  // shows the collection as it is.
+  <Route
+    key={`${prefix}-page`}
+    path={`/${prefix}/:code/:curatorCode?`}
+    element={<CollectionPage />}
+  />,
   <Route
     key={`${prefix}-thing`}
     caseSensitive

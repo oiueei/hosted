@@ -49,11 +49,13 @@ describe('the sub-routes of a collection tell case apart', () => {
   });
 
   test.each(['DELETE', 'IMPORT', 'Delete'])(
-    '%s is not the page that deletes or imports: no such page to open',
+    '%s is not the page that deletes or imports: it is the collection, as a code that names nobody',
     async (segment) => {
       await openApp(`/library/COL001/${segment}`);
 
-      expect(await screen.findByText('Page not found')).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'The lending library' })
+      ).toBeVisible();
       expect(screen.queryByRole('heading', { name: /Delete/ })).toBeNull();
       expect(screen.queryByRole('heading', { name: 'Add several at once (CSV)' })).toBeNull();
     }
@@ -70,6 +72,9 @@ describe('the sub-routes of a collection tell case apart', () => {
   test('the public sub-routes tell case apart too', async () => {
     await openApp('/library/COL001/JOIN');
 
-    expect(await screen.findByText('Page not found')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'The lending library' })
+    ).toBeVisible();
+    expect(screen.queryByRole('heading', { name: /Join/ })).toBeNull();
   });
 });

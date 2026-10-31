@@ -166,8 +166,10 @@ export default function CollectionPage() {
     // `error` holds the i18n *key*, translated where it is painted, so this effect
     // never reads `t`: `useCollectionLanguage` changes the language once the first
     // response lands, `t` gets a new identity, and listing it here fetched the
-    // whole collection a second time.
-  }, [code, navigate]);
+    // whole collection a second time. Nor `navigate`: it is not read here, and its
+    // identity changes with every address, so listing it loaded the collection again
+    // each time a network's filter moved the address.
+  }, [code]);
 
   if (error) {
     // Not being allowed in is a fact about the reader's access, not a fault: it
