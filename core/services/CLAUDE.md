@@ -96,6 +96,11 @@ The payload keys that make this work (`booking_code`, `thing_code`, `collection_
 
 ---
 
+
+### Rules of a network's things (`Collection.rental_rules_for`, `effective_text`)
+
+`booking_service.request_date_based_booking` asks `rental_collection.rental_violation(start, end, owner_code=thing.owner_id)`, `Thing.availability_window` reads `collection.rental_rules_for(owner_id)` and `ThingSerializer` serves the same answer (`rental_weekdays`, `closed_dates`, and the notes through `effective_text`), so the server's refusal, the card's live availability and the request page's pickers cannot disagree (`test_network_effective_rules.py` walks 45 days comparing the payload with the refusal). `resolve_rental_collection` returns a network even when the collection itself sets no rule, because its pickup points carry theirs. `receives_booking_requests` adds the founder of a NETWORK: they reject pending requests as a rescue before having uploaded a thing.
+
 ### `email_service.py` — Centralised Email Sending
 
 All outbound emails are composed and sent from this module. Views call these functions rather than constructing emails inline.
@@ -442,6 +447,8 @@ A curator downloads their collection's upcoming **date-based** reservations (LEN
 ### `membership_service.py` — Ending a Membership
 
 `end_membership(collection, user, *, actor)` is the one place a person leaves `invites`: inside `transaction.atomic()` and `deleting_as(actor)` it deletes every `Thing` the user owns in the collection (`things_leaving_with`: any status, both modes, so each `THING_REMOVED` names who acted), then removes them from `invites` and `co_owners`, and returns how many things went. **It raises `ValueError` for the founder** (an FK, never a member: their things are not the member rule's to delete) before touching anything. A thing lives in one collection and its owner always has access to it, so the things go with the person. Running activity does not hold the deletion back; the live requests and reservations (`BookingPeriod.blocking_filter`) are read first, and on commit one `send_thing_left_with_owner_email` goes to each requester — once per requester and thing, never to the leaving member, and nothing if the transaction rolls back. Used by `CollectionLeaveView` and the accepted-member branch of `CollectionInviteView` DELETE; demotion (`CollectionCoOwnerView`) and the pending-invitation branch do not call it, and account erasure already deletes by CASCADE.
+
+**In a network**, a dinamizador who stops being one takes the role's weight with them. `demote_curator(collection, user, *, actor)` (demotion) and `end_membership` (removal or leaving) delete their things **and their `NetworkPoint`** in the same transaction, and email whoever had a live request on one of those things once it commits. `network_exit_block(collection, user, *, removing)` is what says no first: it returns `("curator_things_lent_out", headlines)` while one of their things is out (an accepted loan or rental that has started and has not reached its end date: there is no "returned" state), and — when removing, which also ends what they hold themselves — `("member_holds_loans", headlines)` while they have a started loan in hand; `None` outside a network. Erasing an account is never blocked (the cascade also takes the point), and tells whoever held a thing the way a member leaving does.
 
 ### `deletion_events.py` — Log a Deletion Whichever Way the Row Goes
 
