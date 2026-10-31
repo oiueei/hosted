@@ -505,6 +505,8 @@
     "goesPhotos": "La cosa i les seves fotos.",
     "goesFaq": "Totes les preguntes que va fer altra gent sobre ell, i les seves respostes.",
     "goesHolds": "Qualsevol sol·licitud pendent, i el registre del recorregut que ha fet.",
+    "liveRequesters_one": "Una persona té una sol·licitud pendent o acceptada d'aquesta cosa: l'avisarem per correu.",
+    "liveRequesters_other": "{{count}} persones tenen una sol·licitud pendent o acceptada d'aquesta cosa: les avisarem per correu.",
     "errorDeleting": "Error en eliminar la cosa."
   },
   "deleteCollection": {
