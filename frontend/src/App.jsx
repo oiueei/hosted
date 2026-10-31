@@ -123,9 +123,12 @@ const protectedCollectionRoutes = (prefix) =>
  * would make the skip link — which precedes `<main>` — unreachable by the first
  * forward Tab, defeating its purpose. On a fresh load focus stays at the top so
  * the skip link is the first tab stop.
+ *
+ * A navigation carrying `state.keepFocus` (the network filter's) leaves focus and scroll
+ * alone; the path is still remembered.
  */
 function RouteFocusReset() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   // Seed with the initial path so the first mount is a no-op. Comparing the
   // path (rather than a "first render" boolean) is also robust to StrictMode's
   // double effect-invocation in dev, which re-runs the effect with the same
@@ -134,10 +137,14 @@ function RouteFocusReset() {
   useEffect(() => {
     if (prevPath.current === pathname) return;
     prevPath.current = pathname;
+    // A move that is only the same page showing another slice of itself (a network's
+    // filter by dinamizador) asks to keep the reader where they are: the button they
+    // pressed keeps the focus and the list does not jump to the top.
+    if (state?.keepFocus) return;
     const main = document.getElementById('main');
     if (main) main.focus();
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [pathname, state]);
   return null;
 }
 

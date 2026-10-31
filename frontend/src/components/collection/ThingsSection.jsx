@@ -90,7 +90,14 @@ export default function ThingsSection({
   const base = collectionPath(code, collection.kind);
   const chooseLender = (lenderCode) => {
     setShownCount(CARDS_PER_PAGE);
-    navigate(lenderCode ? `${base}/${lenderCode}` : base);
+    // `replace`: a filter is a slice of the page, like a tag, and leaves no history for
+    // "Back" to walk through. `keepFocus`: the button pressed keeps the focus and the
+    // list stays where it is (see RouteFocusReset in App.jsx). The address is still the
+    // filtered one, to share and to open.
+    navigate(lenderCode ? `${base}/${lenderCode}` : base, {
+      replace: true,
+      state: { keepFocus: true },
+    });
   };
 
   const matchingThings = visibleThings.filter(
