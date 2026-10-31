@@ -161,8 +161,10 @@ export default function ThingsSection({
           })}
         </div>
       )}
-      {/* The same chips, by who lends: a second row that combines with the tags. */}
-      {visibleThings.length > 0 && lenders.length > 0 && (
+      {/* The same chips, by who lends: a second row that combines with the tags. With a
+          single dinamizador it would be "All (5)" next to "Fusteria (5)": the same button
+          twice, so there is no row until there are two. */}
+      {visibleThings.length > 0 && lenders.length > 1 && (
         <div className="tag-filter-bar" role="group" aria-label={t('networkPoint.filterLabel')}>
           <button
             type="button"

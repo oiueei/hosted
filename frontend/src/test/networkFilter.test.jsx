@@ -180,6 +180,44 @@ describe('the network’s filter by who lends', () => {
     expect(shown()).toEqual(['Drill']);
   });
 
+  test('with a single dinamizador there is no row: it would be the same button twice', async () => {
+    const onlyLele = {
+      ...NETWORK,
+      things: NETWORK.things.filter((t) => t.owner === 'ENTA01'),
+    };
+    renderAt('/library/COL001', onlyLele);
+
+    await screen.findByText('Drill');
+    expect(screen.queryByRole('group', { name: 'Who lends' })).toBeNull();
+    expect(shown()).toHaveLength(2);
+  });
+
+  test('an address filtered by the only one there is still shows all their things, with no error', async () => {
+    const onlyLele = {
+      ...NETWORK,
+      things: NETWORK.things.filter((t) => t.owner === 'ENTA01'),
+    };
+    renderAt('/library/COL001/ENTA01', onlyLele);
+
+    await screen.findByText('Drill');
+    expect(shown()).toHaveLength(2);
+    expect(screen.queryByText(/not found|error/i)).toBeNull();
+  });
+
+  test('with two it appears', async () => {
+    const two = {
+      ...NETWORK,
+      things: NETWORK.things.filter((t) => t.owner !== 'ENTB01' && t.owner !== 'FOUN01'),
+    };
+    renderAt('/library/COL001', {
+      ...two,
+      things: [...two.things, NETWORK.things.find((t) => t.owner === 'ENTB01')],
+    });
+
+    await screen.findByText('Drill');
+    expect(lenderRow()).toBeInTheDocument();
+  });
+
   test('a code that is nobody’s shows the whole collection, with no error', async () => {
     renderAt('/library/COL001/NOBODY');
 
