@@ -5,6 +5,7 @@ from .collection import Collection
 from .event import Event
 from .faq import FAQ
 from .language import Language
+from .network_point import NetworkPoint
 from .notification import InAppNotification
 from .proposal import InvitationProposal
 from .report import Report
@@ -28,6 +29,7 @@ __all__ = [
     "InAppNotification",
     "Report",
     "InvitationProposal",
+    "NetworkPoint",
     "Event",
     "DailyActivity",
     "DeviceDay",

@@ -55,6 +55,13 @@ export default function ManageInvitesPage() {
   // 2026-09 — reads `isCurator`, the server-computed field that admits a
   // co-owner. The founder is no longer a distinct client-side tier here.
   const [isCurator, setIsCurator] = useState(false);
+  // In a network the team and the members are the founder's alone: what one entity
+  // does there reaches the others. `canAdmin` is what the star and the remove
+  // control read; inviting and everything else stays with every curator.
+  const [isNetwork, setIsNetwork] = useState(false);
+  const [ownerCode, setOwnerCode] = useState('');
+  const canAdmin =
+    isCurator && (!isNetwork || ownerCode === (localStorage.getItem('userCode') || ''));
   const [coOwnerCodes, setCoOwnerCodes] = useState(new Set());
   // What is in the invitations field: one address or several, cut by commas.
   const [inviteEmail, setInviteEmail] = useState('');
@@ -71,6 +78,9 @@ export default function ManageInvitesPage() {
   // name public on the group's page, so it gets a confirm (DESIGN §6). Demotion
   // only removes access, so it stays a one-click toggle.
   const [promoteCandidate, setPromoteCandidate] = useState(null);
+  // In a network demoting deletes the things the dinamizador ran, so it asks first and
+  // says how many go (the same form as leaving a community group).
+  const [demoteCandidate, setDemoteCandidate] = useState(null);
   const inviteLockRef = useRef(false);
   const resendLockRef = useRef(false);
 
@@ -87,6 +97,8 @@ export default function ManageInvitesPage() {
         setCollectionLanguage(data.language || '');
         setPalette({ colors: data.theeeme_colors, koro: data.koro });
         setIsCurator(!!data.is_curator);
+        setIsNetwork(data.mode === 'NETWORK');
+        setOwnerCode(data.owner || '');
         setCoOwnerCodes(new Set((data.co_owners || []).map((u) => u.code)));
         setLoadError('');
       } else {
@@ -425,7 +437,7 @@ export default function ManageInvitesPage() {
                         (2026-09) — the founder is not a distinct tier here.
                         The founder's own row cannot be demoted (they are an
                         FK, not an invites row), so it never carries this. */}
-                        {isCurator && !row._isPending && (
+                        {canAdmin && !row._isPending && (
                           <TooltipButton
                             tooltip={
                               row._isCoOwner
@@ -434,7 +446,9 @@ export default function ManageInvitesPage() {
                             }
                             onClick={() =>
                               row._isCoOwner
-                                ? togglePromote(row._code, false)
+                                ? isNetwork
+                                  ? setDemoteCandidate(row)
+                                  : togglePromote(row._code, false)
                                 : setPromoteCandidate(row)
                             }
                             disabled={promoting === row._code}
@@ -446,32 +460,34 @@ export default function ManageInvitesPage() {
                             )}
                           </TooltipButton>
                         )}
-                        <TooltipButton
-                          tooltip={t('manageInvites.removeTooltip')}
-                          onClick={() =>
-                            navigate(`${base}/invites/remove`, {
-                              state: {
-                                guestCode: row._code,
-                                guestName: row._name,
-                                // Their things in this group go with them; the
-                                // confirmation names them.
-                                thingTitles: things
-                                  .filter((thing) => thing.owner === row._code)
-                                  .map((thing) => thing.headline),
-                                // Bare: with no headline, RemoveGuestPage's own
-                                // `t('removeGuest.guests')` is the right label for
-                                // where the link goes. A literal here is truthy and
-                                // would beat that fallback to it, in English.
-                                backLabel: headline,
-                                // The group's colours, so the confirmation is painted with
-                                // them from the first frame (it reads no collection).
-                                palette,
-                              },
-                            })
-                          }
-                        >
-                          <IconCrossCircle aria-hidden />
-                        </TooltipButton>
+                        {(row._isPending || canAdmin) && (
+                          <TooltipButton
+                            tooltip={t('manageInvites.removeTooltip')}
+                            onClick={() =>
+                              navigate(`${base}/invites/remove`, {
+                                state: {
+                                  guestCode: row._code,
+                                  guestName: row._name,
+                                  // Their things in this group go with them; the
+                                  // confirmation names them.
+                                  thingTitles: things
+                                    .filter((thing) => thing.owner === row._code)
+                                    .map((thing) => thing.headline),
+                                  // Bare: with no headline, RemoveGuestPage's own
+                                  // `t('removeGuest.guests')` is the right label for
+                                  // where the link goes. A literal here is truthy and
+                                  // would beat that fallback to it, in English.
+                                  backLabel: headline,
+                                  // The group's colours, so the confirmation is painted with
+                                  // them from the first frame (it reads no collection).
+                                  palette,
+                                },
+                              })
+                            }
+                          >
+                            <IconCrossCircle aria-hidden />
+                          </TooltipButton>
+                        )}
                       </div>
                     ),
                   },
@@ -542,7 +558,13 @@ export default function ManageInvitesPage() {
             title={t('manageInvites.promoteConfirmTitle', { name: promoteCandidate._name })}
           />
           <ThemedDialog.Content>
-            <p style={{ marginBottom: 0 }}>{t('manageInvites.promoteConfirmBody')}</p>
+            <p style={{ marginBottom: 0 }}>
+              {t(
+                isNetwork
+                  ? 'manageInvites.promoteConfirmNetworkBody'
+                  : 'manageInvites.promoteConfirmBody'
+              )}
+            </p>
           </ThemedDialog.Content>
           <ThemedDialog.ActionButtons>
             <Button
@@ -559,6 +581,47 @@ export default function ManageInvitesPage() {
               variant="secondary"
               style={btnSecondaryStyle}
               onClick={() => setPromoteCandidate(null)}
+            >
+              {t('common.cancel')}
+            </Button>
+          </ThemedDialog.ActionButtons>
+        </ThemedDialog>
+      )}
+
+      {demoteCandidate && (
+        <ThemedDialog
+          id="demote-confirm"
+          aria-labelledby="demote-confirm-title"
+          isOpen
+          close={() => setDemoteCandidate(null)}
+          closeButtonLabelText={t('common.close')}
+        >
+          <ThemedDialog.Header
+            id="demote-confirm-title"
+            title={t('manageInvites.demoteConfirmTitle', { name: demoteCandidate._name })}
+          />
+          <ThemedDialog.Content>
+            <p style={{ marginBottom: 0 }}>
+              {t('manageInvites.demoteNetworkBody', {
+                count: things.filter((thing) => thing.owner === demoteCandidate._code).length,
+              })}
+            </p>
+          </ThemedDialog.Content>
+          <ThemedDialog.ActionButtons>
+            <Button
+              style={btnStyle}
+              onClick={() => {
+                const row = demoteCandidate;
+                setDemoteCandidate(null);
+                togglePromote(row._code, false);
+              }}
+            >
+              {t('manageInvites.demoteConfirm')}
+            </Button>
+            <Button
+              variant="secondary"
+              style={btnSecondaryStyle}
+              onClick={() => setDemoteCandidate(null)}
             >
               {t('common.cancel')}
             </Button>

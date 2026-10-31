@@ -45,7 +45,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.test.utils import override_settings
 
-from core.models import BookingPeriod, Collection, Thing, User
+from core.models import BookingPeriod, Collection, NetworkPoint, Thing, User
 from core.services import email_service as es
 
 LANGS = ("es", "ca", "en")
@@ -148,11 +148,37 @@ class World:
             email_note=pickup_note,
         )
         self.library.invites.add(self.me, self.member)
+        # A network: Lele answers for an entity with a pickup point of its own, and
+        # Lala, the founder, may decline a request on his things as the network.
+        self.network = Collection.objects.create(
+            owner=self.owner,
+            kind=Collection.Kind.LIBRARY,
+            mode=Collection.Mode.NETWORK,
+            headline="Red de bibliotecas del barrio",
+            language=lang,
+            allowed_thing_types=[Thing.Type.LEND_THING, Thing.Type.RENT_THING],
+            email_note="**Trae el carné** de la red cuando vengas a recoger.",
+        )
+        self.network.invites.add(self.me, self.member)
+        self.network.co_owners.add(self.member)
+        NetworkPoint.objects.create(
+            collection=self.network,
+            user=self.member,
+            entity_name="Cooperativa La Fusteria",
+            address="Carrer Major 4",
+            hours_note="martes y jueves de 18 a 20",
+            contact="93 000 00 00",
+        )
 
         self.gift = self._thing(Thing.Type.GIFT_THING, "Silla de madera")
         self.lend = self._thing(
             Thing.Type.LEND_THING, "Escalera de mano", location="Planta baja", home=self.library
         )
+
+        self.net_lend = Thing.objects.create(
+            type=Thing.Type.LEND_THING, owner=self.member, headline="Taladro"
+        )
+        self.network.things.add(self.net_lend)
 
         self.rooms = Collection.objects.create(
             owner=self.owner,
@@ -187,7 +213,7 @@ class World:
         right and does nothing."""
         return f"{es._frontend_base_url()}/{path}/SAMPLE"
 
-    def booking(self, thing, requester, *, dated=True, times=False, accepted=False):
+    def booking(self, thing, requester, *, dated=True, times=False, accepted=False, owner=None):
         kwargs = {}
         if dated:
             kwargs.update(start_date=self.start, end_date=self.end)
@@ -203,7 +229,7 @@ class World:
             thing_type=thing.type,
             requester_code=requester,
             requester_email=requester.email,
-            owner_code=self.owner,
+            owner_code=owner or self.owner,
             status=BookingPeriod.Status.ACCEPTED if accepted else BookingPeriod.Status.PENDING,
             **kwargs,
         )
@@ -264,6 +290,23 @@ def _(w):
         w.to,
         collection=w.collection,
         things=["Taladro", "Escalera de mano"],
+    )
+
+
+@sample("thing_withdrawn_asked", "send_thing_withdrawn_email")
+def _(w):
+    es.send_thing_withdrawn_email("Escalera de mano", "Chalmercadillo", w.to, holding=False)
+
+
+@sample("thing_withdrawn_holding_in_a_network", "send_thing_withdrawn_email")
+def _(w):
+    es.send_thing_withdrawn_email(
+        "Taladro",
+        "Red de bibliotecas del barrio",
+        w.to,
+        holding=True,
+        collection=w.network,
+        point=w.network.point_for(w.member.code),
     )
 
 
@@ -358,6 +401,28 @@ def _(w):
     )
 
 
+@sample("network_booking_confirmed", "send_booking_decision_email")
+def _(w):
+    es.send_booking_decision_email(
+        w.booking(w.net_lend, w.me, accepted=True, owner=w.member),
+        w.net_lend,
+        accepted=True,
+        collection=w.network,
+        decided_by=w.member,
+    )
+
+
+@sample("network_booking_declined_by_the_network", "send_booking_decision_email")
+def _(w):
+    es.send_booking_decision_email(
+        w.booking(w.net_lend, w.me, owner=w.member),
+        w.net_lend,
+        accepted=False,
+        collection=w.network,
+        decided_by=w.owner,
+    )
+
+
 @sample("booking_confirmation", "send_booking_confirmation_email")
 def _(w):
     es.send_booking_confirmation_email(
@@ -397,6 +462,11 @@ def _(w):
     es.send_thing_reported_email(w.gift, w.to)
 
 
+@sample("thing_hidden_by_founder", "send_thing_hidden_by_founder_email")
+def _(w):
+    es.send_thing_hidden_by_founder_email(w.gift, w.owner, w.collection.headline, w.to)
+
+
 @sample("return_reminder_to_owner", "send_return_reminder_email")
 def _(w):
     es.send_return_reminder_email("Lele", w.lend, w.end, w.to)
@@ -405,6 +475,16 @@ def _(w):
 @sample("return_due_to_borrower", "send_return_due_email")
 def _(w):
     es.send_return_due_email("Lala", w.lend, w.end, w.to)
+
+
+@sample("network_return_due_to_borrower", "send_return_due_email")
+def _(w):
+    es.send_return_due_email("Lele", w.net_lend, w.end, w.to)
+
+
+@sample("network_pickup_due_to_borrower", "send_pickup_due_email")
+def _(w):
+    es.send_pickup_due_email("Lele", w.net_lend, w.start, w.to)
 
 
 @sample("pickup_due_to_borrower", "send_pickup_due_email")

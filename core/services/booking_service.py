@@ -383,18 +383,22 @@ def receives_booking_requests(user):
     True when they **own a thing** — a member of a COMMUNITY collection who has
     contributed one gets requests on it — or when they **run a PROPRIETARY
     collection**, as its founder or a co-curator, whose curators answer for every
-    thing in it. It is the reach of ``OwnerBookingsView`` read as a yes/no, and it
-    is asked of the server because the browser cannot know it: someone who only
-    joined a group has nothing to receive, and the account menu used to offer the
-    page to everybody. Two ``EXISTS`` queries, nothing loaded.
+    thing in it — or when they **founded a NETWORK**, whose founder can reject a
+    pending request on any entity's thing before having uploaded one (a network's
+    co-curators receive only their own things, which the first case covers).
+
+    It is the reach of ``OwnerBookingsView`` read as a yes/no, and it is asked of
+    the server because the browser cannot know it: someone who only joined a
+    group has nothing to receive, and the account menu used to offer the page to
+    everybody. Two ``EXISTS`` queries, nothing loaded.
     """
     if Thing.objects.filter(owner=user).exists():
         return True
-    return (
-        Collection.objects.filter(mode=Collection.Mode.PROPRIETARY)
-        .filter(Q(owner=user) | Q(co_owners=user))
-        .exists()
-    )
+    return Collection.objects.filter(
+        Q(mode=Collection.Mode.PROPRIETARY, owner=user)
+        | Q(mode=Collection.Mode.PROPRIETARY, co_owners=user)
+        | Q(mode=Collection.Mode.NETWORK, owner=user)
+    ).exists()
 
 
 def _clear_request_notifications(booking):
@@ -539,7 +543,9 @@ def finalize_booking_decision(booking, accepted, decided_by=None):
         ),
         payload=payload,
     )
-    send_booking_decision_email(booking, thing, accepted=accepted, collection=collection)
+    send_booking_decision_email(
+        booking, thing, accepted=accepted, collection=collection, decided_by=decider
+    )
     _clear_request_notifications(booking)
     _notify_team_of_decision(booking, team, collection, decider, accepted)
     if accepted:
@@ -610,7 +616,9 @@ def resolve_rental_collection(thing, collection_code=None, requester=None):
             if collection.code == code and _readable_by(collection, requester):
                 return collection
     for collection in collections:
-        if collection.has_rental_rules():
+        # A network may set no rules of its own and still have them: its
+        # dinamizadores' pickup points carry theirs.
+        if collection.has_rental_rules() or collection.is_network():
             return collection
     return None
 
@@ -688,7 +696,9 @@ def request_date_based_booking(
     # Enforce the collection's rental rules (fixed durations + allowed pickup/
     # return weekdays). The frontend already prevents these — server-side backstop.
     if rental_collection:
-        violation = rental_collection.rental_violation(start_date, end_date)
+        violation = rental_collection.rental_violation(
+            start_date, end_date, owner_code=thing.owner_id
+        )
         if violation:
             raise BookingRequestError(violation)
 

@@ -312,6 +312,21 @@ describe('InboxNotifications — every type says something', () => {
       links: '/collections/COL001',
     },
     {
+      what: 'a promotion in a network says they run their own things, not the whole group',
+      notification: {
+        code: 'NOTA12',
+        type: 'PROMOTED_CO_OWNER',
+        payload: { collection_headline: 'Toy network', collection_code: 'COL001', network: true },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [
+        /message the group, add your own things/i,
+        /Toy network/,
+        /founder keeps the settings/i,
+      ],
+      links: '/collections/COL001',
+    },
+    {
       what: 'a demotion says the member is a regular member again',
       notification: {
         code: 'NOTA07',
@@ -320,6 +335,38 @@ describe('InboxNotifications — every type says something', () => {
         created: '2026-08-06T10:00:00Z',
       },
       says: [/you no longer help run this group/i, /regular member/i, /Toy library/],
+      links: '/collections/COL001',
+    },
+    {
+      what: 'a thing hidden by the founder of a network says who hid it and that it is still yours',
+      notification: {
+        code: 'NOTA10',
+        type: 'THING_HIDDEN',
+        payload: {
+          thing_headline: 'A mitre saw',
+          founder_name: 'Lala',
+          thing_code: 'THG010',
+          collection_code: 'COL001',
+        },
+        created: '2026-09-29T09:00:00Z',
+      },
+      says: [/your thing was hidden/i, /Lala hid A mitre saw/i, /still yours/i],
+      links: '/collections/COL001/things/THG010',
+      linkName: /view thing/i,
+    },
+    {
+      what: 'a demotion in a network says how many of their things were deleted',
+      notification: {
+        code: 'NOTA11',
+        type: 'DEMOTED_CO_OWNER',
+        payload: {
+          collection_headline: 'Toy library',
+          collection_code: 'COL001',
+          things_deleted: 3,
+        },
+        created: '2026-08-06T10:00:00Z',
+      },
+      says: [/Your 3 things there were deleted/i],
       links: '/collections/COL001',
     },
     {

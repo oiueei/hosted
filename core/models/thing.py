@@ -144,7 +144,9 @@ class Thing(models.Model):
         catalogue: edit / hide / activate / delete any thing, answer any FAQ,
         decide any booking. COMMUNITY is deliberately excluded — there a member
         owns what they contribute and a curator's reach stops short of
-        editing it.
+        editing it. A NETWORK is excluded too: each entity runs its own things, so
+        a co-curator (and the founder) manages the thing's owner's things only
+        through the founder's rescue (``Collection.can_rescue``), never here.
 
         Iterates ``collections.all()`` (and ``is_curator`` iterates
         ``co_owners.all()``) rather than ``.filter().exists()`` so a view that
@@ -160,11 +162,42 @@ class Thing(models.Model):
             for c in self.collections.all()
         )
 
+    def can_rescue(self, user_code):
+        """The founder of a network this thing sits in (``Collection.can_rescue``):
+        may reject a pending request on it and hide it, and nothing else. Apart
+        from ``can_manage`` on purpose — rescuing is not managing."""
+        return any(c.can_rescue(user_code) for c in self.collections.all())
+
+    def can_delete(self, user_code):
+        """Who may delete this thing — the one rule, for the endpoint that does it and the
+        page that warns before: the owner of a collection it sits in (any mode); a
+        co-curator of a PROPRIETARY one; its owner when they are a dinamizador of the
+        NETWORK it sits in (lent or not: they run their things there); or its owner while
+        it has never changed hands.
+
+        Reads ``collections.all()`` and the co-owners through ``.all()`` like
+        ``can_manage``, so a view that prefetched them pays nothing for the collections.
+        """
+        from core.models.collection import Collection
+
+        is_owner = self.is_owner(user_code)
+        for collection in self.collections.all():
+            if collection.is_owner(user_code):
+                return True
+            if collection.mode == Collection.Mode.PROPRIETARY and collection.is_curator(user_code):
+                return True
+            if collection.mode == Collection.Mode.NETWORK and is_owner:
+                if collection.is_curator(user_code):
+                    return True
+        return is_owner and not self.transfers.exists()
+
     def managers(self):
         """Every ``User`` for whom ``can_manage`` is true — the thing owner,
         plus the curators (owner + co-curators) of every PROPRIETARY collection
         it sits in. Deduped by code. Used to fan a notice out to the whole
-        team that runs the thing (FAQ questions, reservation notices).
+        team that runs the thing (FAQ questions, reservation notices). In a
+        NETWORK it is just the thing's owner: the founder's rescue powers don't
+        make them a recipient of the day-to-day mail.
         Prefetch-aware via ``collections`` / ``co_owners`` like ``can_manage``.
         """
         from core.models.collection import Collection
@@ -268,12 +301,13 @@ class Thing(models.Model):
         if collection is None:
             collection = resolve_rental_collection(self)
 
+        rules = collection.rental_rules_for(self.owner_id) if collection else None
         available_today, next_available = compute_availability(
             blocked,
             horizon_days=horizon_days,
-            allowed_weekdays=collection.rental_weekdays if collection else None,
-            durations=collection.rental_durations if collection else None,
-            closed_dates=collection.closed_date_set() if collection else None,
+            allowed_weekdays=rules.weekdays if rules else None,
+            durations=rules.durations if rules else None,
+            closed_dates=rules.closed if rules else None,
         )
         self._availability_window_cache = {
             "available_today": available_today,

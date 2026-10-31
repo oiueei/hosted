@@ -32,7 +32,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from core.models import FAQ, RSVP, BookingPeriod, Collection, Thing, User
+from core.models import FAQ, RSVP, BookingPeriod, Collection, NetworkPoint, Thing, User
 from core.models.transfer import ThingTransfer
 from core.services import storage
 
@@ -43,8 +43,14 @@ SUPPORTED_LANGS = ["en", "es", "ca"]
 # Entities whose text every reader should get in their own language, and the
 # fields the {lang: text} maps are built for. Everything else (user bios, FAQs)
 # is plain-column text and follows --lang.
-_LOCALIZED_ENTITIES = ("COLLECTIONS", "THINGS")
-_LOCALIZED_FIELDS = ("headline", "description")
+_LOCALIZED_FIELDS = {
+    "COLLECTIONS": ("headline", "description"),
+    "THINGS": ("headline", "description"),
+    # A pickup point's hours are plain text and follow --lang; the conditions it
+    # writes are owner text like any other.
+    "NETWORK_POINTS": ("deposit_policy", "request_info", "email_note"),
+}
+_LOCALIZED_ENTITIES = tuple(_LOCALIZED_FIELDS)
 
 # Key order inside a stored map — es first mirrors resolve_localized's fallback.
 _LANG_ORDER = ["es", "ca", "en"]
@@ -83,6 +89,7 @@ _MERGE_KEYS = {
     "COLLECTIONS": "code",
     "THINGS": "code",
     "FAQS": "thing_code",
+    "NETWORK_POINTS": "code",
 }
 
 
@@ -126,7 +133,7 @@ def load_seed_data(lang):
             for code in SUPPORTED_LANGS
         }
         for row in merged[entity]:
-            for field in _LOCALIZED_FIELDS:
+            for field in _LOCALIZED_FIELDS[entity]:
                 row[field] = _localize(
                     {
                         code: rows_by_lang[code].get(row[key], {}).get(field, "")
@@ -163,6 +170,7 @@ class Command(BaseCommand):
 
         self._seed_users(data.USERS)
         self._seed_collections(data.COLLECTIONS)
+        self._seed_points(data.NETWORK_POINTS)
         self._seed_invitations(common.PENDING_INVITATIONS)
         self._seed_things(data.THINGS)
         self._seed_faqs(data.FAQS)
@@ -173,7 +181,8 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded [{lang}] {len(data.USERS)} users, {len(data.COLLECTIONS)} collections, "
-                f"{len(data.THINGS)} things, {len(data.FAQS)} FAQs, "
+                f"{len(data.THINGS)} things, {len(data.NETWORK_POINTS)} pickup points, "
+                f"{len(data.FAQS)} FAQs, "
                 f"{len(common.PENDING_INVITATIONS)} pending invitations, "
                 f"{len(common.BOOKINGS)} bookings, "
                 f"{len(common.TRANSFERS) + len(common.COMMUNITY_TRANSFERS)} transfers."
@@ -267,6 +276,34 @@ class Command(BaseCommand):
             col.co_owners.remove(
                 *col.co_owners.filter(code__in=DEMO_USER_CODES).exclude(pk__in=col.invites.all())
             )
+
+    def _seed_points(self, points):
+        """The pickup points of the demo network, one per dinamizador.
+
+        Like the rest of the group, only the demo characters' points are the seed's:
+        one it no longer places is taken out, and a point of anybody else is left
+        where it is.
+        """
+        for data in points:
+            NetworkPoint.objects.update_or_create(
+                collection=Collection.objects.get(code=data["collection_code"]),
+                user=User.objects.get(code=data["user_code"]),
+                defaults={
+                    "entity_name": data["entity_name"],
+                    "address": data["address"],
+                    "hours_note": data["hours_note"],
+                    "contact": data["contact"],
+                    "weekdays": data["weekdays"],
+                    "closed_dates": data["closed_dates"],
+                    "deposit_policy": data["deposit_policy"],
+                    "request_info": data["request_info"],
+                    "email_note": data["email_note"],
+                },
+            )
+        wanted = {(p["collection_code"], p["user_code"]) for p in points}
+        for point in NetworkPoint.objects.filter(user_id__in=DEMO_USER_CODES):
+            if (point.collection_id, point.user_id) not in wanted:
+                point.delete()
 
     def _seed_invitations(self, invitations):
         """Invitations the guest has not answered yet (COLLECTION_INVITE RSVPs).

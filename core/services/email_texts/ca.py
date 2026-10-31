@@ -90,6 +90,10 @@ TEXTS = {
         "La teva sol·licitud o reserva ja no és vigent."
     ),
     "thing_left_holding": "Si la tens tu, torna-la-hi com vau acordar.",
+    "thing_withdrawn_subject": "S'ha retirat «{thing}» de {group}",
+    "thing_withdrawn_intro": (
+        "S'ha retirat «{thing}» de {group}, i la teva sol·licitud queda anul·lada."
+    ),
     # Collection welcome document (sent once, the first time someone joins)
     "welcome_doc_subject": "Et donem la benvinguda a '{collection}'",
     "welcome_doc_plain": (
@@ -205,6 +209,12 @@ TEXTS = {
     "decision_plain": (
         "La teva sol·licitud {action} de '{thing}' ha estat {decision}. Veure la publicació: {url}"
     ),
+    "decision_by_confirmed": "{who} ha acceptat la teva sol·licitud {action}:",
+    "decision_by_declined": "{who} ha rebutjat la teva sol·licitud {action}:",
+    "point_name_label": "Punt de recollida",
+    "point_address_label": "Adreça",
+    "point_hours_label": "Horari",
+    "point_contact_label": "Contacte",
     "decision_intro": "La teva sol·licitud {action} ha estat {decision}:",
     # Invite declined (to collection owner)
     "invite_rejected_subject": "S'ha rebutjat la teva invitació",
@@ -275,6 +285,14 @@ TEXTS = {
         "No compartim qui l'ha denunciat. Dona-hi un cop d'ull i assegura't que tot està en ordre."
     ),
     "reported_review_cta": "Revisar la cosa",
+    "thing_hidden_subject": "{founder} ha amagat una de les teves coses",
+    "thing_hidden_plain": (
+        "{founder} ha amagat {thing} de {group}. Continua sent teva: pots tornar a "
+        "mostrar-la quan vulguis. {url}"
+    ),
+    "thing_hidden_intro": "{founder} ha amagat aquesta cosa de {group}:",
+    "thing_hidden_outro": "Continua sent teva: pots tornar a mostrar-la quan vulguis.",
+    "thing_hidden_cta": "Revisar la cosa",
     # Broadcast (owner → invitees)
     "email_note_test_subject": "La teva nota del correu, tal com la veuran — {collection}",
     "email_note_test_intro": (

@@ -297,6 +297,18 @@
       "informative": true
     },
     {
+      "what": "the founder of a network hid one of your things",
+      "type": "THING_HIDDEN",
+      "payload": {
+        "thing_headline": "Drill",
+        "founder_name": "Lala",
+        "thing_code": "THG001",
+        "collection_code": "COL001"
+      },
+      "grouped": false,
+      "informative": true
+    },
+    {
       "what": "someone was made co-curator",
       "type": "PROMOTED_CO_OWNER",
       "payload": {

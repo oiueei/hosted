@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useTranslation, Trans } from 'react-i18next';
 import { Button, IconCrossCircle } from 'hds-react';
-import { apiFetch } from '../services/api';
+import { apiFetch, extractApiError } from '../services/api';
 import PageLayout from '../components/PageLayout';
 import Toast from '../components/Toast';
 import ThingsGoNotice from '../components/ThingsGoNotice';
@@ -52,7 +52,10 @@ export default function RemoveGuestPage() {
       if (res.ok) {
         navigate(backPath);
       } else {
-        setToast({ type: 'error', message: t('removeGuest.errorRemoving') });
+        // A refusal that has its own reason (a network holds the removal back while a
+        // loan is in hand) is said in the reader's language, not as a generic failure.
+        const detail = await extractApiError(res);
+        setToast({ type: 'error', message: detail || t('removeGuest.errorRemoving') });
       }
     } catch {
       setToast({ type: 'error', message: t('common.connectionError') });

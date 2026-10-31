@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from core.models import RSVP, Collection, InvitationProposal, Thing, User
+from core.models import RSVP, Collection, InvitationProposal, NetworkPoint, Thing, User
 from core.models.collection import generate_share_token
 from core.models.event import Event
 from core.models.notification import InAppNotification
@@ -37,6 +37,7 @@ from core.serializers import (
     CollectionUpdateSerializer,
     EmailNoteTestSerializer,
 )
+from core.serializers.network_point import NetworkPointSerializer, NetworkPointWriteSerializer
 from core.serializers.theeeme import theeeme_colors
 from core.serializers.thing import optimise_thing_queryset
 from core.services.creator_policy import (
@@ -68,7 +69,12 @@ from core.services.invitation_service import (
     reject_proposal,
 )
 from core.services.join_quota import consume_join_quota, join_quota_exhausted
-from core.services.membership_service import end_membership, things_leaving_with
+from core.services.membership_service import (
+    demote_curator,
+    end_membership,
+    network_exit_block,
+    things_leaving_with,
+)
 from core.services.team import drop_team_notices_of
 from core.utils import get_client_ip, redact_email
 from core.validators import SafeHeadlineField
@@ -76,6 +82,7 @@ from core.views._helpers import (
     body_dict,
     refusal_body,
     require_collection_curator,
+    require_network_founder,
     viewer_code,
 )
 
@@ -283,6 +290,24 @@ class CollectionViewSet(ModelViewSet):
 # (the same switch the django-ratelimit decorators read, so dev and tests stay
 # consistent) and its DatabaseCache read-then-set shares base.py's
 # non-atomicity note.
+def _exit_blocked(code, headlines):
+    """The 409 that holds a network's removal or demotion back while a loan is in hand."""
+    sentences = {
+        "curator_things_lent_out": (
+            "Some of their things are lent out right now. It can be done once the loans end: "
+            "{things}."
+        ),
+        "member_holds_loans": (
+            "They have things in hand right now. It can be done once the loans end: {things}."
+        ),
+    }
+    things = ", ".join(headlines)
+    return Response(
+        refusal_body(sentences[code].format(things=things), code=code, things=things),
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
 class CollectionInviteView(APIView):
     """
     POST /api/v1/collections/{collection_code}/invite/
@@ -397,6 +422,16 @@ class CollectionInviteView(APIView):
             invited_user = None
 
         if invited_user:
+            # Cancelling a pending invitation undoes what any dinamizador may do
+            # (invite); removing a member is the founder's alone in a network.
+            denied = require_network_founder(
+                collection, request.user.code, "Only the founder of a network can remove members"
+            )
+            if denied:
+                return denied
+            blocked = network_exit_block(collection, invited_user, removing=True)
+            if blocked:
+                return _exit_blocked(*blocked)
             was_co_owner = collection.co_owners.filter(code=invited_user.code).exists()
             went_with_them = [t.headline for t in things_leaving_with(collection, invited_user)]
             things_deleted = end_membership(collection, invited_user, actor=request.user)
@@ -526,6 +561,8 @@ class CollectionCoOwnerView(APIView):
 
         denied = require_collection_curator(
             collection, request.user.code, "Only a curator can promote a co-curator"
+        ) or require_network_founder(
+            collection, request.user.code, "Only the founder of a network can name its team"
         )
         if denied:
             return denied
@@ -568,6 +605,8 @@ class CollectionCoOwnerView(APIView):
                 payload={
                     "collection_headline": collection.headline,
                     "collection_code": collection.code,
+                    # A dinamizador's reach is narrower in a network: the card says which.
+                    **({"network": True} if collection.is_network() else {}),
                 },
             )
 
@@ -590,6 +629,8 @@ class CollectionCoOwnerView(APIView):
 
         denied = require_collection_curator(
             collection, request.user.code, "Only a curator can demote a co-curator"
+        ) or require_network_founder(
+            collection, request.user.code, "Only the founder of a network can name its team"
         )
         if denied:
             return denied
@@ -599,15 +640,27 @@ class CollectionCoOwnerView(APIView):
             return denied
 
         was_co_owner = collection.co_owners.filter(code=member.code).exists()
-        collection.co_owners.remove(member)
+        things_deleted = 0
+        if was_co_owner and collection.is_network():
+            # Stops being a dinamizador: the things they ran cannot stay (nobody else
+            # may decide them), and not while someone has one in hand.
+            blocked = network_exit_block(collection, member, removing=False)
+            if blocked:
+                return _exit_blocked(*blocked)
+            things_deleted = demote_curator(collection, member, actor=request.user)
+        else:
+            collection.co_owners.remove(member)
         if was_co_owner:
+            payload = {
+                "collection_headline": collection.headline,
+                "collection_code": collection.code,
+            }
+            if collection.is_network():
+                payload["things_deleted"] = things_deleted
             InAppNotification.objects.create(
                 user=member,
                 type=InAppNotification.Type.DEMOTED_CO_OWNER,
-                payload={
-                    "collection_headline": collection.headline,
-                    "collection_code": collection.code,
-                },
+                payload=payload,
             )
             # After the DEMOTED notice, so the one that tells them what happened is
             # never in the way: what goes is the team's requests and reservations of
@@ -1584,6 +1637,11 @@ class CollectionBroadcastView(APIView):
         # owner makes knowingly; rendering it as their *name* in the body and in
         # every member's inbox is not the same thing, and is not what it means.
         owner_name = request.user.name
+        # In a network a dinamizador speaks for their entity: the message is signed
+        # with the name of their pickup point (its entity's, else their own).
+        point = collection.point_for(request.user.code)
+        if point is not None:
+            owner_name = point.display_name
 
         _send_broadcast(
             owner_name=owner_name,
@@ -1618,3 +1676,54 @@ class CollectionBroadcastView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class CollectionPointView(APIView):
+    """
+    GET / PUT /api/v1/collections/{collection_code}/point/
+
+    The pickup point of the dinamizador asking, in a network: the entity they answer
+    for, where and when members collect and return, and the conditions of their own
+    loans. Each dinamizador reads and edits **only their own** (the founder is one too);
+    the points of the others are in the collection's payload, public with it.
+
+    No point yet is a 200 with the empty fields: setting one up is a first PUT. A
+    collection that is not a network has no points (404), and a member who is not a
+    dinamizador gets 403.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _resolve(self, request, collection_code):
+        collection = get_object_or_404(Collection, code=collection_code)
+        if not collection.is_network():
+            return collection, Response(
+                refusal_body("Only a network has pickup points.", code="not_a_network"),
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        denied = require_collection_curator(
+            collection, request.user.code, "Only a dinamizador can set up a pickup point"
+        )
+        return collection, denied
+
+    def get(self, request, collection_code):
+        collection, denied = self._resolve(request, collection_code)
+        if denied:
+            return denied
+        point = collection.points.filter(user=request.user).first()
+        if point is None:
+            point = NetworkPoint(collection=collection, user=request.user)
+        return Response(NetworkPointSerializer(point, context={"request": request}).data)
+
+    @method_decorator(ratelimit(key="user", rate="30/h", method="PUT", block=True))
+    def put(self, request, collection_code):
+        collection, denied = self._resolve(request, collection_code)
+        if denied:
+            return denied
+        point = collection.points.filter(user=request.user).first() or NetworkPoint(
+            collection=collection, user=request.user
+        )
+        serializer = NetworkPointWriteSerializer(point, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(NetworkPointSerializer(point, context={"request": request}).data)

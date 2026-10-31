@@ -49,6 +49,7 @@ export default function AddThingPage() {
 
   const capabilities = useCapabilities();
   const [collectionAllowedTypes, setCollectionAllowedTypes] = useState([]);
+  const [isNetwork, setIsNetwork] = useState(false);
   const [collectionTags, setCollectionTags] = useState([]);
   // A community group whose members may not set a price lists only its free verb: the
   // form has no price field there, since a price would only be refused.
@@ -95,6 +96,7 @@ export default function AddThingPage() {
         const allowed = data.allowed_thing_types || [];
         setKind(data.kind || 'STALL');
         setCollectionAllowedTypes(allowed);
+        setIsNetwork(data.mode === 'NETWORK');
         setContributingToCommunity(data.mode === 'COMMUNITY' && !!data.is_member);
         setIsOnboarding(!!data.is_onboarding);
         setCollectionTags(data.tags || []);
@@ -140,7 +142,7 @@ export default function AddThingPage() {
     }
     if (DETAIL_TYPES.includes(type)) {
       if (availability) body.availability = availability;
-      if (location.trim()) body.location = location.trim();
+      if (!isNetwork && location.trim()) body.location = location.trim();
       if (condition) body.condition = condition;
     }
     if (gallery.length > 0) {
@@ -212,6 +214,7 @@ export default function AddThingPage() {
           setCondition={setCondition}
           location={location}
           setLocation={setLocation}
+          askLocation={!isNetwork}
           collectionTags={collectionTags}
           tags={tags}
           setTags={setTags}

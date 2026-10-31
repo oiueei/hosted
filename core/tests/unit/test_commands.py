@@ -1110,6 +1110,7 @@ class TestSeedDemoCommand:
             "1u1uC1": "LIBRARY",
             "L3L3C1": "STALL",
             "1u1uRe": "SHED",
+            "N3t0C1": "LIBRARY",
         }
         for collection in Collection.objects.filter(is_onboarding=True):
             assert set(collection.allowed_thing_types) <= set(KIND_THING_TYPES[collection.kind])

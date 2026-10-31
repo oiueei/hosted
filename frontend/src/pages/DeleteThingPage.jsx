@@ -104,6 +104,13 @@ export default function DeleteThingPage() {
         <li>{t('deleteThing.goesFaq')}</li>
         <li>{t('deleteThing.goesHolds')}</li>
       </ul>
+      {/* How many people the deletion will email: those with a pending or accepted
+          request on this thing. The server counts them for whoever may delete it. */}
+      {thing.live_requesters_count > 0 && (
+        <p data-testid="live-requesters">
+          {t('deleteThing.liveRequesters', { count: thing.live_requesters_count })}
+        </p>
+      )}
       <div className="spacer-s" />
       <div className="form-grid">
         <Button

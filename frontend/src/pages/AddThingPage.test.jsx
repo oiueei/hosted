@@ -230,6 +230,24 @@ describe('AddThingPage — when the collection cannot be read', () => {
 });
 
 describe('AddThingPage — what the form sends', () => {
+  test('a network’s form does not ask for a location: the pickup point says where', async () => {
+    mockApi({
+      coll: collection({
+        kind: 'LIBRARY',
+        mode: 'NETWORK',
+        allowed_thing_types: ['LEND_THING', 'RENT_THING'],
+      }),
+    });
+    const { container } = await renderPage();
+    fireEvent.change(await screen.findByLabelText(/Title/), { target: { value: 'Drill' } });
+
+    expect(container.querySelector('#add-thing-location')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(postBody()).toBeTruthy());
+    expect(postBody()).not.toHaveProperty('location');
+  });
+
   test('a stall gift sends its condition, its place and its availability', async () => {
     mockApi();
     const { container } = await renderPage();

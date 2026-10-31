@@ -4,6 +4,7 @@ import {
   COLLECTION_PREFIXES,
   collectionPath,
   collectionThingPath,
+  isCodeShaped,
   kindOfPrefix,
   kindSegment,
 } from './collectionPath';
@@ -42,4 +43,17 @@ describe('a collection lives at /{kind}/{code}', () => {
     expect(kindOfPrefix('collections')).toBeUndefined();
     expect(kindOfPrefix(undefined)).toBeUndefined();
   });
+});
+
+describe('isCodeShaped', () => {
+  test.each(['ABC123', 'DELETE', '000000', 'USR001'])('%s has the shape of a code', (segment) => {
+    expect(isCodeShaped(segment)).toBe(true);
+  });
+
+  test.each(['Delete', 'abc123', 'ABC12', 'ABC1234', 'AB-123', 'join', '', undefined, null])(
+    '%s has not',
+    (segment) => {
+      expect(isCodeShaped(segment)).toBe(false);
+    }
+  );
 });

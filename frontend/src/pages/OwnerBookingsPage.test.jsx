@@ -79,6 +79,28 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
+describe('OwnerBookingsPage in a network', () => {
+  test('a request the reader may not decide offers rejecting it and no way to accept it', async () => {
+    mockApi([{ results: [booking({ can_decide: false })], next: null }]);
+    renderPage();
+
+    await screen.findByText('Asked by Lele');
+
+    expect(screen.getAllByRole('button', { name: /decline|reject/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /confirm|accept/i })).not.toBeInTheDocument();
+  });
+
+  test('a request the reader decides offers both answers', async () => {
+    mockApi([{ results: [booking({ can_decide: true })], next: null }]);
+    renderPage();
+
+    await screen.findByText('Asked by Lele');
+
+    expect(screen.getAllByRole('button', { name: /confirm|accept/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /decline|reject/i }).length).toBeGreaterThan(0);
+  });
+});
+
 describe('OwnerBookingsPage listing', () => {
   test('names who is waiting and on what, and splits pending from settled', async () => {
     mockApi([

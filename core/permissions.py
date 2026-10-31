@@ -27,6 +27,17 @@ class IsThingManager(BasePermission):
         return obj.can_manage(request.user.code)
 
 
+class IsThingManagerOrRescuer(BasePermission):
+    """Object-level: a manager of the Thing, or the founder of the network it sits in.
+
+    For the one action the founder's rescue allows besides rejecting a request:
+    hiding another entity's thing.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        return obj.can_manage(request.user.code) or obj.can_rescue(request.user.code)
+
+
 class IsCollectionOwner(BasePermission):
     """Object-level: request user is the Collection owner."""
 
@@ -43,4 +54,8 @@ class IsCollectionCurator(BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
+        # In a network the settings are the founder's alone: each dinamizador
+        # edits only their own point, through its own endpoint.
+        if obj.is_network():
+            return obj.is_owner(request.user.code)
         return obj.is_curator(request.user.code)

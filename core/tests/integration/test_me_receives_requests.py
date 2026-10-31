@@ -89,3 +89,18 @@ class TestWhoHasRequestsToReceive:
         )
 
         assert me(newcomer)["receives_requests"] is False
+
+    def test_the_founder_of_a_network_has_some_before_any_thing(self, founder):
+        # The rescue lets the founder reject a pending request on any entity's thing,
+        # and that is done from this page, so it has to be offered before they upload.
+        group(founder, "NETW01", Collection.Mode.NETWORK)
+
+        assert me(founder)["receives_requests"] is True
+
+    def test_a_co_curator_of_a_network_has_none_owning_nothing(self, founder, newcomer):
+        # A co-curator receives only what is theirs, which `Thing.owner` already covers.
+        network = group(founder, "NETW01", Collection.Mode.NETWORK)
+        network.invites.add(newcomer)
+        network.co_owners.add(newcomer)
+
+        assert me(newcomer)["receives_requests"] is False

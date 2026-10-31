@@ -933,11 +933,17 @@ def _collection_transfers(thing_codes):
     ]
 
 
-def build_collection_export(collection):
+def build_collection_export(collection, user=None):
     """A whole group, as a curator runs it. **Curator-only** (owner or
     co-curator) — the caller is what enforces that
-    (``require_collection_curator``); this function trusts it."""
-    things = list(collection.things.select_related("owner").order_by("created"))
+    (``require_collection_curator``); this function trusts it.
+
+    In a network, ``user`` narrows the copy of a co-curator to the things they run
+    (and what hangs from them): the founder gets the whole group."""
+    things = collection.things.select_related("owner").order_by("created")
+    if collection.is_network() and (user is None or not collection.is_owner(user.code)):
+        things = things.filter(owner=user) if user is not None else things.none()
+    things = list(things)
     thing_codes = [thing.code for thing in things]
     people = _group_people(collection)
     data = {

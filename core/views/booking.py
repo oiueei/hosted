@@ -110,6 +110,12 @@ class OwnerBookingsView(ListAPIView):
         curated = Q(thing_code__collections__mode=Collection.Mode.PROPRIETARY) & (
             Q(thing_code__collections__owner=user) | Q(thing_code__collections__co_owners=user)
         )
+        # The founder of a network sees the requests on every entity's things, to
+        # be able to reject one (the rescue); a co-curator sees only their own.
+        curated |= Q(
+            thing_code__collections__mode=Collection.Mode.NETWORK,
+            thing_code__collections__owner=user,
+        )
         # "Has this thing been lent again since?" — the question behind the
         # "remind them to return it" action, asked once per row inside the
         # list query so a page of finished loans costs no query per row
@@ -222,10 +228,13 @@ class BookingActionView(APIView):
             code=booking_code,
         )
 
-        # The thing owner, or a PROPRIETARY collection's curator, decides
+        # The thing owner, or a PROPRIETARY collection's curator, decides. The
+        # founder of a network may also reject (never accept) what an entity's
+        # thing was asked for: the rescue.
         if not (
             booking.owner_code_id == request.user.code
             or booking.thing_code.can_manage(request.user.code)
+            or (action == "reject" and booking.thing_code.can_rescue(request.user.code))
         ):
             return Response(
                 refusal_body("Not authorized", code="not_allowed"),
