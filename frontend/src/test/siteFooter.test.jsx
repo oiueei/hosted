@@ -159,10 +159,10 @@ describe('SiteFooter — one line from 768px', () => {
     for (const child of nav.children) {
       expect(child.tagName === 'A' || child.getAttribute('aria-hidden') === 'true').toBe(true);
     }
-    expect(
-      sep.compareDocumentPosition(inner.lastChild) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-    expect(inner.lastChild.textContent).toMatch(/Zona Franca/);
+    // The colophon text is the node before "Back to top", the last thing in the footer.
+    const colophon = inner.lastChild.previousSibling;
+    expect(sep.compareDocumentPosition(colophon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(colophon.textContent).toMatch(/Zona Franca/);
   });
 
   /* What the line reads depends on whether the deployment has an about page, so
@@ -355,5 +355,65 @@ describe('SiteFooter — the tagline, only without a session', () => {
       '0 0 100%',
     ]);
     expect(declarations('.site-footer-tagline a', 'min-height')).toEqual(['44px']);
+  });
+});
+
+describe('SiteFooter back to top', () => {
+  const renderFooter = () =>
+    render(
+      <MemoryRouter>
+        <SiteFooter />
+      </MemoryRouter>
+    );
+
+  test('is an anchor to <main> after the colophon, with a hidden arrow', () => {
+    renderFooter();
+    const link = screen.getByRole('link', { name: 'Back to top' });
+    expect(link).toHaveAttribute('href', '#main');
+    expect(link.className).toBe('site-footer-top');
+    expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(link.closest('nav')).toBeNull();
+    expect(link.closest('.site-footer-inner').lastElementChild).toBe(link);
+  });
+
+  test('is 44px tall, bold 20px and the footer text colour', () => {
+    const value = (property) => declarations('.site-footer-top', property)[0];
+    expect(value('min-height')).toBe('44px');
+    expect(value('font-size')).toBe('var(--fontsize-body-xl)');
+    expect(value('font-weight')).toBe('700');
+    expect(value('color')).toBe('inherit');
+  });
+
+  test('is as wide as what it shows, and the auto margin puts it on the right', () => {
+    const value = (property) => declarations('.site-footer-top', property);
+    expect(value('width')).toContain('fit-content');
+    expect(value('margin-left')).toContain('auto');
+    // No rule makes it the whole row: its touch area would then be the whole row.
+    expect(value('flex').filter((v) => /100%/.test(v))).toEqual([]);
+    expect(value('width').filter((v) => /100%/.test(v))).toEqual([]);
+    expect(value('justify-content')).toEqual([]);
+  });
+
+  test('is not drawn from 992px', () => {
+    expect(declarationsInMedia('(min-width: 992px)', '.site-footer-top', 'display')).toEqual([
+      'none',
+    ]);
+  });
+
+  test('scrolls smoothly only for those who have not asked for less motion', () => {
+    expect(
+      declarationsInMedia('(prefers-reduced-motion: no-preference)', 'html', 'scroll-behavior')
+    ).toEqual(['smooth']);
+  });
+
+  test('has its text in the three languages', async () => {
+    const [en, es, ca] = await Promise.all(
+      ['en', 'es', 'ca'].map((l) => import(`../i18n/locales/${l}.json`))
+    );
+    expect([en, es, ca].map((m) => m.default.footer.backToTop)).toEqual([
+      'Back to top',
+      'Volver arriba',
+      'Torna amunt',
+    ]);
   });
 });

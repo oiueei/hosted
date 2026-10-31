@@ -660,6 +660,43 @@ main > .page-container {
   .site-footer-sep {
     display: inline;
   }
+
+  /* In the row, "Back to top" goes to the right end of the line (or of the next one when
+     the colophon fills this one); it is as wide as it looks, so only it is a link. */
+  .site-footer-top {
+    margin-top: 0;
+  }
+}
+
+/* "Back to top", under 992px only: an anchor to <main> (so the focus goes up with no
+   JavaScript), 44px tall, Body Bold 20 in the footer's text colour. It is as wide as its
+   text and arrow (`fit-content`, not the whole row: the part you can press is the part you
+   see) and the auto margin on its left puts it at the right of the column, in the block
+   of a phone and in the flex row from 768px alike. Smooth scrolling only for those who
+   have not asked for less motion. */
+.site-footer-top {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  margin-left: auto;
+  gap: var(--spacing-2-xs);
+  min-height: 44px;
+  margin-top: var(--spacing-s);
+  font-size: var(--fontsize-body-xl);
+  font-weight: 700;
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (min-width: 992px) {
+  .site-footer-top {
+    display: none;
+  }
 }
 
 .form-actions {
@@ -970,12 +1007,12 @@ body :focus-visible {
   box-sizing: border-box;
 }
 
-/* Match the collection Linkbox heading to .thing-card-headline (heading-s / 700). */
+/* The title of a collection row follows HDS's heading-s (20px, line-height 1.5, no letter
+   spacing) with this app's bolder weight: only the size and the weight are declared, the
+   line-height and the spacing are HDS's own. */
 .collections-grid *[class*='Linkbox-module_heading'] {
   font-size: var(--fontsize-heading-s);
   font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.2px;
 }
 
 /* Spacers */
@@ -1790,24 +1827,14 @@ figure[class*='Highlight-module_highlight'] {
   align-items: center;
 }
 
-/* Toggle-left: puts the toggle pill on the left of the label.
- * `flex-wrap: nowrap` + `flex-shrink: 0` on the pill keeps the pill on the
- * same row even when the label is multi-line (e.g. long helper text under
- * the title). `align-items: flex-start` aligns the pill with the title
- * rather than the vertical centre of a tall label. */
-.toggle-left [class*='toggleButtonContainerInlineVariant'] {
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  gap: var(--spacing-s);
-}
-.toggle-left [class*='toggleButtonContainerInlineVariant'] > button {
-  margin-left: 0 !important;
-  flex-shrink: 0;
+/* Explanation under an HDS ToggleButton (`ToggleWithHelp`): HDS has no helper text for it. */
+.toggle-help {
+  margin: var(--spacing-3-xs) 0 0;
+  font-size: var(--fontsize-body-s);
+  color: var(--color-black-70);
 }
 /* Disabled+checked toggle: darker grey than HDS default (black-10) */
-.toggle-left button[aria-pressed='true'][disabled] {
+.toggle-with-help button[aria-pressed='true'][disabled] {
   background-color: var(--color-black-90) !important;
   border-color: var(--color-black-90) !important;
 }

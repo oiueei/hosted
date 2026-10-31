@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Button, Notification, ToggleButton } from 'hds-react';
+import { Button, Notification } from 'hds-react';
+import ToggleWithHelp from '../components/ToggleWithHelp';
 import { getCsrfToken } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PageLayout from '../components/PageLayout';
@@ -93,97 +94,49 @@ export default function NotificationsPage() {
         <>
           <p>{t('notifications.intro')}</p>
           <div className="form-grid">
-            <div className="toggle-left">
-              <ToggleButton
-                id="notify-magic"
-                label={
-                  <>
-                    {t('notifications.magicLabel')}
-                    <br />
-                    <span
-                      style={{
-                        fontSize: 'var(--fontsize-body-s)',
-                        fontWeight: 400,
-                        color: 'var(--color-black-70)',
-                      }}
-                    >
-                      {t('notifications.magicHelper')}
-                    </span>
-                  </>
-                }
-                checked
-                disabled
-                onChange={() => {}}
-                variant="inline"
-                theme={
-                  theeemeColors.color_01
-                    ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
-                    : undefined
-                }
-              />
-            </div>
-            <div className="toggle-left">
-              <ToggleButton
-                id="notify-activity"
-                label={
-                  <>
-                    {t('notifications.activityLabel')}
-                    <br />
-                    <span
-                      style={{
-                        fontSize: 'var(--fontsize-body-s)',
-                        fontWeight: 400,
-                        color: 'var(--color-black-70)',
-                      }}
-                    >
-                      {t('notifications.activityHelper')}
-                    </span>
-                  </>
-                }
-                checked={notifyActivity}
-                onChange={(val) => {
-                  setNotifyActivity(!val);
-                  setSaved(false);
-                }}
-                variant="inline"
-                theme={
-                  theeemeColors.color_01
-                    ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
-                    : undefined
-                }
-              />
-            </div>
-            <div className="toggle-left">
-              <ToggleButton
-                id="notify-news"
-                label={
-                  <>
-                    {t('notifications.newsLabel')}
-                    <br />
-                    <span
-                      style={{
-                        fontSize: 'var(--fontsize-body-s)',
-                        fontWeight: 400,
-                        color: 'var(--color-black-70)',
-                      }}
-                    >
-                      {t('notifications.newsHelper')}
-                    </span>
-                  </>
-                }
-                checked={notifyNews}
-                onChange={(val) => {
-                  setNotifyNews(!val);
-                  setSaved(false);
-                }}
-                variant="inline"
-                theme={
-                  theeemeColors.color_01
-                    ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
-                    : undefined
-                }
-              />
-            </div>
+            <ToggleWithHelp
+              id="notify-magic"
+              label={t('notifications.magicLabel')}
+              help={t('notifications.magicHelper')}
+              checked
+              disabled
+              onChange={() => {}}
+              theme={
+                theeemeColors.color_01
+                  ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                  : undefined
+              }
+            />
+            <ToggleWithHelp
+              id="notify-activity"
+              label={t('notifications.activityLabel')}
+              help={t('notifications.activityHelper')}
+              checked={notifyActivity}
+              onChange={(val) => {
+                setNotifyActivity(!val);
+                setSaved(false);
+              }}
+              theme={
+                theeemeColors.color_01
+                  ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                  : undefined
+              }
+            />
+            <ToggleWithHelp
+              id="notify-news"
+              label={t('notifications.newsLabel')}
+              help={t('notifications.newsHelper')}
+              checked={notifyNews}
+              onChange={(val) => {
+                setNotifyNews(!val);
+                setSaved(false);
+              }}
+              theme={
+                theeemeColors.color_01
+                  ? { '--toggle-button-color': `var(--color-${theeemeColors.color_01})` }
+                  : undefined
+              }
+            />
           </div>
           <StatusRegion>
             {saved && (

@@ -130,8 +130,8 @@ class Collection(models.Model):
     visibility = models.CharField(
         max_length=7, choices=Visibility.choices, default=Visibility.PRIVATE
     )
-    # WEEKLY by default. It was NONE, which — with
-    # `User.notify_news` also defaulting off — is why the digest reached almost
+    # MONTHLY by default (it was WEEKLY, and NONE before that). NONE, with
+    # `User.notify_news` also defaulting off, is why the digest once reached almost
     # nobody: it needed an owner to find a setting inside an accordion *and* every
     # reader to have opted in.
     #
@@ -145,7 +145,7 @@ class Collection(models.Model):
     # their behalf is not ours to decide (contrast 0127, which subscribes existing
     # *recipients*, who can unsubscribe themselves).
     digest_frequency = models.CharField(
-        max_length=7, choices=DigestFrequency.choices, default=DigestFrequency.WEEKLY
+        max_length=7, choices=DigestFrequency.choices, default=DigestFrequency.MONTHLY
     )
     # The language this group's outbound email speaks. Blank = inherit the
     # deployment default (EMAIL_LANGUAGE); a member's own preference still wins
