@@ -3,7 +3,7 @@ Thing views for OIUEEI.
 """
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import prefetch_related_objects
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
@@ -129,33 +129,16 @@ class ThingViewSet(ModelViewSet):
             return [AllowAny()]
         return [IsAuthenticated()]
 
-    def _can_delete(self, thing, user_code):
-        """A collection owner (any mode); a co-curator of a PROPRIETARY
-        collection it sits in; the owner of a thing of a NETWORK who is a
-        dinamizador of it (always, lent or not: they run their things there as a
-        PROPRIETARY co-curator runs the catalogue); or the thing owner while it
-        has never changed hands."""
-        is_curator = Q(owner_id=user_code) | Q(
-            mode=Collection.Mode.PROPRIETARY, co_owners__code=user_code
-        )
-        if thing.collections.filter(is_curator).exists():
-            return True
-        if (
-            thing.is_owner(user_code)
-            and thing.collections.filter(
-                mode=Collection.Mode.NETWORK, co_owners__code=user_code
-            ).exists()
-        ):
-            return True
-        return thing.is_owner(user_code) and not thing.transfers.exists()
-
     def get_object(self):
         obj = get_object_or_404(Thing, code=self.kwargs[self.lookup_field])
         if self.action == "retrieve":
             if not obj.can_view(viewer_code(self.request)):
                 self.permission_denied(self.request)
+            # The thing's collections and their co-owners, once: `can_manage`, the
+            # collection menu and `live_requesters_count` all ask who curates them.
+            prefetch_related_objects([obj], "collections__co_owners")
         elif self.action == "destroy":
-            if not self._can_delete(obj, self.request.user.code):
+            if not obj.can_delete(self.request.user.code):
                 self.permission_denied(self.request)
         else:
             self.check_object_permissions(self.request, obj)

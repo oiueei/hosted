@@ -371,6 +371,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
     collection_is_onboarding = serializers.SerializerMethodField()
     collection_request_info = serializers.SerializerMethodField()
     deposit_policy = serializers.SerializerMethodField()
+    live_requesters_count = serializers.SerializerMethodField()
     collection_language = serializers.SerializerMethodField()
     collection_theeeme_colors = serializers.SerializerMethodField()
     collection_koro = serializers.SerializerMethodField()
@@ -427,6 +428,7 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
             "collection_is_onboarding",
             "collection_request_info",
             "deposit_policy",
+            "live_requesters_count",
             "collection_language",
             "collection_theeeme_colors",
             "collection_koro",
@@ -588,6 +590,23 @@ class ThingSerializer(ThingComputedFieldsMixin, serializers.ModelSerializer):
         collection."""
         first = self._viewable_collection(obj)
         return first.effective_text("request_info", obj.owner_id) if first else ""
+
+    def get_live_requesters_count(self, obj):
+        """How many people would be emailed if the reader deleted this thing — those with a
+        pending or accepted request on it, the reader left out — for the page that warns
+        before deleting. Only for someone who may delete it (``Thing.can_delete``, the
+        rule of the endpoint) and only when one thing is read, not in a list, where it
+        would cost queries per row; ``None`` otherwise."""
+        request = self.context.get("request")
+        if request is None or not request.user.is_authenticated:
+            return None
+        if isinstance(self.parent, serializers.ListSerializer):
+            return None
+        if not obj.can_delete(request.user.code):
+            return None
+        from core.services.membership_service import people_told_on_delete
+
+        return len(people_told_on_delete(obj, request.user))
 
     def get_deposit_policy(self, obj):
         """How deposits work for this thing — the collection's policy or, in a network,

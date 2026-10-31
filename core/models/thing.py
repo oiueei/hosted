@@ -168,6 +168,29 @@ class Thing(models.Model):
         from ``can_manage`` on purpose — rescuing is not managing."""
         return any(c.can_rescue(user_code) for c in self.collections.all())
 
+    def can_delete(self, user_code):
+        """Who may delete this thing — the one rule, for the endpoint that does it and the
+        page that warns before: the owner of a collection it sits in (any mode); a
+        co-curator of a PROPRIETARY one; its owner when they are a dinamizador of the
+        NETWORK it sits in (lent or not: they run their things there); or its owner while
+        it has never changed hands.
+
+        Reads ``collections.all()`` and the co-owners through ``.all()`` like
+        ``can_manage``, so a view that prefetched them pays nothing for the collections.
+        """
+        from core.models.collection import Collection
+
+        is_owner = self.is_owner(user_code)
+        for collection in self.collections.all():
+            if collection.is_owner(user_code):
+                return True
+            if collection.mode == Collection.Mode.PROPRIETARY and collection.is_curator(user_code):
+                return True
+            if collection.mode == Collection.Mode.NETWORK and is_owner:
+                if collection.is_curator(user_code):
+                    return True
+        return is_owner and not self.transfers.exists()
+
     def managers(self):
         """Every ``User`` for whom ``can_manage`` is true — the thing owner,
         plus the curators (owner + co-curators) of every PROPRIETARY collection

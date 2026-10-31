@@ -158,6 +158,13 @@ def end_membership(collection, user, *, actor):
     return len(leaving)
 
 
+def people_told_on_delete(thing, actor):
+    """Who will be emailed if ``actor`` deletes ``thing``: one entry per person with a live
+    request or reservation on it, ``actor`` left out. The page that asks before deleting
+    counts these, so the number it shows is the number of emails that go."""
+    return _people_to_tell([thing], actor)
+
+
 def delete_thing(thing, *, actor):
     """Delete ``thing`` and tell whoever had a live request or reservation on it.
 
@@ -170,7 +177,7 @@ def delete_thing(thing, *, actor):
     """
     collection = next(iter(thing.collections.all()), None)
     with transaction.atomic(), deleting_as(actor):
-        to_tell = _people_to_tell([thing], actor)
+        to_tell = people_told_on_delete(thing, actor)
         group_headline = collection.headline if collection else ""
         point = collection.point_for(thing.owner_id) if collection else None
         thing.delete()
