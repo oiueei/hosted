@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { settle } from './settle';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 /**
@@ -58,6 +59,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
   window.history.pushState({}, '', '/library/COL001');
+});
+// The page asks for more than the collection (the inbox, for one) and a test can end on a
+// synchronous assertion before those answers land: outside `act`, which setup.js fails.
+afterEach(async () => {
+  await settle(globalThis.fetch);
 });
 afterEach(() => window.history.pushState({}, '', '/'));
 
