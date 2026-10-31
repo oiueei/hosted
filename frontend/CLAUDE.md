@@ -280,7 +280,7 @@ Detail page for a thing with full information and FAQs. At `/collections/:code/t
 ### DeleteThingPage (`src/pages/DeleteThingPage.jsx`)
 
 - **API:** `GET /api/v1/things/{thingCode}/` (headline), `DELETE` the same URL. At `/collections/:code/things/:thingCode/delete` or `/things/:thingCode/delete`; redirects to `/login` without `userCode`.
-- Back link from `location.state.backPath` / `backLabel` (passed by `ThingLinkbox`, `ThingPage` or `EditThingPage`). Title `Delete: {thing.headline}`. Buttons: Delete (primary, `btnStyle`) + Cancel (secondary, back). No fields. Success → `backPath`; error → toast.
+- Back link from `location.state.backPath` / `backLabel` (passed by `ThingLinkbox`, `ThingPage` or `EditThingPage`). Title `Delete: {thing.headline}`. Buttons: Delete (primary, `btnStyle`) + Cancel (secondary, back). No fields. Success → `backPath`; error → toast. **Under the list of what goes it says how many people will be emailed** (`deleteThing.liveRequesters`, plural: `thing.live_requesters_count`, which the server sends only to someone who may delete the thing; nothing with 0 or no count).
 
 ### RemoveGuestPage (`src/pages/RemoveGuestPage.jsx`)
 
