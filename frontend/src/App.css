@@ -660,6 +660,38 @@ main > .page-container {
   .site-footer-sep {
     display: inline;
   }
+
+  /* "Back to top" keeps a line of its own below the colophon. */
+  .site-footer-top {
+    flex: 0 0 100%;
+  }
+}
+
+/* "Back to top", under 992px only: an anchor to <main> (so the focus goes up with no
+   JavaScript), 44px tall, on the right of the column, Body Bold 20 in the footer's text
+   colour. Smooth scrolling only for those who have not asked for less motion. */
+.site-footer-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-2-xs);
+  min-height: 44px;
+  margin-top: var(--spacing-s);
+  font-size: var(--fontsize-body-xl);
+  font-weight: 700;
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (min-width: 992px) {
+  .site-footer-top {
+    display: none;
+  }
 }
 
 .form-actions {
