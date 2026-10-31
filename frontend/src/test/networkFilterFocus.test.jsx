@@ -124,7 +124,7 @@ describe('the network’s filter keeps the reader where they are', () => {
 
     await waitFor(() => expect(window.location.pathname).toBe('/library/COL001/ENTA01'));
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('main')));
-    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
   });
 
   test('going to another page still brings the focus to the main content', async () => {
@@ -136,6 +136,6 @@ describe('the network’s filter keeps the reader where they are', () => {
     });
 
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('main')));
-    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
   });
 });

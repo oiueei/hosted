@@ -99,7 +99,22 @@ describe('navigating to another page', () => {
     // new page's content rather than wherever the previous page left it, and the
     // viewport is not still parked halfway down the page they came from.
     await waitFor(() => expect(document.activeElement).toBe(main));
-    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
+  });
+
+  test('focuses main without scrolling it into view: the jump to the top is the only scroll', async () => {
+    const { default: App } = await import('../App');
+    const { container } = render(<App />);
+
+    const main = container.querySelector('#main');
+    await waitFor(() => expect(main).not.toBeNull());
+    const focus = vi.spyOn(main, 'focus');
+
+    navigateTo('/contact');
+
+    await waitFor(() => expect(focus).toHaveBeenCalledWith({ preventScroll: true }));
+    // `html` smooths scrolling for the footer's anchor; a page change must jump.
+    expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0, left: 0, behavior: 'instant' });
   });
 
   test('renders the page that was navigated to', async () => {
