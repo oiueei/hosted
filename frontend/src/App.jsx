@@ -4,7 +4,7 @@ import 'hds-core/lib/base.css';
 import './fonts/oiueei-fonts.css';
 import './styles/oiueei-theme.css';
 import { useEffect, useRef, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import i18n, { SUPPORTED_LANGUAGES } from './i18n';
 import RequireAuth from './components/RequireAuth';
@@ -12,7 +12,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import SiteFooter from './components/SiteFooter';
 import NewVersionNotice from './components/NewVersionNotice';
 import { deploymentRoutes } from './deployment';
-import { COLLECTION_PREFIXES, COLLECTION_KINDS } from './utils/collectionPath';
+import { COLLECTION_PREFIXES, COLLECTION_KINDS, isCodeShaped } from './utils/collectionPath';
 import './App.css';
 
 // Pages are lazy-loaded so each route ships as its own chunk: the initial bundle
@@ -66,6 +66,18 @@ const ContactPage = lazy(() => import('./pages/ContactPage'));
  * `/library/ABC123/DELETE` — the address of a dinamizador's filter of the collection
  * — on the page that deletes it. Lowercase paths stay what they were.
  */
+/**
+ * The collection's page, or the collection filtered by one of a network's
+ * dinamizadores (`/:curatorCode`). The optional segment is a user's code: six capitals
+ * and digits. Anything else there is not a page of the app (`/library/ABC123/foo`) and
+ * gets the usual "not found"; a code that names nobody shows the collection as it is.
+ */
+function CollectionRoute() {
+  const { curatorCode } = useParams();
+  if (curatorCode !== undefined && !isCodeShaped(curatorCode)) return <NotFoundPage />;
+  return <CollectionPage />;
+}
+
 const publicCollectionRoutes = (prefix) => [
   // One route for the collection and for the collection filtered by one of a network's
   // dinamizadores (`/:curatorCode`, optional): a single route so that moving between
@@ -75,7 +87,7 @@ const publicCollectionRoutes = (prefix) => [
   <Route
     key={`${prefix}-page`}
     path={`/${prefix}/:code/:curatorCode?`}
-    element={<CollectionPage />}
+    element={<CollectionRoute />}
   />,
   <Route
     key={`${prefix}-thing`}

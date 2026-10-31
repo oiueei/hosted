@@ -48,8 +48,8 @@ describe('the sub-routes of a collection tell case apart', () => {
     expect(await screen.findByRole('heading', { level: 1, name: /Delete/ })).toBeVisible();
   });
 
-  test.each(['DELETE', 'IMPORT', 'Delete'])(
-    '%s is not the page that deletes or imports: it is the collection, as a code that names nobody',
+  test.each(['DELETE', 'IMPORT'])(
+    '%s has the shape of a code, so it is the collection, as a code that names nobody',
     async (segment) => {
       await openApp(`/library/COL001/${segment}`);
 
@@ -61,20 +61,22 @@ describe('the sub-routes of a collection tell case apart', () => {
     }
   );
 
+  test.each(['Delete', 'Import', 'foo', 'JOIN', 'ABC12', 'ABC1234'])(
+    '%s is not the shape of a code: the usual "not found"',
+    async (segment) => {
+      await openApp(`/library/COL001/${segment}`);
+
+      expect(await screen.findByText('Page not found')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /Delete|Join/ })).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'The lending library' })).toBeNull();
+    }
+  );
+
   test('the lowercase import is still the import page', async () => {
     await openApp('/library/COL001/import');
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Add several at once (CSV)' })
     ).toBeVisible();
-  });
-
-  test('the public sub-routes tell case apart too', async () => {
-    await openApp('/library/COL001/JOIN');
-
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'The lending library' })
-    ).toBeVisible();
-    expect(screen.queryByRole('heading', { name: /Join/ })).toBeNull();
   });
 });
