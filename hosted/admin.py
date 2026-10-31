@@ -113,7 +113,9 @@ class CreatorValidationAdmin(admin.ModelAdmin):
             send_creator_validation_decision_email(obj)
 
     @admin.action(
-        description="Approve — grant community collections, lending, renting and reservations"
+        description=(
+            "Approve — grant community and network collections, lending, renting and reservations"
+        )
     )
     def approve(self, request, queryset):
         self._resolve(request, queryset, CreatorValidation.Status.APPROVED)
