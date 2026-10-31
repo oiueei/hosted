@@ -376,13 +376,22 @@ describe('SiteFooter back to top', () => {
     expect(link.closest('.site-footer-inner').lastElementChild).toBe(link);
   });
 
-  test('is 44px tall, bold 20px, right-aligned and the footer text colour', () => {
+  test('is 44px tall, bold 20px and the footer text colour', () => {
     const value = (property) => declarations('.site-footer-top', property)[0];
     expect(value('min-height')).toBe('44px');
     expect(value('font-size')).toBe('var(--fontsize-body-xl)');
     expect(value('font-weight')).toBe('700');
-    expect(value('justify-content')).toBe('flex-end');
     expect(value('color')).toBe('inherit');
+  });
+
+  test('is as wide as what it shows, and the auto margin puts it on the right', () => {
+    const value = (property) => declarations('.site-footer-top', property);
+    expect(value('width')).toContain('fit-content');
+    expect(value('margin-left')).toContain('auto');
+    // No rule makes it the whole row: its touch area would then be the whole row.
+    expect(value('flex').filter((v) => /100%/.test(v))).toEqual([]);
+    expect(value('width').filter((v) => /100%/.test(v))).toEqual([]);
+    expect(value('justify-content')).toEqual([]);
   });
 
   test('is not drawn from 992px', () => {
