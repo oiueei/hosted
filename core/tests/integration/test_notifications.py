@@ -58,8 +58,8 @@ def test_new_user_starts_subscribed_to_both_categories(db):
     assert fresh.notify_activity is True
 
 
-def test_new_collection_sends_a_weekly_digest_by_default(db):
-    """A new collection is born sending a weekly summary.
+def test_new_collection_sends_a_monthly_digest_by_default(db):
+    """A new collection is born sending a monthly summary.
 
     The other half of the same 2026-08 change: `notify_news` defaulting on is
     worth nothing while every collection defaults to `NONE`, which is the state
@@ -69,7 +69,7 @@ def test_new_collection_sends_a_weekly_digest_by_default(db):
     """
     owner = User.objects.create(code="DGDEF1", email="lele1@your-domain.test", name="Owner")
     collection = Collection.objects.create(code="DGDEF2", owner=owner, headline="Fresh")
-    assert collection.digest_frequency == Collection.DigestFrequency.WEEKLY
+    assert collection.digest_frequency == Collection.DigestFrequency.MONTHLY
 
 
 def test_muting_one_collection_stops_only_that_digest(db, noti_user):
