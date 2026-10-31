@@ -179,6 +179,8 @@ def _collections_section(creators, guests):
     total = real.count()
     active = real.filter(status=Collection.Status.ACTIVE).count()
     community = real.filter(mode=Collection.Mode.COMMUNITY).count()
+    network = real.filter(mode=Collection.Mode.NETWORK).count()
+    proprietary = real.filter(mode=Collection.Mode.PROPRIETARY).count()
     public = real.filter(visibility=Collection.Visibility.PUBLIC).count()
     invites = real.aggregate(n=Count("invites"))["n"] or 0
     # Distinct guests per creator: a guest under two of the same creator's
@@ -191,7 +193,10 @@ def _collections_section(creators, guests):
         "rows": [
             ("Total", total),
             ("Active (status ACTIVE)", active),
-            ("COMMUNITY / PROPRIETARY", f"{community} / {total - community}"),
+            ("COMMUNITY / PROPRIETARY", f"{community} / {proprietary}"),
+            # A network is neither: counted with the proprietary ones it would hide
+            # the mode this deployment asks approval for.
+            ("NETWORK", network),
             ("PUBLIC / PRIVATE", f"{public} / {total - public}"),
             ("Avg collections per creator", _avg(total, n_creators)),
             ("Avg guests per collection", _avg(invites, total)),

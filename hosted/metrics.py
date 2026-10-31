@@ -87,7 +87,12 @@ ALL_TYPES = REQUEST_TYPES + (RESERVE_TYPE,)
 # Window, in weeks, after which a cohort's conversion to owner is reported.
 COHORT_WINDOWS = (1, 2, 4, 8)
 
-LIVE_ONLY_KEYS = ("collections_community", "collections_public", "things_available")
+LIVE_ONLY_KEYS = (
+    "collections_community",
+    "collections_network",
+    "collections_public",
+    "things_available",
+)
 
 METRIC_KEYS = (
     # Stocks at the cutoff.
@@ -575,12 +580,13 @@ def _generation_rows(history):
 
 
 def _live_only():
-    """The three numbers that describe the state of today, over what is real."""
+    """The numbers that describe the state of today, over what is real."""
     real_collections = Collection.objects.filter(is_onboarding=False).exclude(
         owner_id__in=SEED_USER_CODES
     )
     return {
         "collections_community": real_collections.filter(mode=Collection.Mode.COMMUNITY).count(),
+        "collections_network": real_collections.filter(mode=Collection.Mode.NETWORK).count(),
         "collections_public": real_collections.filter(
             visibility=Collection.Visibility.PUBLIC
         ).count(),

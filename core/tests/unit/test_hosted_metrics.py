@@ -496,10 +496,14 @@ class TestTheCatalogue:
             visibility=Collection.Visibility.PUBLIC,
         )
         Collection.objects.create(code="COL002", owner=owner, headline="Private")
+        Collection.objects.create(
+            code="COL003", owner=owner, headline="Network", mode=Collection.Mode.NETWORK
+        )
 
         got = week(W37, live=True)
 
         assert got["collections_community"] == 1
+        assert got["collections_network"] == 1
         assert got["collections_public"] == 1
         assert got["things_available"] == 0
 

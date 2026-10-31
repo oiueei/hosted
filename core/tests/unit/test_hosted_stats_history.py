@@ -62,6 +62,16 @@ class TestTheSeries:
         assert row["collections_public"] == ""
         assert row["creators"] == "0"
 
+    def test_a_week_recorded_before_a_metric_existed_has_an_empty_cell_for_it(self):
+        old = snapshot(date(2026, 9, 7))
+        del old.metrics["collections_network"]
+        old.save()
+
+        row = rows()[0]
+
+        assert row["collections_network"] == ""
+        assert row["creators"] == "0"
+
     def test_each_week_names_its_iso_week_phase_and_milestones(self):
         snapshot(date(2026, 9, 7), origin="LIVE")
         Milestone.objects.create(

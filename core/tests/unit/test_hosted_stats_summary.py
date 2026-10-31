@@ -81,6 +81,28 @@ class TestRealMetrics:
         assert _row(sections, "Collections (real)", "COMMUNITY / PROPRIETARY") == "1 / 1"
         assert _row(sections, "Collections (real)", "PUBLIC / PRIVATE") == "1 / 1"
 
+    def test_a_network_has_its_own_row_and_is_not_counted_as_proprietary(self, user):
+        _real_collection(user, code="RC1", mode="COMMUNITY")
+        _real_collection(user, code="RC2", mode="PROPRIETARY")
+        _real_collection(user, code="RC3", mode="NETWORK")
+        _real_collection(user, code="RC4", mode="NETWORK")
+        sections = build_report()
+        assert _row(sections, "Collections (real)", "Total") == 4
+        assert _row(sections, "Collections (real)", "COMMUNITY / PROPRIETARY") == "1 / 1"
+        assert _row(sections, "Collections (real)", "NETWORK") == 2
+
+    def test_no_network_is_a_row_of_zero(self, user):
+        _real_collection(user, code="RC1", mode="PROPRIETARY")
+        sections = build_report()
+        assert _row(sections, "Collections (real)", "NETWORK") == 0
+
+    def test_a_demo_network_counts_for_nothing(self, user):
+        Collection.objects.create(
+            code="DEMO01", owner=user, headline="Demo", is_onboarding=True, mode="NETWORK"
+        )
+        sections = build_report()
+        assert _row(sections, "Collections (real)", "NETWORK") == 0
+
     def test_things_by_type_and_proportions(self, user):
         coll = _real_collection(user)
         for i, ttype in enumerate(["GIFT_THING", "GIFT_THING", "SELL_THING", "LEND_THING"]):

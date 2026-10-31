@@ -214,8 +214,12 @@ survives the anonymisation of the `Event` log.
   who became owners.
 - **Small samples:** always `n/N`, with a percentage only from N = 10. Times are medians.
 - Weeks recorded as `BACKFILL` have no value for `collections_community`,
-  `collections_public` and `things_available`: they describe the state of the day and the
-  log cannot say what it was.
+  `collections_network`, `collections_public` and `things_available`: they describe the
+  state of the day and the log cannot say what it was. (`collections_network` is later than
+  the first weeks, so those rows have no such key at all; the history file leaves the cell
+  empty, as for any other gap.) The Monday report counts a network on a row of its own
+  (`NETWORK`) and keeps `COMMUNITY / PROPRIETARY` for those two modes alone: a network is
+  neither, and counted as proprietary it would hide the mode this deployment asks approval for.
 
 **Starting it**
 
