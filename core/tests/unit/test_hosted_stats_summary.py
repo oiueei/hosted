@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from core.management.commands.seed_data import common as seed_common
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
+from core.models.invitation_record import InvitationRecord
 from core.tests.unit.hosted_story import LALA, adds, creates, joins, log, person
 from hosted.management.commands.stats_summary import _fraction, build_report
 from hosted.metrics import METRIC_KEYS, cycle_as_of
@@ -379,6 +380,103 @@ class TestJoinsByDoorSection:
         labels = [label for label, _ in self._section()["rows"]]
 
         assert not any("Unrecorded" in label for label in labels)
+
+
+class TestInvitationsSection:
+    """Who the invitations reach, and which accounts send many that nobody accepts."""
+
+    TITLE = "Invitations answered"
+    State = InvitationRecord.State
+
+    def _inviter(self, code, real=True):
+        """An account; a real one owns a collection of its own, a demo one owns nothing."""
+        who = person(code)
+        if real:
+            Collection.objects.create(
+                code=f"C{code[1:]}", owner=who, headline="Real", is_onboarding=False
+            )
+        return who
+
+    def _sent(self, who, sent, accepted=0, declined=0, days_ago=15):
+        for i in range(sent):
+            state = self.State.SENT
+            if i < accepted:
+                state = self.State.ACCEPTED
+            elif i < accepted + declined:
+                state = self.State.DECLINED
+            record = InvitationRecord.objects.create(
+                founder=who, inviter=who, address_hash=f"{who.code}-{i}", state=state
+            )
+            InvitationRecord.objects.filter(pk=record.pk).update(
+                sent_at=timezone.now() - timedelta(days=days_ago)
+            )
+
+    def _labels(self):
+        return [label for label, _ in _section(build_report(), self.TITLE)["rows"]]
+
+    def test_an_account_with_20_sent_and_under_30_percent_accepted_is_marked(self):
+        self._sent(self._inviter("INV001"), sent=20, accepted=5)
+
+        assert "⚠ INV001" in self._labels()
+
+    def test_an_account_with_19_sent_is_not_marked_however_few_are_accepted(self):
+        self._sent(self._inviter("INV002"), sent=19, accepted=0)
+
+        labels = self._labels()
+        assert "INV002" in labels
+        assert not any("⚠" in label for label in labels)
+
+    def test_an_account_at_exactly_30_percent_is_not_marked(self):
+        self._sent(self._inviter("INV003"), sent=20, accepted=6)
+
+        labels = self._labels()
+        assert "INV003" in labels
+        assert not any("⚠" in label for label in labels)
+
+    def test_each_row_says_sent_accepted_declined_and_the_percentage(self):
+        self._sent(self._inviter("INV004"), sent=10, accepted=4, declined=2)
+
+        rows = dict(_section(build_report(), self.TITLE)["rows"])
+
+        assert rows["INV004"] == "10 sent, 4 accepted, 2 declined, 40% accepted"
+
+    def test_a_demo_account_is_left_out_of_the_rows_and_of_the_total(self):
+        self._sent(self._inviter("INV005"), sent=4, accepted=2)
+        self._sent(self._inviter("DEM001", real=False), sent=30, accepted=0)
+
+        rows = dict(_section(build_report(), self.TITLE)["rows"])
+
+        assert "DEM001" not in rows and "⚠ DEM001" not in rows
+        assert rows["All accounts"] == "4 sent, 2 accepted, 0 declined, 50% accepted"
+
+    def test_the_total_counts_every_account_and_not_only_the_ten_listed(self):
+        for n in range(12):
+            self._sent(self._inviter(f"INV1{n:02d}"), sent=2, accepted=1)
+
+        rows = _section(build_report(), self.TITLE)["rows"]
+
+        assert dict(rows)["All accounts"] == "24 sent, 12 accepted, 0 declined, 50% accepted"
+        assert len(rows) == 1 + 10
+
+    def test_with_no_invitations_the_section_says_there_is_no_data(self):
+        rows = _section(build_report(), self.TITLE)["rows"]
+
+        assert rows == [("All accounts", "no data in this window")]
+
+    def test_the_section_names_accounts_by_code_and_never_by_address(self):
+        who = self._inviter("INV006")
+        self._sent(who, sent=3, accepted=1)
+
+        shown = repr(_section(build_report(), self.TITLE))
+
+        assert "INV006" in shown
+        assert who.email not in shown and "@" not in shown
+
+    def test_the_note_says_which_window_the_figures_cover(self):
+        note = _section(build_report(), self.TITLE)["note"]
+
+        assert "last 30 days" in note
+        assert "7 most recent" in note
 
 
 # --- The weekly series in the Monday email ----------------------------------------

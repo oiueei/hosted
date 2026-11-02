@@ -28,6 +28,7 @@ from django.utils import timezone
 from core.management.commands.device_share import _cell, weekly_device_share
 from core.management.commands.seed_data.common import USERS as _SEED_USERS
 from core.models import FAQ, BookingPeriod, Collection, DailyActivity, Event, Thing, User
+from core.services.invitation_service import invitation_acceptance
 from hosted.emails import send_stats_summary_email
 from hosted.metrics import WEEK_TZ, cohorts_as_of, cycle_as_of, real_events, retired_orphans
 from hosted.models import AccessInterest, CreatorValidation, Milestone, WeeklySnapshot
@@ -151,6 +152,7 @@ def build_report():
         _holds_section(real_list, guests),
         _history_section(events, now),
         _joins_by_door_section(events, now),
+        _invitations_section(demo),
         _conversion_section(events),
         _retention_section(real, creators, guests, today),
         _evolution_section(),
@@ -356,6 +358,65 @@ def _joins_by_door_section(events, now):
         "rows": rows,
         "note": "A door with no joins over several months is a candidate for removal.",
     }
+
+
+# An account that sent at least this many invitations in the window and had fewer than this
+# share of them accepted is marked in the report. Only a warning: nothing is blocked by it.
+INVITE_FLAG_MIN_SENT = 20
+INVITE_FLAG_BELOW_PERCENT = 30
+INVITE_TOP_ACCOUNTS = 10
+
+
+def _invitations_section(demo):
+    """How the invitations were answered: everyone together, then the accounts sending most.
+
+    Reads ``invitation_acceptance()`` with its defaults (sent in the last 30 days, leaving out
+    the 7 most recent), and says so, or the figures would be read against the wrong window.
+    Accounts are shown by code, never by address. Unanswered invitations count as sent, so the
+    percentage is accepted over sent. Demo accounts are left out, like every other section.
+    """
+    rows = [row for row in invitation_acceptance() if row["inviter"] not in demo]
+    note = (
+        "Invitations sent in the last 30 days, leaving out the 7 most recent so that "
+        "recent ones have had time to be answered. Unanswered count as sent. "
+        f"⚠ marks an account with {INVITE_FLAG_MIN_SENT} or more sent and fewer than "
+        f"{INVITE_FLAG_BELOW_PERCENT}% accepted: a warning only, nobody is blocked."
+    )
+    if not rows:
+        return {
+            "title": "Invitations answered",
+            "rows": [("All accounts", "no data in this window")],
+            "note": note,
+        }
+
+    def summary(sent, accepted, declined):
+        return (
+            f"{sent} sent, {accepted} accepted, {declined} declined, "
+            f"{round(accepted * 100 / sent)}% accepted"
+        )
+
+    out = [
+        (
+            "All accounts",
+            summary(
+                sum(r["sent"] for r in rows),
+                sum(r["accepted"] for r in rows),
+                sum(r["declined"] for r in rows),
+            ),
+        )
+    ]
+    for r in rows[:INVITE_TOP_ACCOUNTS]:
+        flagged = (
+            r["sent"] >= INVITE_FLAG_MIN_SENT
+            and r["accepted"] * 100 < INVITE_FLAG_BELOW_PERCENT * r["sent"]
+        )
+        out.append(
+            (
+                f"{'⚠ ' if flagged else ''}{r['inviter']}",
+                summary(r["sent"], r["accepted"], r["declined"]),
+            )
+        )
+    return {"title": "Invitations answered", "rows": out, "note": note}
 
 
 def _conversion_section(events):
