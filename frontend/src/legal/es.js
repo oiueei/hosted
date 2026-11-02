@@ -45,7 +45,7 @@ OIUEEI es un proyecto personal: no hay ninguna sociedad detrás. Soy su creador,
 
 **Tus derechos:** acceso, rectificación, supresión y portabilidad los ejerces directamente desde tu perfil: puedes descargar todos tus datos en un fichero cuando quieras y, si gestionas un grupo, también el grupo entero —ese segundo fichero lleva datos de otras personas, así que guárdalo bien—. Para oposición o limitación escríbeme a legal@oiueei.com. También puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).
 
-**Si has llegado por una invitación:** tu correo nos lo dio quien te invitó, y solo se usa para enviarte esa invitación. Si no la aceptas y nadie vuelve a invitarte, esa cuenta pendiente se borra sola a los 60 días.
+**Si has llegado por una invitación:** tu correo nos lo dio quien te invitó, y solo se usa para enviarte esa invitación. Si no la aceptas y nadie vuelve a invitarte, esa cuenta pendiente se borra sola a los 60 días. Guardamos **12 meses** una huella de tu dirección, de la que no se puede leer el correo, para que, si no aceptas la invitación, ni quien te invitó ni quien fundó ese grupo puedan volver a invitarte por correo, y para contar cuántas invitaciones de cada cuenta se aceptan, lo que ayuda a detectar abusos.
 
 **Menores:** si tienes menos de 14 años, necesitas la autorización de tus tutores para usar OIUEEI.
 
@@ -69,5 +69,5 @@ OIUEEI es software de código abierto bajo la licencia **EUPL-1.2**, un copyleft
 
 ---
 
-*Última actualización: 9 de septiembre de 2026.*
+*Última actualización: 2 de noviembre de 2026.*
 `;

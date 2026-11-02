@@ -45,7 +45,7 @@ OIUEEI és un projecte personal: no hi ha cap societat al darrere. En soc el cre
 
 **Els teus drets:** accés, rectificació, supressió i portabilitat els exerceixes directament des del teu perfil: pots descarregar totes les teves dades en un fitxer quan vulguis i, si gestiones un grup, també el grup sencer —aquest segon fitxer porta dades d'altres persones, així que guarda'l bé—. Per a oposició o limitació escriu-me a legal@oiueei.com. També pots reclamar davant l'Agència Espanyola de Protecció de Dades (www.aepd.es).
 
-**Si hi has arribat per una invitació:** el teu correu ens el va donar qui et va convidar, i només es fa servir per enviar-te aquesta invitació. Si no l'acceptes i ningú no torna a convidar-te, aquest compte pendent s'esborra sol als 60 dies.
+**Si hi has arribat per una invitació:** el teu correu ens el va donar qui et va convidar, i només es fa servir per enviar-te aquesta invitació. Si no l'acceptes i ningú no torna a convidar-te, aquest compte pendent s'esborra sol als 60 dies. Guardem **12 mesos** una empremta de la teva adreça, de la qual no es pot llegir el correu, perquè, si no acceptes la invitació, ni qui et va convidar ni qui va fundar aquest grup et puguin tornar a convidar per correu, i per comptar quantes invitacions de cada compte s'accepten, cosa que ajuda a detectar abusos.
 
 **Menors:** si tens menys de 14 anys, necessites l'autorització dels teus tutors per fer servir OIUEEI.
 
@@ -69,5 +69,5 @@ OIUEEI és programari de codi obert sota la llicència **EUPL-1.2**, un copyleft
 
 ---
 
-*Darrera actualització: 9 de setembre de 2026.*
+*Darrera actualització: 2 de novembre de 2026.*
 `;

@@ -44,7 +44,7 @@ OIUEEI is a personal project: there is no company behind it. I am its creator, m
 
 **Your rights:** access, rectification, erasure and portability you exercise directly from your profile: you can download all your data in one file whenever you like and, if you run a group, the whole group as well — that second file carries other people's data, so keep it safe. For objection or restriction write to legal@oiueei.com. You may also lodge a complaint with the Spanish Data Protection Agency (www.aepd.es).
 
-**If you arrived through an invitation:** your email address was given to us by whoever invited you, and it is used only to send you that invitation. If you do not accept it and nobody invites you again, that pending account deletes itself after 60 days.
+**If you arrived through an invitation:** your email address was given to us by whoever invited you, and it is used only to send you that invitation. If you do not accept it and nobody invites you again, that pending account deletes itself after 60 days. We keep a fingerprint of your address for **12 months**, from which your email cannot be read, so that, if you do not accept the invitation, neither the person who invited you nor the founder of that group can invite you by email again, and to count how many of each account's invitations are accepted, which helps spot abuse.
 
 **Minors:** if you are under 14, you need your guardians' permission to use OIUEEI.
 
@@ -68,5 +68,5 @@ OIUEEI is open source software under the **EUPL-1.2**, a strong copyleft licence
 
 ---
 
-*Last updated: 9 September 2026.*
+*Last updated: 2 November 2026.*
 `;
