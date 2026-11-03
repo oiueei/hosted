@@ -69,5 +69,5 @@ OIUEEI es software de código abierto bajo la licencia **EUPL-1.2**, un copyleft
 
 ---
 
-*Última actualización: 2 de noviembre de 2026.*
+*Última actualización: 3 de noviembre de 2026.*
 `;
