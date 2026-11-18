@@ -73,12 +73,12 @@ export default [
   {
     id: 'contacto',
     q: '¿Cómo se ponen en contacto quien pide una cosa y quien la gestiona?',
-    a: 'Por correo, y en un solo sentido. Cuando pides una cosa, a quien la gestiona le llegan con la solicitud tu nombre y tu email —el que usas para entrar en OIUEEI—, para que pueda escribirte y quedar; también lo ve en «Solicitudes para mí». Su email no se te muestra: lo tendrás cuando te escriba. OIUEEI no tiene chat, y el pago o la entrega los acordáis vosotros.',
+    a: 'Por correo, y en un solo sentido. Cuando pides una cosa, a quien la gestiona le llegan con la solicitud tu nombre y tu email —el que usas para entrar en OIUEEI—, para que pueda escribirte y quedar; también lo ve en «Solicitudes para mí». Si el grupo lo pide, al reservar puedes dejar además un teléfono (es opcional), y una biblioteca puede pedirte para prestarte algo tu nombre completo, tu dirección, un teléfono y un documento de identificación. Se guardan cifrados, solo los ve quien gestiona esa reserva o te presta la cosa, y se borran: el teléfono, el día después de la reserva; los datos del préstamo, al devolverla o, como mucho, 90 días después. Su email no se te muestra: lo tendrás cuando te escriba. OIUEEI no tiene chat, y el pago o la entrega los acordáis vosotros.',
   },
   {
     id: 'sin-devolver',
     q: '¿Qué pasa si alguien no devuelve algo?',
-    a: 'La aplicación avisa el día antes a las dos partes y guarda el recorrido de cada cosa, así que siempre se sabe en qué manos está. A partir de ahí no hay multas ni bloqueos automáticos: eso lo arregla el grupo, no el software. Se puede anotar una **fianza** y la condición para recuperarla, pero es información y nada más — OIUEEI no cobra, no retiene dinero y no es parte del trato.',
+    a: 'La aplicación avisa el día antes a las dos partes y guarda el recorrido de cada cosa, así que siempre se sabe en qué manos está. Si se pasa la fecha, quien la presta puede «Recordar la devolución», y eso además alarga el préstamo unos días si la cosa está libre; cuando vuelve, la marca como devuelta. A partir de ahí no hay multas ni bloqueos automáticos: eso lo arregla el grupo, no el software. Se puede anotar una **fianza** y la condición para recuperarla, pero es información y nada más — OIUEEI no cobra, no retiene dinero y no es parte del trato.',
   },
   {
     id: 'quien-ve',
@@ -88,7 +88,7 @@ export default [
   {
     id: 'dinamizar',
     q: 'Si dinamizas un grupo',
-    a: 'Puedes invitar y quitar miembros, escribir a todo el grupo, editar la colección y pasar a otros a dinamizarla contigo. En un grupo que lleva el equipo (no en una comunidad), también ves y respondes las solicitudes de todas sus cosas. Con eso tienes datos de otras personas: el correo de cada miembro, quién pide qué y cuándo. La copia de la colección (el JSON del menú) los lleva todos: guárdala en un sitio seguro y no la reenvíes. Usa esos correos solo para el grupo. Si dejas de dinamizar, borra las copias que tengas.',
+    a: 'Puedes invitar y quitar miembros, escribir a todo el grupo, editar la colección y pasar a otros a dinamizarla contigo. En un grupo que lleva el equipo (no en una comunidad), también ves y respondes las solicitudes de todas sus cosas. Con eso tienes datos de otras personas: el correo de cada miembro, quién pide qué y cuándo. Y si tu biblioteca pide los datos de contacto al prestar, también los de quien se lleva cada cosa, mientras la tiene; esos no van en la copia de la colección. La copia de la colección (el JSON del menú) los lleva todos: guárdala en un sitio seguro y no la reenvíes. Usa esos correos solo para el grupo. Si dejas de dinamizar, borra las copias que tengas.',
   },
   {
     id: 'mis-datos',

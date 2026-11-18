@@ -55,12 +55,12 @@ export default [
   {
     id: 'contacto',
     q: 'Com es posen en contacte qui demana una cosa i qui la gestiona?',
-    a: "Per correu, i en un sol sentit. Quan demanes una cosa, a qui la gestiona li arriben amb la sol·licitud el teu nom i el teu email —el que fas servir per entrar a OIUEEI—, perquè et pugui escriure i quedar; també el veu a «Sol·licituds per a mi». El seu email no se't mostra: el tindràs quan t'escrigui. OIUEEI no té xat, i el pagament o el lliurament els acordeu vosaltres.",
+    a: "Per correu, i en un sol sentit. Quan demanes una cosa, a qui la gestiona li arriben amb la sol·licitud el teu nom i el teu email —el que fas servir per entrar a OIUEEI—, perquè et pugui escriure i quedar; també el veu a «Sol·licituds per a mi». Si el grup ho demana, en reservar pots deixar també un telèfon (és opcional), i una biblioteca et pot demanar per prestar-te alguna cosa el teu nom complet, la teva adreça, un telèfon i un document d'identificació. Es guarden xifrats, només els veu qui gestiona aquesta reserva o et presta la cosa, i s'esborren: el telèfon, l'endemà de la reserva; les dades del préstec, en tornar-la o, com a molt, 90 dies després. El seu email no se't mostra: el tindràs quan t'escrigui. OIUEEI no té xat, i el pagament o el lliurament els acordeu vosaltres.",
   },
   {
     id: 'sin-devolver',
     q: 'Què passa si algú no torna una cosa?',
-    a: "L'aplicació avisa el dia abans les dues parts i guarda el recorregut de cada cosa, així que sempre se sap en quines mans és. A partir d'aquí no hi ha multes ni bloquejos automàtics: això ho arregla el grup, no el programari. Es pot anotar una **fiança** i la condició per recuperar-la, però és informació i res més — OIUEEI no cobra, no reté diners i no és part del tracte.",
+    a: "L'aplicació avisa el dia abans les dues parts i guarda el recorregut de cada cosa, així que sempre se sap en quines mans és. Si es passa la data, qui la presta pot «Recordar la devolució», i això a més allarga el préstec uns dies si la cosa està lliure; quan torna, la marca com a retornada. A partir d'aquí no hi ha multes ni bloquejos automàtics: això ho arregla el grup, no el programari. Es pot anotar una **fiança** i la condició per recuperar-la, però és informació i res més — OIUEEI no cobra, no reté diners i no és part del tracte.",
   },
   {
     id: 'quien-ve',
@@ -70,7 +70,7 @@ export default [
   {
     id: 'dinamizar',
     q: 'Si dinamitzes un grup',
-    a: "Pots convidar i treure membres, escriure a tot el grup, editar la col·lecció i fer que altres la dinamitzin amb tu. En un grup que porta l'equip (no en una comunitat), també veus i respons les sol·licituds de totes les seves coses. Amb això tens dades d'altres persones: el correu de cada membre, qui demana què i quan. La còpia de la col·lecció (el JSON del menú) les porta totes: guarda-la en un lloc segur i no la reenviïs. Fes servir aquests correus només per al grup. Si deixes de dinamitzar, esborra les còpies que tinguis.",
+    a: "Pots convidar i treure membres, escriure a tot el grup, editar la col·lecció i fer que altres la dinamitzin amb tu. En un grup que porta l'equip (no en una comunitat), també veus i respons les sol·licituds de totes les seves coses. Amb això tens dades d'altres persones: el correu de cada membre, qui demana què i quan. I si la teva biblioteca demana les dades de contacte en prestar, també les de qui s'emporta cada cosa, mentre la té; aquestes no van a la còpia de la col·lecció. La còpia de la col·lecció (el JSON del menú) les porta totes: guarda-la en un lloc segur i no la reenviïs. Fes servir aquests correus només per al grup. Si deixes de dinamitzar, esborra les còpies que tinguis.",
   },
   {
     id: 'mis-datos',
