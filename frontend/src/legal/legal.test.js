@@ -151,9 +151,9 @@ describe('who answers for the contact details a library asks for', () => {
     en: '90 days after the return date. ',
   };
   const SENTENCE = {
-    es: 'De esos datos responde la biblioteca que te los pide, y la plataforma los guarda por su encargo: para ejercer tus derechos sobre ellos, escríbele a ella o al operador de esta instancia, que se lo hará llegar.',
-    ca: "D'aquestes dades en respon la biblioteca que te les demana, i la plataforma les guarda per encàrrec seu: per exercir els teus drets sobre elles, escriu-li a ella o a l'operador d'aquesta instància, que li ho farà arribar.",
-    en: "The library that asks you for these details answers for them, and the platform keeps them on its behalf: to exercise your rights over them, write to the library or to this instance's operator, who will pass it on.",
+    es: 'De esos datos responde la biblioteca que te los pide, y OIUEEI los guarda por su encargo: para ejercer tus derechos sobre ellos, escríbele a ella o a legal@oiueei.com, y se lo haré llegar.',
+    ca: "D'aquestes dades en respon la biblioteca que te les demana, i OIUEEI les guarda per encàrrec seu: per exercir els teus drets sobre elles, escriu-li a ella o a legal@oiueei.com, i li ho faré arribar.",
+    en: 'The library that asks you for these details answers for them, and OIUEEI keeps them on its behalf: to exercise your rights over them, write to the library or to legal@oiueei.com, and I will pass it on.',
   };
 
   test.each(CODES)('%s says it, once, right after the contact details of a library', (lang) => {
@@ -166,9 +166,9 @@ describe('the terms a library may ask a borrower to accept', () => {
   // The request page can show a box to tick before borrowing; the privacy text says what
   // is kept of it, right after the sentence saying who answers for the contact details.
   const AFTER = {
-    es: 'escríbele a ella o al operador de esta instancia, que se lo hará llegar. ',
-    ca: "escriu-li a ella o a l'operador d'aquesta instància, que li ho farà arribar. ",
-    en: "write to the library or to this instance's operator, who will pass it on. ",
+    es: 'escríbele a ella o a legal@oiueei.com, y se lo haré llegar. ',
+    ca: 'escriu-li a ella o a legal@oiueei.com, i li ho faré arribar. ',
+    en: 'write to the library or to legal@oiueei.com, and I will pass it on. ',
   };
   const SENTENCE = {
     es: 'Si una biblioteca te pide que aceptes sus condiciones para prestarte algo, se guarda cuándo las aceptaste y cuáles eran.',
@@ -225,4 +225,68 @@ describe('what is seen of a profile, of a team page and of an invitation', () =>
       expect(paragraph).toContain(sentence);
     }
   );
+});
+
+describe('the term about a library that asks for contact details to lend', () => {
+  // Term 9 makes the library the controller and OIUEEI its processor (art. 28). It is one
+  // numbered item, with its six points inline (the Markdown renderer has no nested lists),
+  // and "Law and venue" follows it as 10: a term added in the middle must not leave the
+  // old last one numbered 9 or restart the list.
+  const HEADING = {
+    es: '9. **Si tu biblioteca pide datos para prestar.**',
+    ca: '9. **Si la teva biblioteca demana dades per prestar.**',
+    en: '9. **If your library asks for details in order to lend.**',
+  };
+  const LAW = {
+    es: '10. **Ley y fuero.**',
+    ca: '10. **Llei i fur.**',
+    en: '10. **Law and venue.**',
+  };
+  const POINTS = {
+    es: [
+      'Qué y cuánto tiempo',
+      'Solo para eso',
+      'Seguridad',
+      'Subencargado',
+      'Ayuda',
+      'Al terminar',
+    ],
+    ca: [
+      'Què i quant de temps',
+      'Només per a això',
+      'Seguretat',
+      'Subencarregat',
+      'Ajuda',
+      'En acabar',
+    ],
+    en: [
+      'What and for how long',
+      'Only for that',
+      'Security',
+      'Sub-processor',
+      'Help',
+      'When it ends',
+    ],
+  };
+
+  const termLines = (lang) => LANGS[lang].split('\n').filter((l) => /^\d+\. /.test(l));
+
+  test.each(CODES)('%s has term 9 once, with the six points in order on the same line', (lang) => {
+    const lines = termLines(lang);
+    const nine = lines.filter((l) => l.startsWith(HEADING[lang]));
+    expect(nine).toHaveLength(1);
+    const at = POINTS[lang].map((p) => nine[0].indexOf(`**${p}:**`));
+    expect(at.every((i) => i > 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+
+  test.each(CODES)('%s numbers the terms 1 to 10 in a row, "Law and venue" being 10', (lang) => {
+    const numbers = termLines(lang).map((l) => Number(l.split('.')[0]));
+    expect(numbers).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(termLines(lang)[9].startsWith(LAW[lang])).toBe(true);
+  });
+
+  test.each(CODES)('%s has no indented list lines the renderer would not draw', (lang) => {
+    expect(LANGS[lang]).not.toMatch(/^ +[-*+] /m);
+  });
 });
