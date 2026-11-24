@@ -18,17 +18,17 @@ import { externalForms } from './index';
 const APPROVED = {
   es: [
     es,
-    'Tally (los formularios de contacto, de sugerencias y de solicitud de acceso, Bélgica — solo recibe lo que escribes en ellos, y los envíos se borran a los 12 meses)',
+    'Tally (los formularios de contacto, de sugerencias y de solicitud de acceso, Bélgica — solo recibe lo que escribes en ellos, y los envíos se borran a los 12 meses; si pides acceso, tus respuestas y la decisión se guardan también con tu cuenta)',
     'Tally (el formulario de sugerencias, Bélgica — solo recibe algo si escribes en él)',
   ],
   ca: [
     ca,
-    "Tally (els formularis de contacte, de suggeriments i de sol·licitud d'accés, Bèlgica — només rep el que hi escrius, i els enviaments s'esborren als 12 mesos)",
+    "Tally (els formularis de contacte, de suggeriments i de sol·licitud d'accés, Bèlgica — només rep el que hi escrius, i els enviaments s'esborren als 12 mesos; si demanes accés, les teves respostes i la decisió es guarden també amb el teu compte)",
     'Tally (el formulari de suggeriments, Bèlgica — només rep res si hi escrius)',
   ],
   en: [
     en,
-    'Tally (the contact, feedback and access-request forms, Belgium — it only receives what you write in them, and submissions are deleted after 12 months)',
+    'Tally (the contact, feedback and access-request forms, Belgium — it only receives what you write in them, and submissions are deleted after 12 months; if you ask for access, your answers and the decision are also kept with your account)',
     'Tally (the feedback form, Belgium — it receives nothing unless you write in it)',
   ],
 };

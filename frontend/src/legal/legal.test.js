@@ -192,19 +192,19 @@ describe('what is seen of a profile, of a team page and of an invitation', () =>
   const SENTENCES = {
     es: [
       'Tu perfil (nombre público, presentación, «acerca de ti» y foto) lo ve quien comparte algún grupo contigo, nunca tu email, tu idioma ni tus datos demográficos.',
-      'Quien dinamiza un grupo puede tener en él una página con el nombre de su entidad, un logo, una presentación y un contacto (y, en una red, la dirección y el horario de su punto de recogida): se ve junto con el grupo, también sin cuenta si el grupo es público.',
+      'El nombre de quien dinamiza un grupo (o el de su entidad, si tiene página) se ve junto con el grupo, también sin cuenta si el grupo es público. Esa página puede llevar además un logo, una presentación y un contacto (y, en una red, la dirección y el horario de su punto de recogida).',
       'Si alguien te invita por email, el grupo guarda durante un año una huella de tu dirección (no la dirección) para no volver a invitarte; se borra pasado ese año.',
       'Si un miembro propone invitarte, quienes dinamizan el grupo ven tu dirección y su nota; la propuesta se borra a los 60 días si nadie la responde y al año de responderse.',
     ],
     ca: [
       'El teu perfil (nom públic, presentació, «sobre tu» i foto) el veu qui comparteix algun grup amb tu, mai el teu email, el teu idioma ni les teves dades demogràfiques.',
-      "Qui dinamitza un grup hi pot tenir una pàgina amb el nom de la seva entitat, un logo, una presentació i un contacte (i, en una xarxa, l'adreça i l'horari del seu punt de recollida): es veu juntament amb el grup, també sense compte si el grup és públic.",
+      "El nom de qui dinamitza un grup (o el de la seva entitat, si té pàgina) es veu juntament amb el grup, també sense compte si el grup és públic. Aquesta pàgina pot portar, a més, un logo, una presentació i un contacte (i, en una xarxa, l'adreça i l'horari del seu punt de recollida).",
       "Si algú et convida per email, el grup guarda durant un any una empremta de la teva adreça (no l'adreça) per no tornar a convidar-te; s'esborra passat aquest any.",
       "Si un membre proposa convidar-te, qui dinamitza el grup veu la teva adreça i la seva nota; la proposta s'esborra als 60 dies si ningú la respon i a l'any de respondre-la.",
     ],
     en: [
       'Your profile (public name, bio, about and photo) is seen by the people who share a group with you, never your email, your language or your demographic details.',
-      'Whoever runs a group can have a page in it with the name of their organisation, a logo, an introduction and a contact (and, in a network, the address and hours of their pickup point): it is seen together with the group, also without an account if the group is public.',
+      'The name of whoever runs a group (or that of their organisation, if it has a page) is seen together with the group, also without an account if the group is public. That page can also carry a logo, an introduction and a contact (and, in a network, the address and hours of their pickup point).',
       'If someone invites you by email, the group keeps for a year a fingerprint of your address (not the address) so as not to invite you again; it is deleted after that year.',
       'If a member proposes inviting you, the people who run the group see your address and their note; the proposal is deleted after 60 days if nobody answers it and a year after it is answered.',
     ],

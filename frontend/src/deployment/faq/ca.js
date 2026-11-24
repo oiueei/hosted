@@ -24,7 +24,7 @@ export default [
   {
     id: 'probar',
     q: "M'he de registrar per provar-ho?",
-    a: "No hi ha formulari de registre: escrius el teu correu a la porta d'entrada i t'arriba un enllaç per entrar. El compte que es crea és **real i permanent** —el que facis a dins és teu i no ho toca ningú—, mentre que les col·leccions d'exemple on aterres són un aparador compartit que es reinicia cada cert temps. Regalar i vendre són oberts des del primer minut; per muntar una col·lecció de grup, per deixar o llogar, o per gestionar un espai que es reserva, cal demanar accés, perquè en tots aquests casos hi ha algú més comptant amb tu.",
+    a: "No hi ha formulari de registre: escrius el teu correu a la porta d'entrada i t'arriba un enllaç per entrar. El compte que es crea és **real i permanent** —el que facis a dins és teu i no ho toca ningú—, mentre que les col·leccions d'exemple on aterres són un aparador compartit que es reinicia cada cert temps. En elles coincideixes amb totes les persones que han entrat a mirar, així que veuen el teu nom públic i el teu perfil: si no vols, deixa aquests camps buits fins que tinguis el teu propi grup. Regalar i vendre són oberts des del primer minut; per muntar una col·lecció de grup, per deixar o llogar, o per gestionar un espai que es reserva, cal demanar accés, perquè en tots aquests casos hi ha algú més comptant amb tu.",
     link: { to: '/popin', label: 'Entrar i mirar' },
   },
   {
@@ -55,7 +55,7 @@ export default [
   {
     id: 'contacto',
     q: 'Com es posen en contacte qui demana una cosa i qui la gestiona?',
-    a: "Per correu, i en un sol sentit. Quan demanes una cosa, a qui la gestiona li arriben amb la sol·licitud el teu nom i el teu email —el que fas servir per entrar a OIUEEI—, perquè et pugui escriure i quedar; també el veu a «Sol·licituds per a mi». Si el grup ho demana, en reservar pots deixar també un telèfon (és opcional), i una biblioteca et pot demanar per prestar-te alguna cosa el teu nom complet, la teva adreça, un telèfon i un document d'identificació. Es guarden xifrats, només els veu qui gestiona aquesta reserva o et presta la cosa, i s'esborren: el telèfon, l'endemà de la reserva; les dades del préstec, en tornar-la o, com a molt, 90 dies després. El seu email no se't mostra: el tindràs quan t'escrigui. OIUEEI no té xat, i el pagament o el lliurament els acordeu vosaltres.",
+    a: "Per correu, i en un sol sentit. Quan demanes una cosa, a qui la gestiona li arriben amb la sol·licitud el teu nom i el teu email —el que fas servir per entrar a OIUEEI—, perquè et pugui escriure i quedar; també el veu a «Sol·licituds per a mi». Si el grup ho demana, en reservar pots deixar també un telèfon (és opcional), i una biblioteca et pot demanar per prestar-te alguna cosa el teu nom complet, la teva adreça, un telèfon i un document d'identificació. Es guarden xifrats, només els veu qui gestiona aquesta reserva o et presta la cosa, i s'esborren: el telèfon, l'endemà de la reserva; les dades del préstec, en tornar-la o, com a molt, 90 dies després de la data de devolució; d'aquestes en respon la biblioteca. El seu email no se't mostra: el tindràs quan t'escrigui. OIUEEI no té xat, i el pagament o el lliurament els acordeu vosaltres.",
   },
   {
     id: 'sin-devolver',
@@ -70,7 +70,7 @@ export default [
   {
     id: 'dinamizar',
     q: 'Si dinamitzes un grup',
-    a: "Pots convidar i treure membres, escriure a tot el grup, editar la col·lecció i fer que altres la dinamitzin amb tu. En un grup que porta l'equip (no en una comunitat), també veus i respons les sol·licituds de totes les seves coses. Amb això tens dades d'altres persones: el correu de cada membre, qui demana què i quan. I si la teva biblioteca demana les dades de contacte en prestar, també les de qui s'emporta cada cosa, mentre la té; aquestes no van a la còpia de la col·lecció. La còpia de la col·lecció (el JSON del menú) les porta totes: guarda-la en un lloc segur i no la reenviïs. Fes servir aquests correus només per al grup. Si deixes de dinamitzar, esborra les còpies que tinguis.",
+    a: "Pots convidar i treure membres, escriure a tot el grup, editar la col·lecció i fer que altres la dinamitzin amb tu. En un grup que porta l'equip (no en una comunitat), també veus i respons les sol·licituds de totes les seves coses. Amb això tens dades d'altres persones: el correu de cada membre, qui demana què i quan. I si la teva biblioteca demana les dades de contacte en prestar, també les de qui s'emporta cada cosa, mentre la té; aquestes no van a la còpia de la col·lecció, i d'elles respons tu (terme 9 de les condicions). La còpia de la col·lecció (el JSON del menú) porta tota la resta: guarda-la en un lloc segur i no la reenviïs. Fes servir aquests correus només per al grup. Si deixes de dinamitzar, esborra les còpies que tinguis.",
   },
   {
     id: 'mis-datos',

@@ -42,7 +42,7 @@ export default [
   {
     id: 'probar',
     q: '¿Tengo que registrarme para probarlo?',
-    a: 'No hay formulario de registro: escribes tu correo en la puerta de entrada y te llega un enlace para entrar. La cuenta que se crea es **real y permanente** —lo que hagas dentro es tuyo y no lo toca nadie—, mientras que las colecciones de ejemplo en las que aterrizas son un escaparate compartido que se reinicia cada cierto tiempo. Regalar y vender están abiertos desde el primer minuto; para montar una colección de grupo, para prestar o alquilar, o para gestionar un espacio que se reserva, hay que pedir acceso, porque en todos esos casos hay alguien más contando contigo.',
+    a: 'No hay formulario de registro: escribes tu correo en la puerta de entrada y te llega un enlace para entrar. La cuenta que se crea es **real y permanente** —lo que hagas dentro es tuyo y no lo toca nadie—, mientras que las colecciones de ejemplo en las que aterrizas son un escaparate compartido que se reinicia cada cierto tiempo. En ellas coincides con todas las personas que han entrado a mirar, así que ven tu nombre público y tu perfil: si no quieres, deja esos campos vacíos hasta tener tu propio grupo. Regalar y vender están abiertos desde el primer minuto; para montar una colección de grupo, para prestar o alquilar, o para gestionar un espacio que se reserva, hay que pedir acceso, porque en todos esos casos hay alguien más contando contigo.',
     link: { to: '/popin', label: 'Entrar y mirar' },
   },
   {
@@ -73,7 +73,7 @@ export default [
   {
     id: 'contacto',
     q: '¿Cómo se ponen en contacto quien pide una cosa y quien la gestiona?',
-    a: 'Por correo, y en un solo sentido. Cuando pides una cosa, a quien la gestiona le llegan con la solicitud tu nombre y tu email —el que usas para entrar en OIUEEI—, para que pueda escribirte y quedar; también lo ve en «Solicitudes para mí». Si el grupo lo pide, al reservar puedes dejar además un teléfono (es opcional), y una biblioteca puede pedirte para prestarte algo tu nombre completo, tu dirección, un teléfono y un documento de identificación. Se guardan cifrados, solo los ve quien gestiona esa reserva o te presta la cosa, y se borran: el teléfono, el día después de la reserva; los datos del préstamo, al devolverla o, como mucho, 90 días después. Su email no se te muestra: lo tendrás cuando te escriba. OIUEEI no tiene chat, y el pago o la entrega los acordáis vosotros.',
+    a: 'Por correo, y en un solo sentido. Cuando pides una cosa, a quien la gestiona le llegan con la solicitud tu nombre y tu email —el que usas para entrar en OIUEEI—, para que pueda escribirte y quedar; también lo ve en «Solicitudes para mí». Si el grupo lo pide, al reservar puedes dejar además un teléfono (es opcional), y una biblioteca puede pedirte para prestarte algo tu nombre completo, tu dirección, un teléfono y un documento de identificación. Se guardan cifrados, solo los ve quien gestiona esa reserva o te presta la cosa, y se borran: el teléfono, el día después de la reserva; los datos del préstamo, al devolverla o, como mucho, 90 días después de la fecha de devolución; de esos responde la biblioteca. Su email no se te muestra: lo tendrás cuando te escriba. OIUEEI no tiene chat, y el pago o la entrega los acordáis vosotros.',
   },
   {
     id: 'sin-devolver',
@@ -88,7 +88,7 @@ export default [
   {
     id: 'dinamizar',
     q: 'Si dinamizas un grupo',
-    a: 'Puedes invitar y quitar miembros, escribir a todo el grupo, editar la colección y pasar a otros a dinamizarla contigo. En un grupo que lleva el equipo (no en una comunidad), también ves y respondes las solicitudes de todas sus cosas. Con eso tienes datos de otras personas: el correo de cada miembro, quién pide qué y cuándo. Y si tu biblioteca pide los datos de contacto al prestar, también los de quien se lleva cada cosa, mientras la tiene; esos no van en la copia de la colección. La copia de la colección (el JSON del menú) los lleva todos: guárdala en un sitio seguro y no la reenvíes. Usa esos correos solo para el grupo. Si dejas de dinamizar, borra las copias que tengas.',
+    a: 'Puedes invitar y quitar miembros, escribir a todo el grupo, editar la colección y pasar a otros a dinamizarla contigo. En un grupo que lleva el equipo (no en una comunidad), también ves y respondes las solicitudes de todas sus cosas. Con eso tienes datos de otras personas: el correo de cada miembro, quién pide qué y cuándo. Y si tu biblioteca pide los datos de contacto al prestar, también los de quien se lleva cada cosa, mientras la tiene; esos no van en la copia de la colección, y de ellos respondes tú (término 9 de las condiciones). La copia de la colección (el JSON del menú) lleva todo lo demás: guárdala en un sitio seguro y no la reenvíes. Usa esos correos solo para el grupo. Si dejas de dinamizar, borra las copias que tengas.',
   },
   {
     id: 'mis-datos',

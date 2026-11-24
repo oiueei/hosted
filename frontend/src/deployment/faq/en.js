@@ -24,7 +24,7 @@ export default [
   {
     id: 'probar',
     q: 'Do I have to register to try it?',
-    a: 'There is no sign-up form: you type your email at the front door and a link to get in arrives. The account it creates is **real and permanent** — whatever you do inside is yours and nobody touches it — while the example collections you land in are a shared window display that gets reset every so often. Giving and selling are open from the first minute; to run a group collection, to lend or rent, or to run a space people book, you have to ask for access, because each of those leaves someone else counting on you.',
+    a: "There is no sign-up form: you type your email at the front door and a link to get in arrives. The account it creates is **real and permanent** — whatever you do inside is yours and nobody touches it — while the example collections you land in are a shared window display that gets reset every so often. In them you meet everyone who has come in to look, so they see your public name and your profile: if you'd rather not, leave those fields empty until you have your own group. Giving and selling are open from the first minute; to run a group collection, to lend or rent, or to run a space people book, you have to ask for access, because each of those leaves someone else counting on you.",
     link: { to: '/popin', label: 'Come in and look around' },
   },
   {
@@ -55,7 +55,7 @@ export default [
   {
     id: 'contacto',
     q: 'How do the person asking for a thing and the person who runs it get in touch?',
-    a: "By email, and one way only. When you ask for a thing, whoever runs it gets your name and your email — the one you sign in to OIUEEI with — along with the request, so they can write to you and arrange things; they also see it under “Requests to me”. If the group asks, when you book you can also leave a phone number (it's optional), and a library may ask you, to lend you something, for your full name, your address, a phone number and an identity document. They are stored encrypted, only whoever manages that booking or lends you the thing sees them, and they are deleted: the phone, the day after the booking; the loan details, when you return it or, at the latest, 90 days later. Their email isn't shown to you: you'll have it when they write. OIUEEI has no chat, and payment or hand-over is up to the two of you.",
+    a: "By email, and one way only. When you ask for a thing, whoever runs it gets your name and your email — the one you sign in to OIUEEI with — along with the request, so they can write to you and arrange things; they also see it under “Requests to me”. If the group asks, when you book you can also leave a phone number (it's optional), and a library may ask you, to lend you something, for your full name, your address, a phone number and an identity document. They are stored encrypted, only whoever manages that booking or lends you the thing sees them, and they are deleted: the phone, the day after the booking; the loan details, when you return it or, at the latest, 90 days after the return date; the library answers for those. Their email isn't shown to you: you'll have it when they write. OIUEEI has no chat, and payment or hand-over is up to the two of you.",
   },
   {
     id: 'sin-devolver',
@@ -70,7 +70,7 @@ export default [
   {
     id: 'dinamizar',
     q: 'If you run a group',
-    a: "You can invite and remove members, write to the whole group, edit the collection and bring others in to run it with you. In a group the team runs (not a community), you also see and answer the requests for all of its things. That gives you other people's data: each member's email, who asks for what and when. And if your library asks for contact details when lending, also those of whoever takes each thing, while they have it; those are not in the collection copy. The collection copy (the JSON in the menu) carries all of it: keep it somewhere safe and don't forward it. Use those emails only for the group. If you stop running it, delete the copies you have.",
+    a: "You can invite and remove members, write to the whole group, edit the collection and bring others in to run it with you. In a group the team runs (not a community), you also see and answer the requests for all of its things. That gives you other people's data: each member's email, who asks for what and when. And if your library asks for contact details when lending, also those of whoever takes each thing, while they have it; those are not in the collection copy, and you answer for them (term 9 of the terms). The collection copy (the JSON in the menu) carries everything else: keep it somewhere safe and don't forward it. Use those emails only for the group. If you stop running it, delete the copies you have.",
   },
   {
     id: 'mis-datos',
