@@ -6,6 +6,7 @@ import PageLayout from '../../components/PageLayout';
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 import useTheeeme from '../../hooks/useTheeeme';
 import { apiFetch } from '../../services/api';
+import { uiLanguage } from '../../utils/uiLanguage';
 
 // What needs asking for, in the order the page tells it: a library (lending and renting
 // out are one permission here) and a shed. A community is asked for from the collection
@@ -32,7 +33,7 @@ export default function AccessPage() {
   const reported = useRef(false);
   const requested = NEEDS.includes(need) ? need : null;
   // The form is opened in the language on screen, which is not always the browser's.
-  const language = i18n.resolvedLanguage || i18n.language;
+  const language = uiLanguage(i18n);
 
   useDocumentTitle(t('access.docTitle'));
 
